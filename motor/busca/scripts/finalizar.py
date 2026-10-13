@@ -50,7 +50,7 @@ def recortar(origem, destino):
 def baixar_trecho_direto(url, inicio, dur, destino):
     """Vídeo de banco livre (Pexels, Pixabay, Commons, Archive): o ffmpeg lê só o trecho do arquivo
     remoto e já entrega H.264 até 1080p, sem áudio."""
-    ua = "ProFootballBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)"   # a Wikimedia exige
+    ua = "SpaceMachineBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)"   # a Wikimedia exige
     subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-user_agent", ua,
                     "-ss", f"{inicio:.2f}", "-i", url,
                     "-t", f"{dur:.2f}", "-an", "-vf", "scale=-2:'min(1080,ih)':flags=lanczos,setsar=1",

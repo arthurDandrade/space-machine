@@ -14,13 +14,16 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402
+
 ARIAL = "/System/Library/Fonts/Supplemental/Arial.ttf"
 ARIAL_B = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 IMPACT = "/System/Library/Fonts/Supplemental/Impact.ttf"
 TEXTO, AZUL, CINZA, LINHA, ZEBRA = "#191A21", "#1D2D85", "#6B7280", "#D9DDE5", "#F3F5F9"
-_CANAL = Path(__file__).resolve().parents[2] / "canal.json"   # identidade do canal (Estúdio, 2026-10-11)
-if _CANAL.exists():
-    _id = json.loads(_CANAL.read_text()).get("identidade", {})
+_id = caminhos.identidade()          # identidade do canal (canal.json do canal deste trabalho)
+if _id:
     TEXTO, AZUL = _id.get("cor_texto", TEXTO), _id.get("cor_destaque", AZUL)
     IMPACT = _id.get("fonte_marca_arquivo", IMPACT)
 K = 2                                                   # desenha 2× (aguenta o zoom da cena)

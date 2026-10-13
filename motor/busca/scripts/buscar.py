@@ -25,6 +25,7 @@ from pathlib import Path
 from comum import (baixar_imagem, limpar_cache, config, distancia_hash, dominio_bloqueado, folha_contato,
                    gravar_json, iter_assets, ler_json, log, phash)
 from fontes import BUSCADORES, UA_WIKIMEDIA, VIDEO_LIVRES
+from comum import caminhos
 import requests
 
 # No Commons a busca de texto traz fotos de jogos para "Eagles logo"; exigir a palavra no título resolve.
@@ -92,13 +93,16 @@ def buscar_imagens(asset, pasta, cfg):
     return _escolher_e_folha(asset, pasta, resultados, tmp, alvo, lado_min)
 
 
-def sem_soccer(q):
-    """"football" sozinho traz futebol (vídeo da Copa de 2022 com selo FIFA no positions 03, 2026-10-12):
-    vira "american football", a não ser que a consulta já diga american/NFL/college/high school/soccer."""
-    ql = q.lower()
-    if not re.search(r"\bfootball\b", ql) or re.search(r"american|\bnfl\b|college|high school|soccer|gridiron", ql):
-        return q
-    return re.sub(r"\b[Ff]ootball\b", "american football", q, count=1)
+def ajustar_consulta(q):
+    """Trocas de termo do tema do canal (canal.json › regras.busca.trocar_termos). Ex. do Pro Football: "football"
+    sozinho trazia futebol (Copa de 2022 com selo FIFA, 2026-10-12) e vira "american football", a não ser que a
+    consulta já diga american/NFL/college/soccer. Cada troca: {"padrao", "por", "exceto"} (regex, sem maiúsculas)."""
+    for tr in caminhos.regras().get("busca", {}).get("trocar_termos", []):
+        ql = q.lower()
+        if not re.search(tr["padrao"], ql) or (tr.get("exceto") and re.search(tr["exceto"], ql)):
+            continue
+        q = re.sub(tr["padrao"], tr["por"], q, count=1, flags=re.IGNORECASE)
+    return q
 
 
 def _buscar_camada(asset, fontes, alvo, orient, lado_min, tipo, vistos, cfg):
@@ -113,7 +117,7 @@ def _buscar_camada(asset, fontes, alvo, orient, lado_min, tipo, vistos, cfg):
         for q in consultas_para(asset, fonte):
             if not q:
                 continue
-            q = sem_soccer(q)
+            q = ajustar_consulta(q)
             if fonte == "commons" and tipo in ("logo", "mapa", "bandeira") and "intitle:" not in q:
                 q = f"{q} intitle:{PALAVRA_TITULO_COMMONS[tipo]}"
             res = fn(q, alvo * 2, orient)

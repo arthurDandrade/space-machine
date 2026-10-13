@@ -7,7 +7,7 @@ import re
 import time
 from pathlib import Path
 
-from .motor_claude import canais, consumo
+from .motor_claude import canais, config, consumo
 
 ETAPAS = [
     ("roteiro", "Roteiro"),
@@ -59,7 +59,7 @@ def previas(bloco):
 
 
 def _para_conferir(b):
-    """Tudo que pede o olho do Arthur antes de entregar: "conferir" das escolhas e assets pulados."""
+    """Tudo que pede o seu olho antes de entregar: "conferir" das escolhas e assets pulados."""
     escolhas = _json(b / "escolhas.json", {}) or {}
     itens = {}
     for aid, e in escolhas.items():
@@ -132,7 +132,7 @@ def bloco(caminho, video_dir=None):
         "pulados": [aid for aid, e in escolhas.items() if e.get("pular")],
         "conferir": conferir, "previas": [str(p) for p in pv],
         "conferir_pendentes": conferir_pendentes(b),
-        "travar_conferir": bool(_json(Path(__file__).resolve().parents[1] / "estudio.json", {}).get("travar_conferir")),
+        "travar_conferir": bool(config().get("travar_conferir")),
         "qa": qa_md.read_text() if qa_md.exists() else "", "aprovado": feito["aprovado"],
         "parado": est.get("parado"), "etapas_estudio": est.get("etapas", {}), "rodando": rodando,
         "storyboard_md": str(b / f"storyboard_{nn}.md") if (b / f"storyboard_{nn}.md").exists() else None,

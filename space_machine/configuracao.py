@@ -1,10 +1,10 @@
-"""Configuração pelo painel: chaves de API (por canal e do Estúdio) e criação de canais novos.
+"""Configuração pelo painel: chaves de API (do sistema e de cada canal) e criação de canais novos.
 
-As chaves ficam nos mesmos arquivos que os scripts já leem (nada muda para eles):
-  <raiz do canal>/.env.fishaudio   FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL      (gerar_narracao.py)
-  <raiz do canal>/.env.fontes      PEXELS_API_KEY, PIXABAY_API_KEY, SERPER_API_KEY, SI_API_KEY   (fontes.py)
-  Estudio/.env                     CLAUDE_CODE_OAUTH_TOKEN                      (motor_claude.py)
-Os arquivos são gravados com permissão 600 e o painel nunca mostra uma chave inteira (só os 4 últimos caracteres).
+  <dados>/.env                CLAUDE_CODE_OAUTH_TOKEN                                  (motor_claude.py)
+  <dados>/canais/<slug>/.env  FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL (gerar_narracao.py),
+                              PEXELS_API_KEY, PIXABAY_API_KEY, SERPER_API_KEY, SI_API_KEY (fontes.py)
+Os scripts do motor leem as chaves por motor/caminhos.env(). Os arquivos são gravados com permissão 600 e o painel
+nunca mostra uma chave inteira (só os 4 últimos caracteres).
 """
 import json
 import os
@@ -16,34 +16,35 @@ from pathlib import Path
 
 import requests
 
-from .motor_claude import ENV as ENV_ESTUDIO, RAIZ as RAIZ_ESTUDIO
+from .motor_claude import ENV as ENV_SISTEMA
+from .sistema import CANAIS, ambiente_motor, canais, gravar_json, ler_json
 
 # grupo -> (arquivo relativo à raiz do canal | None = Estudio/.env, [(chave, rótulo, secreta, ajuda)])
 APIS = [
-    {"id": "claude", "nome": "Claude (assinatura)", "arquivo": None, "escopo": "estudio",
-     "ajuda": "Token da sua assinatura para o Estúdio chamar o Claude sem conversa. Gere no Terminal com "
+    {"id": "claude", "nome": "Claude (assinatura)", "arquivo": None, "escopo": "sistema",
+     "ajuda": "Token da sua assinatura para o Space Machine chamar o Claude sem conversa. Gere no Terminal com "
               "`claude setup-token` e cole aqui.",
      "campos": [("CLAUDE_CODE_OAUTH_TOKEN", "Token", True, "")]},
-    {"id": "fish", "nome": "Fish Audio (narração)", "arquivo": ".env.fishaudio", "escopo": "canal",
+    {"id": "fish", "nome": "Fish Audio (narração)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Chave em fish.audio/app/developers. O crédito de API é separado do crédito da plataforma.",
      "campos": [("FISH_API_KEY", "Chave da API", True, ""),
                 ("FISH_VOICE_ID", "Voz (reference_id)", False, "id do modelo de voz"),
                 ("FISH_MODEL", "Modelo", False, "s2.1-pro (pago) ou s2.1-pro-free")]},
-    {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env.fontes", "escopo": "canal",
+    {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pexels.com/api.", "campos": [("PEXELS_API_KEY", "Chave da API", True, "")]},
-    {"id": "pixabay", "nome": "Pixabay (vídeos e fotos livres)", "arquivo": ".env.fontes", "escopo": "canal",
+    {"id": "pixabay", "nome": "Pixabay (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pixabay.com/api/docs.", "campos": [("PIXABAY_API_KEY", "Chave da API", True, "")]},
-    {"id": "serper", "nome": "Serper / Google Imagens (pago)", "arquivo": ".env.fontes", "escopo": "canal",
+    {"id": "serper", "nome": "Serper / Google Imagens (pago)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "serper.dev. Pago: o sistema só usa como última opção de imagem.",
      "campos": [("SERPER_API_KEY", "Chave da API", True, "")]},
-    {"id": "smithsonian", "nome": "Smithsonian (fotos históricas)", "arquivo": ".env.fontes", "escopo": "canal",
+    {"id": "smithsonian", "nome": "Smithsonian (fotos históricas)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em api.data.gov/signup. Sem a chave, o Smithsonian fica fora da busca.",
      "campos": [("SI_API_KEY", "Chave da API", True, "")]},
 ]
 
 
 def _arquivo(api, canal):
-    return ENV_ESTUDIO if api["arquivo"] is None else Path(canal["raiz"]) / api["arquivo"]
+    return ENV_SISTEMA if api["arquivo"] is None else Path(canal["raiz"]) / api["arquivo"]
 
 
 def ler_env(arq):
@@ -132,7 +133,8 @@ def testar_api(canal, api_id):
             return r.ok, "ok" if r.ok else f"HTTP {r.status_code}"
         if api_id == "fish":
             r = subprocess.run([canal["python"], str(Path(canal["scripts"]) / "gerar_narracao.py"), "--uso"],
-                               capture_output=True, text=True, timeout=60)
+                               capture_output=True, text=True, timeout=60,
+                               env=ambiente_motor(canal))
             return r.returncode == 0, (r.stdout or r.stderr).strip()[-300:]
         if api_id == "serper":
             return True, "não testado de propósito (cada busca do Serper gasta crédito pago)"
@@ -148,117 +150,56 @@ def testar_api(canal, api_id):
 
 
 # ---------------- canais ----------------
-def _slug(t):
+def slug_de(t):
     t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
 
 
-def salvar_canais(dados):
-    (RAIZ_ESTUDIO / "canais.json").write_text(json.dumps(dados, ensure_ascii=False, indent=2) + "\n")
+def salvar_canal(slug, **campos):
+    """Muda campos do canal.json (ex.: nome, ativo, identidade, regras)."""
+    arq = CANAIS / slug / "canal.json"
+    cj = ler_json(arq, {}) or {}
+    cj.update(campos)
+    gravar_json(arq, cj)
 
 
-def registrar_canal(slug, raiz, nome, ativo=True):
-    """Cadastra no canais.json uma pasta de canal no formato do motor (buscador_assets + editor_ae)."""
-    raiz = Path(raiz)
-    from .motor_claude import canais
-    dados = canais()
-    dados[slug] = {
-        "nome": nome, "raiz": str(raiz),
-        "python": dados.get("pro-football", {}).get("python", str(raiz / "buscador_assets/.venv/bin/python")),
-        "scripts": str(raiz / "buscador_assets" / "scripts"), "editor": str(raiz / "editor_ae"),
-        "producoes": str(raiz / "producoes" / "videos"), "conhecimento": str(raiz / "conhecimento" / nome),
-        "ativo": ativo}
-    salvar_canais(dados)
-    return dados[slug]
-
-
-IGNORAR = shutil.ignore_patterns("_backup*", "__pycache__", "_cache", "teste_projeto", ".DS_Store", "*.aep",
-                                 "_backup_antes_*", ".venv")
-NOTAS_HERDADAS = ["01 - Formato/Formato do Vídeo.md", "01 - Formato/Análise de Roteiro.md",
-                  "02 - Cenas", "03 - Assets/Como Buscar Assets.md", "03 - Assets/Critérios de Escolha.md",
-                  "03 - Assets/Rank de Fontes.md", "03 - Assets/Sistema Buscador de Assets.md",
-                  "03 - Assets/Buscas que Funcionam.md", "04 - Edição"]
-
-
-def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None, base="pro-football"):
-    """Copia o motor do canal-base (sem produções, cache, backups) para /Users/arthur/Canais/<Nome>, cria
-    canal.json, a pasta de conhecimento (notas do formato herdadas + log novo) e cadastra no canais.json."""
-    from .motor_claude import canais
-    origem = canais()[base]
-    o = Path(origem["raiz"])
-    slug = _slug(nome)
-    destino = o.parent / re.sub(r"[^\w\- ]", "", nome).strip().replace(" ", "")
-    if not slug or slug in canais():
+def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None, formato="explained", regras=None):
+    """Cria <dados>/canais/<slug>/ (canal.json, .env vazio, identidade/, conhecimento/, producoes/).
+    O motor é um só: nada de código é copiado."""
+    slug = slug_de(nome)
+    if not slug:
+        raise ValueError("dê um nome ao canal")
+    if slug in canais():
         raise ValueError("já existe um canal com esse nome")
-    if destino.exists():
-        raise ValueError(f"a pasta {destino} já existe")
-    destino.mkdir()
-    shutil.copytree(o / "buscador_assets", destino / "buscador_assets", ignore=IGNORAR, symlinks=True)
-    shutil.copytree(o / "editor_ae", destino / "editor_ae", ignore=IGNORAR)
-    (destino / "buscador_assets" / "_cache").mkdir()
-    (destino / "producoes" / "videos").mkdir(parents=True)
-    (destino / "identidade").mkdir()
-    if (o / ".claude").exists():
-        shutil.copytree(o / ".claude", destino / ".claude", ignore=shutil.ignore_patterns("_backup*", "launch.json"))
+    d = CANAIS / slug
+    if d.exists():
+        raise ValueError(f"a pasta {d} já existe")
+    for sub in ("identidade", "producoes", "conhecimento/05 - Aprendizados", "conhecimento/06 - Produções"):
+        (d / sub).mkdir(parents=True)
     ident = {"cor_fundo": cores["fundo"], "cor_texto": cores["texto"], "cor_destaque": cores["destaque"],
              "cor_caixa": cores["caixa"], "cor_sombra": cores["sombra"], "fonte_marca": Path(fonte_arquivo).stem,
              "fonte_marca_arquivo": fonte_arquivo, "fundo_imagem": None}
     if logo:
-        shutil.copy2(logo, destino / "identidade" / ("logo" + Path(logo).suffix.lower()))
+        shutil.copy2(logo, d / "identidade" / ("logo" + Path(logo).suffix.lower()))
     if fundo:
-        shutil.copy2(fundo, destino / "identidade" / ("fundo" + Path(fundo).suffix.lower()))
+        shutil.copy2(fundo, d / "identidade" / ("fundo" + Path(fundo).suffix.lower()))
         ident["fundo_imagem"] = "identidade/fundo" + Path(fundo).suffix.lower()
-    (destino / "canal.json").write_text(json.dumps({
-        "_sobre": "Identidade do canal (Estúdio). Lida pela edição e pelos geradores de mapa/tabela.",
-        "nome": nome, "tema": tema, "idioma": idioma, "base": base, "identidade": ident},
-        ensure_ascii=False, indent=2) + "\n")
-    # transcrição: inglês usa o modelo .en; outros idiomas, o multilíngue
-    cfg = destino / "buscador_assets" / "config.json"
-    if idioma != "en" and cfg.exists():
-        cfg.write_text(cfg.read_text().replace("ggml-small.en.bin", "ggml-small.bin"))
-    # conhecimento: notas do formato herdadas do canal-base + log e produções novos
-    k_o, k_d = Path(origem["conhecimento"]), destino / "conhecimento" / nome
-    for rel in NOTAS_HERDADAS:
-        src = k_o / rel
-        if src.is_dir():
-            shutil.copytree(src, k_d / rel)
-        elif src.exists():
-            (k_d / rel).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, k_d / rel)
-    (k_d / "05 - Aprendizados").mkdir(parents=True, exist_ok=True)
-    (k_d / "06 - Produções").mkdir(parents=True, exist_ok=True)
-    (k_d / "05 - Aprendizados" / "Log de Aprendizados.md").write_text(
+    cj = {"_sobre": "Canal do Space Machine: identidade (edição, mapas, tabelas) e regras do TEMA (busca, escolha, "
+                    "storyboard, QA).",
+          "nome": nome, "tema": tema, "idioma": idioma, "formato": formato, "ativo": True, "identidade": ident,
+          "regras": regras or {"escolha": [], "storyboard": [], "busca": {}, "qa": {}}}
+    # transcrição: inglês usa o modelo .en (padrão do motor); outros idiomas, o multilíngue
+    if idioma != "en":
+        cj["busca"] = {"whisper_modelo": "~/.cache/whisper/ggml-small.bin"}
+    gravar_json(d / "canal.json", cj)
+    (d / ".env").write_text("")
+    os.chmod(d / ".env", 0o600)
+    (d / "conhecimento" / "05 - Aprendizados" / "Log de Aprendizados.md").write_text(
         f"---\ntags: [aprendizados, log]\n---\n\n# Log de Aprendizados\n\nVoltar: [[00 - {nome} (Índice)]]\n\n"
-        f"Tudo o que descobrirmos neste canal, mais recente em cima. As notas de formato, cenas, assets e edição "
-        f"foram herdadas do {origem['nome']} (o Log dele fica em {k_o}).\n\n---\n")
-    (k_d / f"00 - {nome} (Índice).md").write_text(
-        f"# {nome} — Índice\n\nCanal no formato \"___ Explained\" sobre {tema} (idioma: {idioma}). "
-        f"Criado pelo Estúdio a partir do motor do {origem['nome']}.\n\n"
-        "Notas herdadas (adaptar ao tema com o tempo): 01 - Formato, 02 - Cenas, 03 - Assets, 04 - Edição.\n"
-        "**Identidade Visual**: as cores, a fonte e o fundo deste canal ficam no `canal.json` da raiz.\n")
-    # caminhos e nomes do canal-base nos arquivos de texto copiados
-    trocas = [(str(o), str(destino)), (f"conhecimento/{origem['nome']}", f"conhecimento/{nome}")]
-    for f in list(destino.rglob("*.md")) + list(destino.rglob("*.py")) + list(destino.rglob("*.sh")) + \
-            list(destino.rglob("*.jsx")):
-        if ".venv" in f.parts:
-            continue
-        try:
-            t = f.read_text()
-        except UnicodeDecodeError:
-            continue
-        n = t
-        for a, b in trocas:
-            n = n.replace(a, b)
-        if n != t:
-            f.write_text(n)
-    claude_md = o / "CLAUDE.md"
-    if claude_md.exists():
-        t = claude_md.read_text()
-        for a, b in trocas + [(origem["nome"], nome)]:
-            t = t.replace(a, b)
-        (destino / "CLAUDE.md").write_text(t)
-    for env in (".env.fishaudio", ".env.fontes"):
-        (destino / env).write_text("")
-        os.chmod(destino / env, 0o600)
-    registrar_canal(slug, destino, nome)
-    return slug, destino
+        "Tudo o que descobrirmos neste canal, mais recente em cima. As 4 entradas do topo vão junto no storyboard. "
+        "O que vale para todos os canais do formato fica em formatos/<formato>/conhecimento/ no Space Machine.\n\n---\n")
+    (d / "conhecimento" / f"00 - {nome} (Índice).md").write_text(
+        f"# {nome} — Índice\n\nCanal no formato \"___ Explained\" sobre {tema} (idioma: {idioma}).\n\n"
+        "- Identidade (cores, fonte, fundo) e regras do tema: `canal.json` na pasta do canal (editável no painel).\n"
+        "- Aprendizados: [[Log de Aprendizados]] · Produções: `06 - Produções/`.\n")
+    return slug, d

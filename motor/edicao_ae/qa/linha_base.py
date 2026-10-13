@@ -7,7 +7,10 @@ import numpy as np
 
 from medidas import ler_det, medir_deteccao, pct
 
-EST = Path("/Users/arthur/Canais/ProFootball/Videos Referencias/estudo_cenas")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402
+
+EST = caminhos.referencias() / "estudo_cenas"
 SCR = Path(sys.argv[1]) if len(sys.argv) > 1 else None
 tot = {}
 for v in range(1, 5):

@@ -1,12 +1,12 @@
-"""Estúdio — linha de comando.
+"""Space Machine — linha de comando.
 
-  python -m estudio servidor [--porta 8765]   painel no navegador (http://localhost:8765)
-  python -m estudio rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]   roteiro → prévia aprovada
-  python -m estudio fila <pasta do vídeo> [--max 3]   todos os blocos não entregues, até 3 ao mesmo tempo
-  python -m estudio escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
-  python -m estudio checar                     testa o claude (versão, login, modelos) sem rodar nada
-  python -m estudio medir                      linha de base: gasto dos subagentes do Claude Code
-  python -m estudio consumo [--video slug]     consumo registrado das chamadas do Estúdio
+  python -m space_machine painel [--porta 8765]   painel no navegador (http://localhost:8765)
+  python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]   roteiro → prévia aprovada
+  python -m space_machine fila <pasta do vídeo> [--max 3]   todos os blocos não entregues, até 3 ao mesmo tempo
+  python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
+  python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
+  python -m space_machine medir                      linha de base: gasto dos subagentes do Claude Code
+  python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
 """
 import sys
 
@@ -22,7 +22,7 @@ def main():
     elif cmd == "fila":
         from .fila import main as m
         m(args)
-    elif cmd == "servidor":
+    elif cmd in ("painel", "servidor"):
         from .servidor import main as m
         m(args)
     elif cmd == "rodar":

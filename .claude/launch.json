@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "estudio",
-      "runtimeExecutable": "/Users/arthur/Canais/Estudio/.venv/bin/python",
-      "runtimeArgs": ["-c", "import sys; sys.path.insert(0, '/Users/arthur/Canais/Estudio'); from estudio.servidor import main; main()"],
+      "name": "space-machine",
+      "runtimeExecutable": "/Users/arthur/Canais/SpaceMachine/.venv/bin/python",
+      "runtimeArgs": ["-c", "import sys, os; os.chdir('/Users/arthur/Canais/SpaceMachine'); sys.path.insert(0, '/Users/arthur/Canais/SpaceMachine'); from space_machine.servidor import main; main()"],
       "port": 8765
     }
   ]

@@ -1,8 +1,8 @@
 """Gestão do canal (Fase 4): kanban de produção, ideias e calendário de publicação.
 
 O andamento da produção vem das pastas (estado.py). O que não está nas pastas (ideia, título/descrição/tags de
-publicação, data, "agendado"/"publicado", link) fica em dados/estudio.sqlite. Upload pelo sistema: não, por decisão
-do Arthur (2026-10-11) — ele sobe no YouTube Studio e marca aqui.
+publicação, data, "agendado"/"publicado", link) fica em <dados>/space_machine.sqlite. Upload pelo sistema: não (2026-10-11) — sobe-se no YouTube
+Studio e marca aqui.
 """
 import calendar
 import datetime as dt

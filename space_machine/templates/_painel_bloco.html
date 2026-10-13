@@ -35,7 +35,7 @@
     {% if b.revisao %}<p><a href="/arquivo?p={{ b.revisao|urlencode }}" target="_blank">Abrir revisão dos assets ↗</a></p>{% endif %}
   </div>
   <div>
-    <h3>Etapas (Estúdio)</h3>
+    <h3>Etapas</h3>
     <table>
     {% for etapa in ETAPAS_RODAR %}{% set e = b.etapas_estudio.get(etapa) %}
       <tr><td>{{ etapa }}</td>

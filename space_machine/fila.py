@@ -1,12 +1,12 @@
 """Fila de produção de um vídeo: roda todos os blocos ainda não entregues, no máximo N ao mesmo tempo.
 
-  python -m estudio fila <pasta do vídeo> [--max 3]
+  python -m space_machine fila <pasta do vídeo> [--max 3]
 
 O painel (botão "Produzir todos" na página do vídeo) lança este processo solto, como as rodadas.
 Regras:
 - conta no limite também os blocos que já estavam rodando (iniciados à mão);
-- bloco "parado" (esperando o Arthur: conferir, decisão, erro) não entra: precisa de gente;
-- cada bloco é lançado no máximo uma vez por fila (se parar, fica para o Arthur);
+- bloco "parado" (esperando você: conferir, decisão, erro) não entra: precisa de gente;
+- cada bloco é lançado no máximo uma vez por fila (se parar, fica para você);
 - parado por limite/erro passageiro do Claude volta para a fila (não precisa de gente);
 - "limite de uso" do Claude → a fila pausa, testa a cada 10 min e continua sozinha quando liberar;
 - estado em <vídeo>/_estudio/fila.json; "Parar fila" só impede novos lançamentos (os que rodam continuam).
@@ -28,7 +28,7 @@ ESPERA_LIMITE_S = 600
 
 
 def _retentavel(parado):
-    """Parou por limite ou erro passageiro do Claude (vale tentar de novo), não por decisão do Arthur."""
+    """Parou por limite ou erro passageiro do Claude (vale tentar de novo), não por uma decisão sua."""
     m = str(parado.get("motivo", ""))
     # "busca falhou"/"erro inesperado" = erro de programa ou de rede (ex.: vídeo gigante do Archive derrubava
     # a busca, 2026-10-12): vale uma nova tentativa por fila depois da correção
@@ -38,12 +38,12 @@ def _retentavel(parado):
 
 
 def lancar_rodada(b, de="", ate="", obs=""):
-    """Lança `python -m estudio rodar` SOLTO (adotado pelo launchd, stdin em /dev/null). Devolve o pid.
+    """Lança `python -m space_machine rodar` SOLTO (adotado pelo launchd, stdin em /dev/null). Devolve o pid.
 
     Filha do painel, a rodada morria quando o terminal do painel era fechado (bloco 01, 2026-10-11)."""
     from .rodar import ETAPAS
     b = Path(b)
-    cmd = [sys.executable, "-m", "estudio", "rodar", str(b)]
+    cmd = [sys.executable, "-m", "space_machine", "rodar", str(b)]
     if de in ETAPAS:
         cmd += ["--de", de]
     if ate in ETAPAS:
@@ -82,12 +82,12 @@ def lancar_fila(video_dir, maximo=3):
     video_dir = Path(video_dir)
     (video_dir / "_estudio").mkdir(exist_ok=True)
     log = video_dir / "_estudio" / "log_fila.txt"
-    cmd = [sys.executable, "-m", "estudio", "fila", str(video_dir), "--max", str(maximo)]
+    cmd = [sys.executable, "-m", "space_machine", "fila", str(video_dir), "--max", str(maximo)]
     sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_FILA" 2>&1 & echo $!', "sh", *cmd],
                         cwd=RAIZ, capture_output=True, text=True, start_new_session=True,
                         env={**os.environ, "PYTHONUNBUFFERED": "1", "LOG_FILA": str(log)})
     pid = sh.stdout.strip()
-    # Mac acordado enquanto a fila existir (o Mac do Arthur dorme com 1 min parado e a fila congelava);
+    # Mac acordado enquanto a fila existir (Mac que dorme com 1 min parado e a fila congelava);
     # o caffeinate termina sozinho junto com a fila
     if pid:
         subprocess.run(["/bin/sh", "-c", 'caffeinate -i -s -w "$1" </dev/null >/dev/null 2>&1 &', "sh", pid])
@@ -103,7 +103,7 @@ def parar_fila(video_dir):
             pass
     if f:
         f.update(status="parada", fim=time.strftime("%Y-%m-%d %H:%M:%S"),
-                 motivo="parada pelo Arthur no painel (os blocos que já rodavam continuam)")
+                 motivo="parada no painel (os blocos que já rodavam continuam)")
         f.pop("ativa", None)
         arquivo_fila(video_dir).write_text(json.dumps(f, ensure_ascii=False, indent=1))
 
@@ -143,7 +143,7 @@ def rodar_fila(video_dir, maximo=3):
                     rodando.append(b["nn"])
                     log(f"bloco {b['nn']} parado só pelo conferir: entregando")
         livres = [b for b in pendentes if not b["rodando"] and b["nn"] not in rodando]
-        # parado por limite/erro passageiro do Claude volta para a fila; parado por decisão fica para o Arthur
+        # parado por limite/erro passageiro do Claude volta para a fila; parado por decisão fica para você
         parados = [b["nn"] for b in livres if b["parado"] and not _retentavel(b["parado"])]
         esperando = [b["nn"] for b in livres if (not b["parado"] or _retentavel(b["parado"]))
                      and b["nn"] not in f["lancados"]]
@@ -196,7 +196,7 @@ def rodar_fila(video_dir, maximo=3):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="estudio fila")
+    ap = argparse.ArgumentParser(prog="space_machine fila")
     ap.add_argument("video")
     ap.add_argument("--max", type=int, default=3)
     a = ap.parse_args(argv)

@@ -30,7 +30,7 @@ def main():
             fr = Path(tmp) / "f"
             fr.mkdir()
             subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-user_agent",
-                            "ProFootballBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)", "-ss", str(a.inicio),
+                            "SpaceMachineBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)", "-ss", str(a.inicio),
                             "-i", v.get("url_preview") or v["url"], "-t", str(a.fim - a.inicio), "-vf",
                             f"fps=1/{a.passo},scale=400:-2", str(fr / "%03d.jpg")], check=True, timeout=1800)
             itens = [(p, f"v{a.n}  t={a.inicio + i * a.passo:.1f}s") for i, p in enumerate(sorted(fr.glob("*.jpg")))]

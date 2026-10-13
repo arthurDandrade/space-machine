@@ -1,13 +1,13 @@
-"""Única porta de entrada do Estúdio para o Claude: `claude -p` enxuto, pela assinatura.
+"""Única porta de entrada do Space Machine para o Claude: `claude -p` enxuto, pela assinatura.
 
 Cada chamada sai sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão do Claude Code:
-só o prompt da etapa (estudio/prompts/*.md), os dados e as imagens (base64, sem turno extra de Read).
-A resposta vem em JSON validado (--json-schema) e o consumo de cada chamada vai para dados/estudio.sqlite.
+só o prompt da etapa (space_machine/prompts/*.md), os dados e as imagens (base64, sem turno extra de Read).
+A resposta vem em JSON validado (--json-schema) e o consumo de cada chamada vai para <dados>/space_machine.sqlite.
 
 Login: o `claude` do terminal precisa estar logado. Para rodar sem conversa (painel, launchd), gere um token
-da assinatura com `claude setup-token` e grave em Estudio/.env a linha CLAUDE_CODE_OAUTH_TOKEN=...
+da assinatura com `claude setup-token` e grave no .env da pasta de dados (painel › APIs) a linha CLAUDE_CODE_OAUTH_TOKEN=...
 
-Teste: python -m estudio.motor_claude --teste [imagem.jpg]
+Teste: python -m space_machine.motor_claude --teste [imagem.jpg]
 """
 import base64
 import io
@@ -22,13 +22,13 @@ from pathlib import Path
 
 from PIL import Image
 
-RAIZ = Path(__file__).resolve().parents[1]
-PROMPTS = RAIZ / "estudio" / "prompts"
-DADOS = RAIZ / "dados"
-BANCO = DADOS / "estudio.sqlite"
-ENV = RAIZ / ".env"
-# pasta neutra: sem CLAUDE.md em nenhum diretório acima
-CWD = DADOS / "claude_cwd"
+from .sistema import DADOS, PACOTE, REPO as RAIZ, canais, config  # noqa: F401  (config/canais: usados por outros módulos)
+
+PROMPTS = PACOTE / "prompts"
+BANCO = DADOS / "space_machine.sqlite"
+ENV = DADOS / ".env"
+# pasta neutra: sem CLAUDE.md em nenhum diretório acima (a pasta de dados fica fora do repo)
+CWD = DADOS / "logs" / "claude"
 PESOS = {"input_tokens": 1, "cache_creation_input_tokens": 1.25, "cache_read_input_tokens": 0.1, "output_tokens": 5}
 _trava_banco = threading.Lock()
 
@@ -41,21 +41,28 @@ class LimiteDeUso(ErroClaude):
     """A assinatura bateu no limite: não adianta continuar chamando até o horário de reset."""
 
 
-def config():
-    return json.loads((RAIZ / "estudio.json").read_text())
+# etapa → regra do tema do canal (canal.json › regras) que vai junto no prompt
+REGRA_DA_ETAPA = {"escolher_imagem": "escolha", "escolher_video": "escolha", "conferir_asset": "escolha",
+                  "confirmar_trecho": "escolha", "storyboard": "storyboard", "qa": "storyboard"}
 
 
-def canais():
-    return json.loads((RAIZ / "canais.json").read_text())
-
-
-def prompt(nome):
-    """Lê estudio/prompts/<nome>.md sem o cabeçalho de comentário (linhas que começam com '<!--')."""
+def prompt(nome, canal=None):
+    """Lê space_machine/prompts/<nome>.md sem o cabeçalho de comentário (linhas que começam com '<!--').
+    Com o canal, acrescenta o tema e as regras do tema dele (o prompt da etapa é do FORMATO, igual para todos)."""
     txt = (PROMPTS / f"{nome}.md").read_text()
-    return "\n".join(l for l in txt.splitlines() if not l.startswith("<!--")).strip()
+    txt = "\n".join(l for l in txt.splitlines() if not l.startswith("<!--")).strip()
+    if canal:
+        cj = json.loads((Path(canal["raiz"]) / "canal.json").read_text())
+        regra = cj.get("regras", {}).get(REGRA_DA_ETAPA.get(nome, ""), "")
+        txt += f"\n\n# Canal: {cj.get('nome', '')}" + (f" — tema: {cj['tema']}" if cj.get("tema") else "")
+        if isinstance(regra, list):
+            regra = "\n".join(f"- {r}" for r in regra)
+        if regra:
+            txt += "\nRegras do tema deste canal (valem tanto quanto as de cima):\n" + regra
+    return txt
 
 
-# etapas do `rodar` que chamam o Claude → chaves de estudio.json["modelos"] que elas usam
+# etapas do `rodar` que chamam o Claude → chaves de config()["modelos"] (space_machine.json) que elas usam
 MODELOS_DA_ETAPA = {"storyboard": ["storyboard"],
                     "escolher": ["escolher_imagem", "escolher_video", "confirmar_trecho", "conferir"],
                     "editar": ["qa"]}
@@ -104,7 +111,7 @@ def checar_claude(etapas, atualizar=True):
 
     Uma chamada mínima por modelo (resultado guardado por 15 min em dados/claude_checagem.json).
     Se o claude estiver velho demais para o modelo, roda `claude update` uma vez e testa de novo.
-    Falha → ErroClaude (ou LimiteDeUso) com o que o Arthur precisa fazer.
+    Falha → ErroClaude (ou LimiteDeUso) com o que você precisa fazer.
     """
     modelos = config()["modelos"]
     precisa = {}
@@ -187,7 +194,7 @@ def imagem_b64(caminho, lado_max=None):
 
 
 def _banco():
-    DADOS.mkdir(exist_ok=True)
+    DADOS.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(BANCO, timeout=30)
     con.execute("""create table if not exists chamadas (
         id integer primary key, quando text, canal text, video text, bloco text, etapa text, asset text,

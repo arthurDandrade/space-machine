@@ -11,6 +11,10 @@ from pathlib import Path
 
 from PIL import Image
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import caminhos  # noqa: E402
+
 W, H = 1920, 1080
 CX, CY = W / 2, H / 2
 FPS = 60
@@ -152,21 +156,19 @@ SOMBRA_BRANCO = {"op": 170, "soft": 12, "dist": 3}
 def _rgb(h):
     return [int(h[i:i + 2], 16) / 255 for i in (1, 3, 5)]
 COR_FUNDO = _rgb("#EDF0F6")      # cinza-azulado do logo/banner
-# imagem de fundo (papel com adesivos de futebol americano nos cantos), escolhida pelo Arthur no bloco 01 de
-# "Who Makes the NFL Possible" (2026-10-08): fica entre o "Fundo" e a "Textura papel", com os valores dele no After
-FUNDO_IMAGEM = {"file": str(Path(__file__).resolve().parent.parent / "identidade" / "fundo_papel_nfl.png"),
-                "opacidade": 50, "escala": 119.576, "pos": [941.58, 545.26]}
+# imagem de fundo do canal (canal.json › identidade.fundo_imagem): fica entre o "Fundo" e a "Textura papel".
+# Opacidade/escala/posição medidas no Pro Football (2026-10-08); o canal pode trocar com fundo_opacidade etc.
+FUNDO_IMAGEM = None
+_FUNDO_PADRAO = {"opacidade": 50, "escala": 119.576, "pos": [941.58, 545.26]}
 COR_TEXTO = _rgb("#191A21")      # quase-preto ("INSIDE THE")
 COR_AZUL = _rgb("#1D2D85")       # azul royal ("NFL WORLD")
 COR_CAIXA = _rgb("#0B2479")      # caixa azul ("WORK INSIDE")
 COR_SOMBRA = _rgb("#0B1A3A")     # sombras levemente azuladas
 FONTE_MARCA = "Impact"           # condensada pesada, sempre em MAIÚSCULAS
 IMPACT_TTF = "/System/Library/Fonts/Supplemental/Impact.ttf"
-# canal.json na raiz do canal (2026-10-11, Estúdio): cada canal criado a partir deste motor troca cores, fonte e
-# fundo ali. Sem o arquivo (ou sem um campo), valem os valores do Pro Football acima.
-_CANAL = Path(__file__).resolve().parent.parent / "canal.json"
-if _CANAL.exists():
-    _id = json.loads(_CANAL.read_text()).get("identidade", {})
+# canal.json do canal (caminhos.canal()): cores, fonte e fundo de cada canal. Sem um campo, vale o padrão acima.
+_id = caminhos.identidade()
+if _id:
     COR_FUNDO = _rgb(_id.get("cor_fundo", "#EDF0F6"))
     COR_TEXTO = _rgb(_id.get("cor_texto", "#191A21"))
     COR_AZUL = _rgb(_id.get("cor_destaque", "#1D2D85"))
@@ -174,11 +176,9 @@ if _CANAL.exists():
     COR_SOMBRA = _rgb(_id.get("cor_sombra", "#0B1A3A"))
     FONTE_MARCA = _id.get("fonte_marca", FONTE_MARCA)
     IMPACT_TTF = _id.get("fonte_marca_arquivo", IMPACT_TTF)
-    if "fundo_imagem" in _id:
-        if _id["fundo_imagem"]:
-            FUNDO_IMAGEM = dict(FUNDO_IMAGEM, file=str(_CANAL.parent / _id["fundo_imagem"]))
-        else:
-            FUNDO_IMAGEM = None
+    if _id.get("fundo_imagem"):
+        FUNDO_IMAGEM = dict(_FUNDO_PADRAO, file=str(caminhos.canal() / _id["fundo_imagem"]),
+                            **{k: _id[f"fundo_{k}"] for k in ("opacidade", "escala", "pos") if f"fundo_{k}" in _id})
 
 
 def tamanho_impact(linhas, max_w, max_size):

@@ -1,9 +1,9 @@
-"""Painel do Estúdio no navegador (localhost). Fase 3 do plano.
+"""Painel do Space Machine no navegador (localhost).
 
-Iniciar:  cd /Users/arthur/Canais/Estudio && .venv/bin/python -m estudio servidor   → http://localhost:8765
+Iniciar:  ./spacemachine   (ou .venv/bin/python -m space_machine painel)   → http://localhost:8765
 
-Tudo o que o painel mostra vem das pastas (estado.py) e do registro de consumo (dados/estudio.sqlite).
-Os botões só disparam os mesmos comandos da linha de comando (python -m estudio rodar ...), em segundo plano.
+Tudo o que o painel mostra vem das pastas (estado.py) e do registro de consumo (<dados>/space_machine.sqlite).
+Os botões só disparam os mesmos comandos da linha de comando (python -m space_machine rodar ...), em segundo plano.
 """
 import hashlib
 import os
@@ -25,12 +25,13 @@ from fastapi.templating import Jinja2Templates
 
 from . import configuracao, estado, fila, gestao
 from .canal import gravar_json, ler_json
-from .motor_claude import RAIZ, _banco, canais
+from .motor_claude import _banco, canais
+from .sistema import DADOS, salvar_config
 from .rodar import ETAPAS as ETAPAS_RODAR
 
-app = FastAPI(title="Estúdio")
+app = FastAPI(title="Space Machine")
 tpl = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
-tpl.env.globals.update(ETAPAS=estado.ETAPAS, ETAPAS_RODAR=ETAPAS_RODAR, quando=estado.quando,
+tpl.env.globals.update(dados=str(DADOS), ETAPAS=estado.ETAPAS, ETAPAS_RODAR=ETAPAS_RODAR, quando=estado.quando,
                        COLUNAS=gestao.COLUNAS, canais_menu=lambda: [(k, c["nome"]) for k, c in canais().items()
                                                                      if c.get("ativo")])
 tpl.env.filters["milhar"] = lambda n: f"{int(n or 0):,}".replace(",", ".")
@@ -153,7 +154,7 @@ def parar_fila(canal: str, video: str):
 
 @app.post("/b/{canal}/{video}/{nn}/conferir_ok")
 def conferir_ok(canal: str, video: str, nn: str):
-    """O Arthur viu a prévia e aprovou os itens de "conferir": grava e entrega."""
+    """Quem produz viu a prévia e aprovou os itens de "conferir": grava e entrega."""
     _, _, b = _bloco_dir(canal, video, nn)
     estado.aprovar_conferir(b)
     if not estado.bloco(b)["travar_conferir"]:          # sem trava: só some da lista ("Marcar como visto")
@@ -177,7 +178,7 @@ def parar(canal: str, video: str, nn: str):
         atual = est.get("atual")
         if atual:
             est["etapas"].setdefault(atual, {})["status"] = "parado"
-            est["parado"] = {"etapa": atual, "motivo": "parado pelo Arthur no painel"}
+            est["parado"] = {"etapa": atual, "motivo": "parado no painel"}
             gravar_json(b / "_estudio" / "estado.json", est)
     return RedirectResponse(f"/b/{canal}/{video}/{nn}", status_code=303)
 
@@ -351,9 +352,7 @@ def editar_canal(slug: str, nome: str = Form(...), ativo: str = Form("")):
     dados = canais()
     if slug not in dados:
         raise HTTPException(404)
-    dados[slug]["nome"] = nome.strip() or dados[slug]["nome"]
-    dados[slug]["ativo"] = bool(ativo)
-    configuracao.salvar_canais(dados)
+    configuracao.salvar_canal(slug, nome=nome.strip() or dados[slug]["nome"], ativo=bool(ativo))
     return RedirectResponse("/config/canais", status_code=303)
 
 
@@ -386,7 +385,8 @@ async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str =
     if not nome.strip() or not all(re.fullmatch(r"#[0-9A-Fa-f]{6}", v) for v in cores.values()) \
             or fonte not in _fontes():
         return RedirectResponse("/config/canais?erro=Preencha+nome,+cores+(#RRGGBB)+e+fonte", status_code=303)
-    tmp = Path(tempfile.mkdtemp(dir=RAIZ / "dados"))
+    DADOS.mkdir(parents=True, exist_ok=True)
+    tmp = Path(tempfile.mkdtemp(dir=DADOS))
     arqs = {}
     for nome_campo, up in (("logo", logo), ("fundo", fundo)):
         if up is not None and up.filename:
@@ -407,6 +407,9 @@ async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str =
 @app.get("/config/apis", response_class=HTMLResponse)
 def config_apis(request: Request, canal: str = "", msg: str = "", ok: str = ""):
     lista = canais()
+    if not lista:
+        return RedirectResponse("/config/canais?erro=" + quote("Crie um canal primeiro: as chaves de API são por canal."),
+                                status_code=303)
     canal = canal if canal in lista else next(iter(lista))
     return tpl.TemplateResponse(request, "config_apis.html", {
         "canal": canal, "lista": lista, "apis": configuracao.estado_apis(lista[canal]), "msg": msg, "ok": ok})
@@ -465,16 +468,15 @@ def config_modelos(request: Request, msg: str = ""):
 @app.post("/config/modelos")
 async def salvar_modelos(request: Request):
     form = await request.form()
-    arq = RAIZ / "estudio.json"
-    cfg = ler_json(arq)
     validos = {m for m, _ in MODELOS}
+    modelos, esforco = {}, {}
     for etapa, _, _ in ETAPAS_CLAUDE:
         m, e = form.get(f"modelo_{etapa}"), form.get(f"esforco_{etapa}")
         if m in validos:
-            cfg["modelos"][etapa] = m
+            modelos[etapa] = m
         if e in ESFORCOS:
-            cfg["esforco"][etapa] = e
-    gravar_json(arq, cfg)
+            esforco[etapa] = e
+    salvar_config({"modelos": modelos, "esforco": esforco})
     return RedirectResponse("/config/modelos?msg=" + quote("Salvo. Vale a partir da próxima chamada."), status_code=303)
 
 

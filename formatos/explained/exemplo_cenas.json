@@ -1,0 +1,497 @@
+{
+  "titulo": "Every Nfl Position Explained In X Minutes",
+  "itens": [
+    {
+      "id": "01",
+      "nome": "Quarterback",
+      "titulo": {
+        "descricao": "American football quarterback in throwing pose, full body cutout, isolated on transparent/white background",
+        "buscas": [
+          "american football quarterback throwing pose isolated png",
+          "quarterback throwing cutout transparent",
+          "american football player throwing isolated white background"
+        ]
+      },
+      "cenas": [
+        {
+          "estados": [
+            {
+              "layout": "B",
+              "fala": "The quarterback got his name from where he used to stand.",
+              "cards": [
+                {
+                  "gatilho": "The",
+                  "tipo": "historica",
+                  "fontes": [
+                    "archive",
+                    "commons"
+                  ],
+                  "descricao": "Early American football game from the 1910s-1930s, players lined up in an old formation, black and white newsreel",
+                  "buscas": [
+                    "1920s american football game newsreel",
+                    "vintage college football game 1930s",
+                    "old american football film black and white"
+                  ],
+                  "id": "01-01-a"
+                }
+              ],
+              "_k": 1,
+              "_cena": 0
+            },
+            {
+              "layout": "A4",
+              "fala": "A quarter of the way back, behind the line, but in front of the running backs.",
+              "textos": [
+                [
+                  "a quarter back",
+                  "A quarter"
+                ],
+                [
+                  "behind the line",
+                  "behind"
+                ],
+                [
+                  "in front of the backs",
+                  "but in"
+                ]
+              ],
+              "_k": 12,
+              "_cena": 0
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "C1",
+              "fala": "Today he touches the ball on almost every offensive play and almost every play runs through his decisions.",
+              "cards": [
+                {
+                  "gatilho": "Today",
+                  "tipo": "video",
+                  "descricao": "American football quarterback taking the snap from the center, generic practice or game, no team logos needed",
+                  "buscas": [
+                    "american football quarterback snap center",
+                    "quarterback receives snap football",
+                    "american football snap slow motion"
+                  ],
+                  "id": "01-02-a"
+                },
+                {
+                  "gatilho": "and almost",
+                  "tipo": "video",
+                  "descricao": "Quarterback dropping back with the ball and looking downfield, deciding where to throw",
+                  "buscas": [
+                    "quarterback dropping back looking downfield",
+                    "american football quarterback drop back",
+                    "quarterback holding football looking field"
+                  ],
+                  "id": "01-02-b"
+                }
+              ],
+              "_k": 28,
+              "_cena": 1
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "B",
+              "fala": "In the huddle, he calls the play.",
+              "cards": [
+                {
+                  "gatilho": "In",
+                  "tipo": "foto",
+                  "descricao": "American football team in a huddle, quarterback in the middle talking to teammates",
+                  "buscas": [
+                    "american football huddle quarterback",
+                    "football team huddle",
+                    "football players huddle field"
+                  ],
+                  "id": "01-03-a"
+                }
+              ],
+              "_k": 46,
+              "_cena": 2
+            },
+            {
+              "layout": "C1",
+              "fala": "At the line, he reads the defense. 11 players shifting, disguising,",
+              "cards": [
+                {
+                  "gatilho": "At",
+                  "tipo": "video",
+                  "descricao": "Defense lined up at the line of scrimmage in three-point stance, ready before the snap",
+                  "buscas": [
+                    "american football line of scrimmage defense",
+                    "football defensive line stance",
+                    "american football players lined up before snap"
+                  ],
+                  "id": "01-03-b"
+                },
+                {
+                  "gatilho": "11",
+                  "tipo": "foto",
+                  "descricao": "Linebacker or safety in ready stance before the snap, watching the quarterback",
+                  "buscas": [
+                    "american football linebacker stance before snap",
+                    "football defender ready stance",
+                    "linebacker american football"
+                  ],
+                  "id": "01-03-c"
+                }
+              ],
+              "_k": 53,
+              "_cena": 2
+            },
+            {
+              "layout": "A",
+              "fala": "trying to make him guess wrong.",
+              "textos": [
+                [
+                  "make him guess wrong",
+                  "trying"
+                ]
+              ],
+              "_k": 64,
+              "_cena": 2
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "A",
+              "fala": "If he sees a problem, he can change the play with a single word.",
+              "textos": [
+                [
+                  "one word changes the play",
+                  "If he"
+                ]
+              ],
+              "_k": 70,
+              "_cena": 3
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "E3",
+              "fala": "Since 1994, a speaker inside his helmet has let the",
+              "cards": [
+                {
+                  "gatilho": "Since",
+                  "tipo": "recorte",
+                  "png": true,
+                  "descricao": "American football helmet, side view, cutout without background",
+                  "buscas": [
+                    "american football helmet isolated png",
+                    "football helmet side view transparent",
+                    "football helmet white background"
+                  ],
+                  "id": "01-05-a"
+                }
+              ],
+              "textos": [
+                [
+                  "since 1994",
+                  "Since"
+                ]
+              ],
+              "_k": 84,
+              "_cena": 4
+            },
+            {
+              "layout": "C1",
+              "fala": "coach talk to him until 15 seconds remain on the play clock.",
+              "cards": [
+                {
+                  "gatilho": "coach",
+                  "tipo": "foto",
+                  "descricao": "American football coach on the sideline talking into a headset microphone",
+                  "buscas": [
+                    "football coach headset sideline",
+                    "american football coach headset",
+                    "coach headset microphone sideline"
+                  ],
+                  "id": "01-05-b"
+                },
+                {
+                  "gatilho": "15",
+                  "tipo": "foto",
+                  "descricao": "Stadium play clock showing the seconds counting down, digital display behind the end zone",
+                  "buscas": [
+                    "american football play clock stadium",
+                    "football play clock display",
+                    "play clock football field"
+                  ],
+                  "id": "01-05-c"
+                }
+              ],
+              "_k": 94,
+              "_cena": 4
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "B",
+              "fala": "Then the ball is snapped, and the clock in his head starts.",
+              "cards": [
+                {
+                  "gatilho": "Then",
+                  "tipo": "video",
+                  "descricao": "Close-up of the center snapping the football to the quarterback, slow motion",
+                  "buscas": [
+                    "football snap close up slow motion",
+                    "american football center snap",
+                    "football hike slow motion"
+                  ],
+                  "id": "01-06-a"
+                }
+              ],
+              "_k": 106,
+              "_cena": 5
+            },
+            {
+              "layout": "C1",
+              "fala": "On most passing plays, he has less than three seconds before the pocket collapses around him.",
+              "cards": [
+                {
+                  "gatilho": "On",
+                  "tipo": "video",
+                  "descricao": "Offensive and defensive linemen colliding after the snap, bodies pushing at the line",
+                  "buscas": [
+                    "american football linemen blocking",
+                    "football offensive line blocking slow motion",
+                    "american football tackle line clash"
+                  ],
+                  "id": "01-06-b"
+                },
+                {
+                  "gatilho": "three",
+                  "tipo": "video",
+                  "descricao": "Stopwatch ticking seconds, close-up",
+                  "buscas": [
+                    "stopwatch ticking close up",
+                    "stopwatch seconds counting",
+                    "stopwatch timer"
+                  ],
+                  "id": "01-06-c"
+                }
+              ],
+              "_k": 118,
+              "_cena": 5
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "D1",
+              "fala": "In that time, he has to move defenders with his eyes, find an open receiver, and throw, often while someone the size of a",
+              "cards": [
+                {
+                  "gatilho": "move",
+                  "tipo": "foto",
+                  "descricao": "Close-up of a quarterback's face mask and eyes looking downfield before throwing",
+                  "buscas": [
+                    "quarterback looking downfield close up",
+                    "american football quarterback eyes helmet",
+                    "quarterback face helmet close"
+                  ],
+                  "id": "01-07-a"
+                },
+                {
+                  "gatilho": "find",
+                  "tipo": "video",
+                  "descricao": "Wide receiver running a route open and catching a pass",
+                  "buscas": [
+                    "american football receiver catch slow motion",
+                    "wide receiver catching football",
+                    "football receiver running catch"
+                  ],
+                  "id": "01-07-b"
+                },
+                {
+                  "gatilho": "throw",
+                  "tipo": "video",
+                  "descricao": "Quarterback throwing a spiral pass, slow motion",
+                  "buscas": [
+                    "quarterback throwing football slow motion",
+                    "american football throw spiral",
+                    "football pass throw slow motion"
+                  ],
+                  "id": "01-07-c"
+                }
+              ],
+              "_k": 134,
+              "_cena": 6
+            },
+            {
+              "layout": "E2",
+              "fala": "refrigerator is closing in from the side he can't see.",
+              "cards": [
+                {
+                  "gatilho": "refrigerator",
+                  "tipo": "recorte",
+                  "png": true,
+                  "descricao": "Tall white refrigerator, front view, cutout without background",
+                  "buscas": [
+                    "refrigerator isolated png",
+                    "white fridge transparent background",
+                    "refrigerator white background"
+                  ],
+                  "id": "01-07-d"
+                },
+                {
+                  "gatilho": "closing",
+                  "tipo": "foto",
+                  "descricao": "Big defensive lineman rushing, charging forward in pads",
+                  "buscas": [
+                    "american football defensive lineman rushing",
+                    "football pass rusher charging",
+                    "defensive lineman american football"
+                  ],
+                  "id": "01-07-e"
+                }
+              ],
+              "_k": 158,
+              "_cena": 6
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "B4",
+              "fala": "Tom Brady was the 199th pick of the 2000 draft.",
+              "cards": [
+                {
+                  "gatilho": "Tom",
+                  "tipo": "foto",
+                  "descricao": "Tom Brady portrait in New England Patriots uniform",
+                  "buscas": [
+                    "Tom Brady Patriots portrait",
+                    "Tom Brady New England Patriots",
+                    "Tom Brady"
+                  ],
+                  "id": "01-08-a"
+                }
+              ],
+              "rotulos": [
+                [
+                  "Tom Brady",
+                  "Tom"
+                ],
+                [
+                  "199th pick",
+                  "199th"
+                ],
+                [
+                  "2000 draft",
+                  "2000"
+                ]
+              ],
+              "_k": 168,
+              "_cena": 7
+            },
+            {
+              "layout": "C9",
+              "fala": "He went on to win seven Super Bowls, more than any single franchise in the league.",
+              "cards": [
+                {
+                  "gatilho": "He",
+                  "tipo": "foto",
+                  "descricao": "Vince Lombardi Trophy on display, silver football trophy",
+                  "buscas": [
+                    "Vince Lombardi Trophy",
+                    "Lombardi Trophy display",
+                    "Super Bowl trophy"
+                  ],
+                  "id": "01-08-b"
+                },
+                {
+                  "gatilho": "seven",
+                  "tipo": "foto",
+                  "descricao": "Tom Brady holding the Lombardi Trophy after a Super Bowl win",
+                  "buscas": [
+                    "Tom Brady holding Lombardi Trophy",
+                    "Tom Brady Super Bowl trophy",
+                    "Tom Brady Super Bowl celebration"
+                  ],
+                  "id": "01-08-c"
+                }
+              ],
+              "_k": 178,
+              "_cena": 7
+            }
+          ]
+        },
+        {
+          "estados": [
+            {
+              "layout": "A",
+              "fala": "That's the gap between an average quarterback and a great one,",
+              "textos": [
+                [
+                  "average vs. great",
+                  "That's"
+                ]
+              ],
+              "_k": 194,
+              "_cena": 8
+            },
+            {
+              "layout": "B10",
+              "fala": "and it's why, in 2026, Patrick Mahomes signed an extension worth about $63 million a year.",
+              "cards": [
+                {
+                  "gatilho": "and",
+                  "tipo": "foto",
+                  "descricao": "Patrick Mahomes portrait in Kansas City Chiefs uniform",
+                  "buscas": [
+                    "Patrick Mahomes Chiefs portrait",
+                    "Patrick Mahomes Kansas City Chiefs",
+                    "Patrick Mahomes"
+                  ],
+                  "sticker": {
+                    "gatilho": "signed",
+                    "tipo": "logo",
+                    "descricao": "Kansas City Chiefs logo, transparent PNG",
+                    "buscas": [
+                      "Kansas City Chiefs logo png",
+                      "Chiefs logo transparent",
+                      "Kansas City Chiefs logo"
+                    ],
+                    "id": "01-09-b"
+                  },
+                  "id": "01-09-a"
+                }
+              ],
+              "rotulos": [
+                [
+                  "2026",
+                  "2026"
+                ],
+                [
+                  "Patrick Mahomes",
+                  "Patrick"
+                ],
+                [
+                  "$63M a year",
+                  "$63"
+                ]
+              ],
+              "_k": 205,
+              "_cena": 8
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

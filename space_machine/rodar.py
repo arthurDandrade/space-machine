@@ -1,13 +1,12 @@
 """Etapa a etapa de um bloco, do roteiro até a prévia aprovada pelo QA, sem conversa.
 
 Uso:
-  python -m estudio rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]
+  python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]
   etapas: narracao, transcrever, storyboard, buscar, escolher, editar, entregar
 
 Cada etapa vê pelos arquivos se já foi feita e pula (idempotente): dá para parar e rodar de novo.
 O Claude só entra no storyboard (sessão curta com voltas de correção), na escolha (escolher.py) e na
 correção automática do QA (uma vez). Exceções param o bloco com o motivo em <bloco>/_estudio/estado.json.
-Plano: ~/.claude/plans/sim-mas-planeje-tudo-splendid-eclipse.md (Fase 2).
 """
 import argparse
 import fcntl
@@ -24,6 +23,7 @@ from . import motor_claude as motor
 from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
 from .estado import conferir_pendentes, previas as previas_do_bloco
+from .sistema import FORMATOS, ambiente_motor
 
 ETAPAS = ["narracao", "transcrever", "storyboard", "buscar", "escolher", "editar", "entregar"]
 
@@ -98,27 +98,27 @@ class Rodada:
         return (cand.exists() and any(cand.iterdir())) or (self.p / "escolhas.json").exists()
 
     def _sistema_storyboard(self):
-        k = Path(self.c["conhecimento"])
-        agente = (Path(self.c["raiz"]) / ".claude" / "agents" / "storyboard.md").read_text()
-        regras = agente[agente.index("## As 60 variações"):agente.index("## Como trabalhar")]
-        log = (k / "05 - Aprendizados" / "Log de Aprendizados.md").read_text()
-        entradas = re.split(r"\n(?=## 20\d\d-)", log)[1:5]
+        # o que é do FORMATO vem de formatos/<formato>/; o que é do CANAL (aprendizados, regras do tema), do canal
+        f = FORMATOS / self.c.get("formato", "explained")
+        k = f / "conhecimento"
+        arq_log = Path(self.c["conhecimento"]) / "05 - Aprendizados" / "Log de Aprendizados.md"
+        entradas = re.split(r"\n(?=## 20\d\d-)", arq_log.read_text())[1:5] if arq_log.exists() else []
         compilar = (Path(self.c["scripts"]) / "compilar_cenas.py").read_text()
         doc = compilar[:compilar.index('"""', 3) + 3]
-        exemplo = next((x for x in [self.video / "blocos" / "01" / "cenas.json",
-                                    Path(self.c["producoes"]) / "who-makes-the-nfl-possible" / "blocos" / "01" / "cenas.json"]
+        exemplo = next((x for x in [self.video / "blocos" / "01" / "cenas.json", f / "exemplo_cenas.json"]
                         if x.exists() and x.parent != self.p), None)
         partes = [
-            motor.prompt("storyboard"),
-            "# Regras do storyboard (o storyboard.py mede as que dá)\n" + regras,
+            motor.prompt("storyboard", self.c),
+            "# Regras do storyboard (o storyboard.py mede as que dá)\n" + (f / "storyboard.md").read_text(),
             "# Formato do cenas.json (topo do compilar_cenas.py)\n" + doc,
             "# Biblioteca de Cenas\n" + (k / "02 - Cenas" / "Biblioteca de Cenas.md").read_text(),
             "# Da Narração às Cenas\n" + (k / "02 - Cenas" / "Da Narração às Cenas.md").read_text(),
-            "# Aprendizados recentes (topo do Log)\n" + "\n".join(entradas),
         ]
+        if entradas:
+            partes.append("# Aprendizados recentes deste canal (topo do Log)\n" + "\n".join(entradas))
         if exemplo:
-            partes.append(f"# Exemplo de cenas.json pronto ({exemplo.parent.parent.parent.name}, bloco "
-                          f"{exemplo.parent.name})\n" + exemplo.read_text())
+            partes.append(f"# Exemplo de cenas.json pronto (só para ver a ESTRUTURA; o assunto pode ser outro)\n"
+                          + exemplo.read_text())
         return "\n\n".join(partes)
 
     def _compilar_e_medir(self):
@@ -157,7 +157,7 @@ class Rodada:
                 f"O item do cenas.json tem \"id\": \"{self.nn}\" e \"nome\": \"{topico}\" (se a transcrição escreveu o "
                 f"nome diferente, ponha a forma da transcrição em \"nome_fala\"); o topo tem "
                 f"\"titulo\": \"{titulo}\".\n"
-                + (f"Observação do Arthur: {self.obs}\n" if self.obs else "")
+                + (f"Observação de quem produz: {self.obs}\n" if self.obs else "")
                 + ("ESTE BLOCO É O COLD OPEN do vídeo (gancho antes do 1º tópico): NÃO tem card de título nem nome "
                    "falado — no item use \"sem_titulo\": true e não escreva \"titulo\". A 1ª cena começa na 1ª palavra "
                    "da narração e precisa prender a atenção logo (cenas curtas, imagens fortes).\n"
@@ -169,7 +169,7 @@ class Rodada:
         if (self.p / "plano.json").exists() and (self.p / f"storyboard_{self.nn}.md").exists():
             return "já existe"
         if self._ja_buscou():
-            raise Parada("já existe busca/escolhas neste bloco: refazer o storyboard aqui é decisão do Arthur")
+            raise Parada("já existe busca/escolhas neste bloco: refazer o storyboard é decisão sua (apague _work/candidatos e escolhas.json e rode de novo)")
         sistema = self._sistema_storyboard()
         sid = str(uuid.uuid4())
         texto = self._pedido_storyboard()
@@ -317,7 +317,7 @@ class Rodada:
         sh = Path(self.c["editor"]) / "editar_bloco.sh"
         with open(self.log("editar"), "a") as f:
             r = subprocess.run([str(sh), str(self.p), self.nn, str(v)], cwd=self.c["raiz"], stdout=f,
-                               stderr=subprocess.STDOUT, timeout=3 * 3600)
+                               stderr=subprocess.STDOUT, timeout=3 * 3600, env=ambiente_motor(self.c))
         previa = self.p / "edicao" / f"previa_bloco_{self.nn}_v{v}.mp4"
         if not previa.exists():
             raise Parada("o After não gerou a prévia (pode estar travado num diálogo: olhar a tela)")
@@ -352,7 +352,7 @@ class Rodada:
         previas = previas_do_bloco(self.p)
         qa_md = self.p / "edicao" / f"qa_{self.nn}.md"
         # pula só se a prévia aprovada é mais nova que tudo o que entra nela (cenas, assets e o próprio editor)
-        # e se o Arthur não pediu para editar de novo (--de editar): antes pulava e a observação dele se perdia
+        # e se ninguém pediu para editar de novo (--de editar): antes pulava e a observação dele se perdia
         entradas = [self.p / "manifesto.json", self.p / "cenas.json", self.p / "plano.json",
                     Path(self.c["editor"]) / "gerar_ae2.py"]
         mais_novo = max((f.stat().st_mtime for f in entradas if f.exists()), default=0)
@@ -375,7 +375,7 @@ class Rodada:
         previas = previas_do_bloco(self.p)
         if not previas:
             raise Parada("sem prévia para entregar")
-        # "conferir" e assets pulados travam a entrega até o Arthur aprovar no painel: antes ficavam só no
+        # "conferir" e assets pulados travam a entrega até alguém aprovar no painel: antes ficavam só no
         # revisao.html e um snapper do Jets debaixo do logo do Giants passou direto (2026-10-11)
         pend = conferir_pendentes(self.p) if self.cfg.get("travar_conferir") else {}
         if pend:
@@ -454,7 +454,7 @@ class Rodada:
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="estudio rodar")
+    ap = argparse.ArgumentParser(prog="space_machine rodar")
     ap.add_argument("bloco")
     ap.add_argument("--de", choices=ETAPAS)
     ap.add_argument("--ate", choices=ETAPAS)

@@ -12,7 +12,9 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-RAIZ = Path(__file__).resolve().parent.parent
+RAIZ = Path(__file__).resolve().parent.parent          # motor/busca (config padrão, dados/, ocr/)
+sys.path.insert(0, str(RAIZ.parent))
+import caminhos  # noqa: E402  (motor/caminhos.py: canal, dados, cache, chaves)
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
 
@@ -21,7 +23,8 @@ sessao.headers.update({"User-Agent": UA})
 
 
 def config():
-    return json.loads((RAIZ / "config.json").read_text())
+    """Config padrão do motor com canal.json["busca"] do canal por cima."""
+    return caminhos.config_busca()
 
 
 def ler_json(caminho, padrao=None):
@@ -68,7 +71,7 @@ def limpar_cache(dias_img=30, dias_busca=30):
     """Apaga do _cache/ as imagens baixadas há mais de 30 dias e buscas vencidas (quadros do YouTube ficam)."""
     agora = time.time()
     for sub, dias in (("img", dias_img), ("busca", dias_busca)):
-        for f in (RAIZ / "_cache" / sub).glob("*"):
+        for f in (caminhos.cache() / sub).glob("*"):
             try:
                 if agora - f.stat().st_mtime > dias * 86400:
                     f.unlink()
@@ -80,7 +83,7 @@ def baixar_imagem(url, destino_sem_ext, lado_minimo, max_mb=30):
     """Baixa e valida uma imagem. Retorna (caminho, largura, altura) ou None.
     Cache por URL (2026-10-10) em _cache/img/: a mesma imagem em outro asset/bloco não baixa de novo;
     URL que falhou fica marcada por 7 dias."""
-    cache = RAIZ / "_cache" / "img" / hashlib.sha1(url.encode()).hexdigest()
+    cache = caminhos.cache() / "img" / hashlib.sha1(url.encode()).hexdigest()
     falhou = cache.with_suffix(".falhou")
     if falhou.exists() and time.time() - falhou.stat().st_mtime < 7 * 86400:
         return None

@@ -12,7 +12,7 @@
 <div class="card" id="{{ a.id }}" style="margin-top:14px">
   <div class="linha" style="justify-content:space-between">
     <h3 style="margin:0">{{ a.nome }} {% if a.configurada %}<span class="pill p-ok">configurada</span>{% else %}<span class="pill p-warn">sem chave</span>{% endif %}
-      {% if a.escopo == "estudio" %}<span class="pill p-neu">vale para todos os canais</span>{% endif %}</h3>
+      {% if a.escopo == "sistema" %}<span class="pill p-neu">vale para todos os canais</span>{% endif %}</h3>
     <form method="post" action="/config/apis/{{ canal }}/{{ a.id }}/testar"><button type="submit">Testar</button></form>
   </div>
   <div class="sub">{{ a.ajuda }} · <code>{{ a.caminho }}</code></div>

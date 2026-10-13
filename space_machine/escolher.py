@@ -1,12 +1,11 @@
 """Etapa "escolher": escolhe os assets de um bloco com chamadas isoladas ao Claude (uma por asset),
 grava escolhas.json no formato da skill buscar-assets, baixa (finalizar.py --asset) e confere.
 
-Substitui o subagente escolher-assets (que continua de plano B). Ver o plano em
-~/.claude/plans/sim-mas-planeje-tudo-splendid-eclipse.md (Fase 1).
+Substitui o subagente escolher-assets (que continua de plano B).
 
 Uso:
-  python -m estudio escolher <bloco> [--asset ID ...] [--modelo haiku] [--sem-finalizar] [--sem-conferir]
-  python -m estudio escolher <bloco> --sombra      # refaz as escolhas que já existem em escolhas_estudio.json
+  python -m space_machine escolher <bloco> [--asset ID ...] [--modelo haiku] [--sem-finalizar] [--sem-conferir]
+  python -m space_machine escolher <bloco> --sombra      # refaz as escolhas que já existem em escolhas_estudio.json
                                                    # e compara com as do subagente (nada é baixado)
 """
 import argparse
@@ -66,7 +65,7 @@ class Bloco:
         self.trava = threading.Lock()
         self.notas = []          # linhas do resumo final
         self.parou_por_limite = False
-        self.obs = ""            # observação do Arthur, vai junto em todo pedido (--obs)
+        self.obs = ""            # observação de quem produz, vai junto em todo pedido (--obs)
 
     # ---------- dados ----------
     def assets(self):
@@ -118,7 +117,7 @@ class Bloco:
             linhas.append("Na mesma cena também entram: " + "; ".join(
                 f"{o.get('papel', 'card')} {o['tipo']}: {o.get('descricao', '')[:90]}" for o in outros))
         if self.obs:
-            linhas.append(f"Observação do Arthur: {self.obs}")
+            linhas.append(f"Observação de quem produz: {self.obs}")
         if a["tipo"] == "video":
             linhas.append("Vídeos candidatos:")
             for v in meta["candidatos"]:
@@ -134,7 +133,7 @@ class Bloco:
         return "\n".join(linhas)
 
     def chamar(self, etapa, prompt, texto, imagens, schema, aid, modelo=None):
-        r = motor.chamar(etapa, motor.prompt(prompt), texto, imagens=imagens, schema=schema,
+        r = motor.chamar(etapa, motor.prompt(prompt, self.c), texto, imagens=imagens, schema=schema,
                          modelo=modelo or self.modelo, ctx={**self.ctx, "asset": aid})
         uso = r.pop("_uso")
         self.registrar(f"[{aid}] {etapa} ({uso['modelo']}, {uso['equivalente']:,} equiv.): "
@@ -215,10 +214,10 @@ class Bloco:
         return out
 
     # ---------- resgate: o bloco não para por asset (2026-10-12) ----------
-    GENERICAS = {"historica": ["American football 1910s", "college football game 1920s",
-                               "vintage American football game photograph"],
-                 "outros": ["american football game action", "american football players on the field",
-                            "american football"]}
+    def genericas(self, tipo):
+        """Buscas genéricas do tema do canal (canal.json › regras.busca.genericas: {"historica": [...], "outros": [...]})."""
+        g = (ler_json(Path(self.c["raiz"]) / "canal.json", {}) or {}).get("regras", {}).get("busca", {}).get("genericas", {})
+        return g.get(tipo) or g.get("outros") or [self.c.get("tema") or self.plano.get("titulo", "")]
 
     def _escolha_arquivo(self, arquivo, fonte, licenca, conferir, n=None):
         out = {"arquivo": str(arquivo), "fonte": fonte, "licenca": licenca or "", "conferir": conferir}
@@ -231,13 +230,13 @@ class Bloco:
         1) foto com busca GENÉRICA e escolha que aceita imagem relacionada (não exige o lance exato);
         2) candidato ainda não usado de outro asset da mesma cena (já baixado, sem custo);
         3) repetir o asset vizinho da mesma cena.
-        Tudo sai com "conferir" para o Arthur ver na prévia."""
+        Tudo sai com "conferir" para quem produz ver na prévia."""
         achado = next(((it, ce, a) for it, ce, a in self.assets() if a["id"] == aid), None)
         if not achado:
             return None
         item, cena, a = achado
         tipo_busca = "historica" if a["tipo"] == "historica" else "foto"
-        consultas = self.GENERICAS["historica" if tipo_busca == "historica" else "outros"]
+        consultas = self.genericas("historica" if tipo_busca == "historica" else "outros")
         # 1) busca genérica + escolha "a mais próxima"
         args = [self.p, "--refazer", "--asset", aid, "--tipo", tipo_busca]
         for q in consultas:
@@ -630,7 +629,7 @@ class Bloco:
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="estudio escolher")
+    ap = argparse.ArgumentParser(prog="space_machine escolher")
     ap.add_argument("bloco")
     ap.add_argument("--asset", action="append", default=[])
     ap.add_argument("--sombra", action="store_true")

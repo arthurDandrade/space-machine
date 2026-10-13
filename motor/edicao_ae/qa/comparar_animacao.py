@@ -5,7 +5,9 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from medir_animacao import medir
 import io, contextlib
-R = Path("/Users/arthur/Canais/ProFootball/Videos Referencias")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402
+R = caminhos.referencias()
 V = {k: str(next(R.glob(f"*{k}*"))) for k in ("Chocolate", "Luxury", "Sugars")}
 REF_E = [("Chocolate", 41.5), ("Chocolate", 56.5), ("Chocolate", 156.25), ("Chocolate", 240.25), ("Luxury", 75.5), ("Luxury", 117.0), ("Luxury", 126.25), ("Sugars", 60.0), ("Sugars", 108.5), ("Sugars", 134.5)]
 REF_S = [("Chocolate", 35.5), ("Chocolate", 132.25), ("Chocolate", 347.75), ("Luxury", 125.5), ("Luxury", 151.0), ("Luxury", 302.0), ("Sugars", 114.0), ("Sugars", 163.75)]

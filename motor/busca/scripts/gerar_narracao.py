@@ -7,11 +7,10 @@ Uso:
       lê <bloco>/roteiro.txt (ignora linhas que começam com '#')
       e grava <bloco>/narracao.mp3.
 
-Chave: variável FISH_API_KEY ou arquivo ProFootball/.env.fishaudio
+Chave: variável FISH_API_KEY ou .env do canal (FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL)
 (linha FISH_API_KEY=...). Voz padrão: FISH_VOICE_ID (o reference_id do modelo de voz);
 modelo padrão: FISH_MODEL (s1, s2-pro, s2.1-pro...; sem nada usa s2.1-pro).
 Docs: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
-Versão antiga (DarkPlanner): removida em 2026-10-13 (ProFootball_backups/lixo_removido_2026-10-13.tar.gz).
 """
 import argparse
 import json
@@ -23,27 +22,21 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402
+
 BASE = "https://api.fish.audio"
-RAIZ = Path(__file__).resolve().parents[2]
-ENV = RAIZ / ".env.fishaudio"
-UA = "ProFootball-narracao/2.0"
+UA = "SpaceMachine-narracao/2.0"
 
 
 def config(nome):
-    if os.environ.get(nome):
-        return os.environ[nome]
-    if ENV.exists():
-        for linha in ENV.read_text().splitlines():
-            k, _, v = linha.partition("=")
-            if k.strip() == nome:
-                return v.strip().strip('"').strip("'")
-    return None
+    return caminhos.env(nome)
 
 
 def chamar(metodo, caminho, corpo=None, headers=None, timeout=60):
     chave = config("FISH_API_KEY")
     if not chave:
-        sys.exit(f"Sem chave: defina FISH_API_KEY ou crie {ENV}")
+        sys.exit("Sem chave: defina FISH_API_KEY no .env do canal (painel › APIs)")
     dados = json.dumps(corpo).encode() if corpo is not None else None
     h = {"Authorization": f"Bearer {chave}", "Content-Type": "application/json", "User-Agent": UA}
     h.update(headers or {})
@@ -118,7 +111,7 @@ def main():
         ap.error("informe a pasta do bloco, --vozes ou --uso")
     voz = a.voz or config("FISH_VOICE_ID")
     if not voz:
-        sys.exit("Sem voz: use --voz ID ou FISH_VOICE_ID no .env.fishaudio (veja --vozes)")
+        sys.exit("Sem voz: use --voz ID ou FISH_VOICE_ID no .env do canal (veja --vozes)")
     gerar(Path(a.bloco).resolve(), voz, a.speed, a.modelo or config("FISH_MODEL") or "s2.1-pro")
 
 

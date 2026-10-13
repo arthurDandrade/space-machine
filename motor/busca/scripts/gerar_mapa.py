@@ -19,6 +19,10 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402
+
 DADOS = Path(__file__).resolve().parent.parent / "dados"
 IMPACT = "/System/Library/Fonts/Supplemental/Impact.ttf"
 AGUA, TERRA, TERRA_FORA = "#D7E3F1", "#F8F6F1", "#ECEAE4"
@@ -26,9 +30,8 @@ BORDA, BORDA_EST = "#A9B0BC", "#C6CBD4"
 CORES = {"azul": "#1D2D85", "laranja": "#F07D1A"}     # azul = Identidade Visual; laranja = referências
 CONTORNO_CINZA, CONTORNO_VERM = "#C9CDD5", "#D42A2A"
 TEXTO = "#191A21"
-_CANAL = Path(__file__).resolve().parents[2] / "canal.json"   # identidade do canal (Estúdio, 2026-10-11)
-if _CANAL.exists():
-    _id = json.loads(_CANAL.read_text()).get("identidade", {})
+_id = caminhos.identidade()          # identidade do canal (canal.json do canal deste trabalho)
+if _id:
     TEXTO = _id.get("cor_texto", TEXTO)
     CORES["azul"] = _id.get("cor_destaque", CORES["azul"])
     IMPACT = _id.get("fonte_marca_arquivo", IMPACT)

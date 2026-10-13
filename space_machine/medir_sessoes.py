@@ -14,7 +14,7 @@ from pathlib import Path
 
 PADRAO = Path.home() / ".claude/projects/-Users-arthur-Canais-ProFootball"
 PESOS = {"input_tokens": 1, "cache_creation_input_tokens": 1.25, "cache_read_input_tokens": 0.1, "output_tokens": 5}
-RE_BLOCO = re.compile(r"(/Users/arthur/Canais/[^\s\"'`]+?/blocos/\d+)")
+RE_BLOCO = re.compile(r"(/[^\s\"'`]+?/blocos/\d+)")
 
 
 def somar(jsonl):

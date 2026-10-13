@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block titulo %}Estúdio{% endblock %} · Estúdio</title>
+<title>{% block titulo %}Space Machine{% endblock %} · Space Machine</title>
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script>
 // 286 = "pare de atualizar" (bloco parado e sem mudança). O htmx trocava o conteúdo pela resposta vazia e o
@@ -57,7 +57,7 @@ label.campo{display:block;margin:8px 0;font-size:13px;color:var(--muted)}label.c
 </style>
 </head>
 <body>
-<header><span class="marca">Estúdio</span><nav>
+<header><span class="marca">Space Machine</span><nav>
 <a href="/">Início</a>
 {% for slug, nome in canais_menu() %}<a href="/canal/{{ slug }}/producao">Produção{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a><a href="/canal/{{ slug }}/calendario">Calendário{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a>{% endfor %}
 <a href="/consumo">Consumo</a><a href="/config/canais">Canais</a><a href="/config/apis">APIs</a><a href="/config/modelos">Modelos</a></nav></header>

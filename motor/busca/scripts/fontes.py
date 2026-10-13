@@ -8,11 +8,11 @@ import sys
 import time
 from pathlib import Path
 
-from comum import log, sessao
+from comum import caminhos, log, sessao
 
 _ultimo_ddg = [0.0]
 # A Wikimedia pede um User-Agent que identifique a ferramenta (senão pode bloquear).
-UA_WIKIMEDIA = "ProFootballBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)"
+UA_WIKIMEDIA = "SpaceMachineBuscadorAssets/1.0 (ferramenta pessoal de pesquisa de imagens)"
 
 
 def _ddg_espera():
@@ -52,7 +52,7 @@ def web_transparente(consulta, n, orientacao=None):
 
 def google(consulta, n, orientacao=None, transparente=False):
     """Google Imagens pela API do Serper (2026-10-10). Chave SERPER_API_KEY (ambiente ou
-    ProFootball/.env.fontes); sem chave, pulado (o "web" do DuckDuckGo continua como reserva).
+    .env do canal); sem chave, pulado (o "web" do DuckDuckGo continua como reserva).
     Cada chamada gasta 1 crédito do Serper."""
     chave = chave_api("SERPER_API_KEY")
     if not chave:
@@ -146,7 +146,7 @@ def openverse(consulta, n, orientacao=None):
 
 def smithsonian(consulta, n, orientacao=None):
     # Sem chave, pulado (2026-10-10): a DEMO_KEY só dá 10 buscas/hora e estourava calada.
-    # Chave grátis: api.data.gov/signup → SI_API_KEY no .env.fontes, e volta sozinho.
+    # Chave grátis: api.data.gov/signup → SI_API_KEY no .env do canal, e volta sozinho.
     chave = chave_api("SI_API_KEY")
     if not chave:
         log("   smithsonian: sem SI_API_KEY (pulado)")
@@ -187,20 +187,10 @@ def smithsonian(consulta, n, orientacao=None):
 # ---------------------------------------------------------------------------------------------
 # Vídeos (desde 2026-10-11 só estes; o YouTube foi removido): bancos livres que não bloqueiam IP. Cada candidato traz
 # "url" (arquivo para o trecho final, até 1080p) e "url_preview" (versão leve para a folha).
-# Chaves (grátis): PEXELS_API_KEY / PIXABAY_API_KEY no ambiente ou em ProFootball/.env.fontes.
+# Chaves (grátis): PEXELS_API_KEY / PIXABAY_API_KEY no ambiente ou no .env do canal.
 # ---------------------------------------------------------------------------------------------
-ENV_FONTES = Path(__file__).resolve().parents[2] / ".env.fontes"
-
-
 def chave_api(nome):
-    if os.environ.get(nome):
-        return os.environ[nome]
-    if ENV_FONTES.exists():
-        for linha in ENV_FONTES.read_text().splitlines():
-            k, _, v = linha.partition("=")
-            if k.strip() == nome and v.strip():
-                return v.strip().strip('"').strip("'")
-    return None
+    return caminhos.env(nome) or None
 
 
 def _ate_1080(arquivos, chave_w="width", chave_h="height"):
@@ -398,14 +388,13 @@ def _limpa_html(s):
 # ---------------------------------------------------------------------------------------------
 # Cache global de buscas (2026-10-10): a mesma consulta na mesma fonte (outro asset, outro bloco,
 # --refazer, outro vídeo) não vai de novo à internet por cache_busca_dias. Resultado vazio não
-# é guardado (pode ter sido erro/limite de taxa). Pasta: buscador_assets/_cache/busca/.
+# é guardado (pode ter sido erro/limite de taxa). Pasta: <dados>/cache/busca/.
 # ---------------------------------------------------------------------------------------------
-CACHE = Path(__file__).resolve().parents[1] / "_cache"
 
 
 def _dias_cache():
     try:
-        return float(json.loads((CACHE.parent / "config.json").read_text()).get("cache_busca_dias", 7))
+        return float(caminhos.config_busca().get("cache_busca_dias", 7))
     except Exception:
         return 7.0
 
@@ -415,7 +404,7 @@ def com_cache(nome, fn):
 
     def envolvida(*args):
         chave = hashlib.sha1(json.dumps([nome, *args], ensure_ascii=False).encode()).hexdigest()
-        arq = CACHE / "busca" / f"{chave}.json"
+        arq = caminhos.cache() / "busca" / f"{chave}.json"
         if arq.exists() and time.time() - arq.stat().st_mtime < _dias_cache() * 86400:
             try:
                 res = json.loads(arq.read_text())

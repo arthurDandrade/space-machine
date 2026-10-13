@@ -28,7 +28,7 @@
 
 <h2>Novo canal</h2>
 <form method="post" action="/config/canais-novo" enctype="multipart/form-data" class="card">
-  <div class="sub">Copia o motor do Pro Football (busca sem YouTube, edição, QA, regras de cena) para uma pasta nova em /Users/arthur/Canais e cria a pasta de conhecimento do canal com as notas do formato. Produções, cache e chaves não são copiados.</div>
+  <div class="sub">Cria a pasta do canal em <code>{{ dados }}/canais/</code> (identidade, conhecimento, produções e chaves próprias). O motor é o mesmo para todos os canais; depois de criar, preencha as chaves em APIs e as regras do tema abaixo.</div>
   <div class="duas" style="margin-top:8px">
     <div>
       <label class="campo">Nome do canal<input name="nome" required placeholder="Space Explained"></label>

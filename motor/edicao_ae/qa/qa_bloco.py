@@ -23,7 +23,10 @@ sys.path.insert(0, str(AQUI))
 from medidas import cards_validos, estaveis, eventos_por_min, ler_det, medir_deteccao, pct  # noqa: E402
 
 REF = json.loads((AQUI / "referencia.json").read_text())
-REFS_DIR = Path("/Users/arthur/Canais/ProFootball/Videos Referencias")
+sys.path.insert(0, str(AQUI.parents[1]))
+import caminhos  # noqa: E402
+
+REFS_DIR = caminhos.referencias()        # vídeos de referência do formato (opcionais: sem eles, a folha não compara)
 EST = REFS_DIR / "estudo_cenas"
 PY = sys.executable
 MIN_ASSET = 1.8
@@ -225,9 +228,11 @@ CATEG = {"A": "texto", "B": "1card", "B4": "rotulo", "B5": "rotulo", "C1": "2car
 
 
 # mesma lista do buscador (domínios: "alamy.com", não "alamy" — foto licenciada da Alamy republicada pela PFF é limpa)
-BLOQUEADOS = tuple(json.loads((Path(__file__).resolve().parents[2] / "buscador_assets" / "config.json").read_text())
-                   ["dominios_bloqueados"])
-SOCCER = ("fifa", "world cup", "world-cup", "worldcup", "soccer", "premier league", "uefa", "la liga", "bundesliga")
+BLOQUEADOS = tuple(caminhos.config_busca()["dominios_bloqueados"])
+# assunto errado para o tema do canal (canal.json › regras.qa): no Pro Football, soccer/FIFA/Copa
+_QA = caminhos.regras().get("qa", {})
+PROIBIDOS = tuple(_QA.get("termos_proibidos", []))
+PERMITIDO_SE = _QA.get("permitido_se", "")
 
 
 def checar_layout(proj, item, R):
@@ -262,7 +267,7 @@ def checar_layout(proj, item, R):
 
 
 def checar_origem(proj, R):
-    """Assets de banco com marca d'água ou de futebol/soccer (positions 03: Copa de 2022 com selo FIFA)."""
+    """Assets de banco com marca d'água ou de assunto proibido no tema do canal (positions 03: Copa de 2022 com selo FIFA)."""
     man = proj / "manifesto.json"
     if not man.exists():
         return
@@ -271,15 +276,15 @@ def checar_origem(proj, R):
         o = a_.get("origem", {})
         txt = " ".join(str(o.get(k, "")) for k in ("url", "pagina", "titulo", "autor")).lower()
         m = [d for d in BLOQUEADOS if d in txt]
-        # soccer só conta se o pedido não é de soccer (16-05-c: chute "estilo futebol" de propósito) e a origem não
-        # diz também american football/NFL (tags do pxhere vêm com "soccer, american football")
-        if not any(s in (a_.get("descricao") or "").lower() for s in SOCCER) and \
-                not re.search(r"american football|\bnfl\b", txt):
-            m += [s for s in SOCCER if s in txt]
+        # termo proibido só conta se o pedido não pede esse termo (16-05-c: chute "estilo futebol" de propósito) e a
+        # origem não diz também o tema certo (tags do pxhere vêm com "soccer, american football")
+        if PROIBIDOS and not any(s in (a_.get("descricao") or "").lower() for s in PROIBIDOS) and \
+                not (PERMITIDO_SE and re.search(PERMITIDO_SE, txt)):
+            m += [s for s in PROIBIDOS if s in txt]
         if m:
             ruins.append(f"{a_['id']}: {', '.join(m)} — {o.get('pagina') or o.get('url', '')}"[:160])
     R.add("OK" if not ruins else "FALHA", "Origem dos assets",
-          "sem banco com marca d'água (Vecteezy, Shutterstock...) e sem futebol/soccer (FIFA, Copa)", ruins)
+          "sem banco com marca d'água (Vecteezy, Shutterstock...) e sem assunto proibido no tema do canal", ruins)
 
 
 def frame(video, t, w=640):

@@ -1,0 +1,27 @@
+# Regras do storyboard (formato "___ Explained")
+
+Lidas pelo orquestrador (`rodar._sistema_storyboard`) e pelo subagente `.claude/agents/storyboard.md`. O `storyboard.py` mede as que dá.
+
+## As 60 variações, não os 34 nomes
+O compilador aceita ~34 nomes em `"layout"`, mas **as 60 variações da biblioteca funcionam todas**: muitas são um layout genérico + um campo no card. Planeje pela biblioteca:
+- A1/A2/A3 = `A` (+ `"cresce"`/`"2linhas"`); A4 = `A4`.
+- B1/B2 = `B`; B3/B7 = `"sobre"`; B6 = `"troca"`; B8 = `"acima"` (só em par/trio); E4 = `"sticker"`.
+- C5 = `C1` com um card `"mapa"`; M4 = `C1` com 2 mapas; C4 = `C1` com `"acima"` nos dois; C8 = `C1` com `"troca"` num card.
+- F1–F7 = **uma cena com vários `"estados"`** (1 card → 2 → 3; card → mapa → texto…).
+- M1/M2 = card com `"mapa": {...}` (gerado, sem busca); T1–T3 = `"sai"`, `"entra"`, `"dissolve"`.
+- G2/G3 = `"tabela"`/`"grafico"` com **dados reais do roteiro** + `"fonte"`; G1 = `"citacao"` com texto real.
+
+## Regras (o `storyboard.py` confere as que dá para medir)
+1. **≥ 8 variações diferentes** no bloco; nenhuma família domina.
+2. **Card único (B1/B2/B4/B5/B6/B7/B9/B10/M1) ≤ 35% dos estados** e **nunca 3 seguidos**.
+3. **≥ 40% das cenas evoluem** (2–4 estados, família F), sem palco vazio.
+4. **Texto solo 12–35% do tempo**, frases de 2–6 palavras (frase longa encolhe a fonte: o QA reprova texto < 108 px). Texto sobre imagem só nome/número/data/termo (~30% das cenas de imagem).
+5. **Cada asset e cada item de `troca` ≥ 1,8 s** na tela. Confira na transcrição a distância entre os gatilhos **antes** de escrever (trocas com gatilhos colados reprovaram nos blocos 02 e 08 de "Who Makes the NFL Possible").
+6. **15–25 assets/min** (meta da nota: 20–25).
+7. **Título ≥ 1 s**: se o narrador emenda o título na frase seguinte, a 1ª cena começa na frase depois.
+8. **Gatilho = palavra como está na transcrição** (o Whisper erra: "Bye weeks" saiu "Five weeks"; use a palavra errada no gatilho e o texto certo na tela).
+9. **Assets que existem.** **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies). Peça foto do que dá para achar na web (jogador, estádio, logo, objeto, foto de lance famoso) e vídeo só do que existe em banco livre: plano genérico (drone de estádio/cidade, torcida, bola, gramado, natureza, trânsito, obra) ou imagem de época (cinejornal, guerra, cidade antiga, filme de governo dos EUA). Transmissão de jogo, lance específico, coletiva e bastidor de time **não existem** nesses bancos: use foto, texto, número em G2/G3 ou mapa, e anote o risco. Nunca planeje imagem de IA de pessoa/lance real. **Vídeo é exceção (2026-10-12):** no Every NFL Position, 28% dos vídeos pedidos não existiam nos bancos livres (0% das fotos). Ação de futebol americano, mesmo genérica (recebedor pegando a bola, DB correndo de costas, pass rush, bloqueio, snap, corte, cobertura), é **foto**. Vídeo só para o que existe aos montes: estádio/torcida sem time, bola em treino, campo/trave vazios, drone, jogo amador de longe, silhueta treinando. Histórica = **foto** antiga de acervo ("college football game 1920s"), não newsreel.
+10. **Fonte de cada vídeo (`"fontes"` no card).** Sem o campo, o vídeo é buscado em Pexels + Pixabay e, se faltar, Commons + Archive. Imagem de época → `"fontes": ["archive", "commons"]`. Buscas para esses bancos são curtas e visuais ("stadium drone aerial", "Chicago skyline drone"), sem nome de time. Campo `"lance"` não serve mais.
+11. Use a variedade a favor do conteúdo: **número com vários valores → G2/G3**; lugar → mapa (C5/M2/M5/F8); objeto → recorte (E2/E3/D7); pessoa citada → B10/C4/F8; comparação → C4/M4; lista de 3–4 → D1/D4/D5/D6/F1; regra/citação → G1; time/país → E4/E5/M7.
+12. **Tempo dos nomes e textos (2026-10-12, positions; o `storyboard.py` avisa).** (a) **B10:** o card precisa entrar **≥ 1,5 s antes** da palavra do 1º rótulo, porque o nome só aparece depois que o card desliza. Se o nome é a 1ª palavra da fala ("Tom Brady was…", "a pathologist named Bennet Omalu" com a cena seguinte colada), use **B4** (card já entra do lado). (b) Rótulos do mesmo estado com **≥ 1,2 s** entre um e outro (mais rápido não dá para ler, e o editor junta em 2 linhas). (c) O **último** rótulo/texto do estado precisa de **≥ 1,2 s** até o próximo estado: se a palavra é dita colada na troca, comece o estado seguinte uma palavra depois. (d) Lista dita de uma vez ("memory loss, confusion, years of struggle") = **empilhar** com `"cresce"`, nunca A4 trocando a cada palavra.
+13. **`"cresce"` só quando o texto novo COMEÇA com o anterior** ("died in 2002" → "died in 2002, at 50"). Texto diferente ("November 18, 1985" → "Monday Night Football") é troca normal, sem `"cresce"`.
