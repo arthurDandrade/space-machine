@@ -8,12 +8,12 @@ description: Busca na internet todos os assets (fotos, vídeos de bancos livres,
 > **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies).
 
 Você recebe **roteiro + narração** e entrega **todos os assets prontos** para a edição, cada um amarrado à palavra da narração em que aparece. O formato visual está descrito em
-`/Users/arthur/Canais/ProFootball/Videos Referencias/Analise_Edicao/ANALISE_EDICAO.md` — leia as seções 3, 4 e 6 antes de planejar o primeiro vídeo.
+`formatos/explained/referencias/Analise_Edicao/ANALISE_EDICAO.md` — leia as seções 3, 4 e 6 antes de planejar o primeiro vídeo.
 
-Motor: `/Users/arthur/Canais/ProFootball/buscador_assets/` (scripts em `scripts/`, Python em `.venv/bin/python`). Rode sempre a partir dessa pasta:
+Motor: `motor/busca/` (scripts em `scripts/`, Python em `../../.venv/bin/python`). Rode sempre a partir dessa pasta:
 
 ```bash
-cd /Users/arthur/Canais/ProFootball/buscador_assets
+cd motor/busca
 PY=.venv/bin/python
 ```
 
@@ -26,13 +26,13 @@ PY=.venv/bin/python
 5. buscar        → _work/candidatos/<asset>/folha.jpg
 6. ESCOLHER      → escolhas.json         ← você, olhando cada folha
 7. finalizar     → assets/ + manifesto.json + creditos.txt + revisao.html
-8. editar        → editor_ae/gerar_ae2.py → After Effects → prévia (ver nota "Edição no After Effects")
+8. editar        → motor/edicao_ae/gerar_ae2.py → After Effects → prévia (ver nota "Edição no After Effects")
 ```
 O layout de cada cena decide o formato do asset (par → retrato, card único → paisagem, PNG → recorte/logo,
 troca no lugar → vídeo vertical). Por isso a cena é planejada ANTES da busca.
 
 ### 1. Projeto
-Pasta padrão: `/Users/arthur/Canais/ProFootball/producoes/videos/<slug>/` com `roteiro.txt` (itens separados por `# Nome do item`) e a narração copiada.
+Pasta padrão: `<dados>/canais/<canal>/producoes/<slug>/` com `roteiro.txt` (itens separados por `# Nome do item`) e a narração copiada.
 
 ### 2. Transcrever
 ```bash
@@ -62,7 +62,7 @@ O formato completo está no topo de `scripts/compilar_cenas.py`. Resumo:
 - **Nada de segundos**: `fala` = começo do trecho falado (as 3 primeiras palavras localizam o estado); `gatilho` = palavra em que o elemento entra. Tudo escrito como na transcrição.
 - **Uma cena = vários estados** quando a composição evolui (família F). Cada estado: `layout` + `cards` e/ou `textos`/`rotulos`.
 - Vídeo: só bancos livres. Sem `"fontes"`: Pexels + Pixabay, e Commons + Archive se faltar. Imagem de época: `"fontes": ["archive", "commons"]`. Buscas curtas e visuais, sem nome de time.
-- Imagem: sem `"fontes"`, segue o rank em camadas do `config.json` (DuckDuckGo + Commons primeiro; Google/Serper é pago e fica por último; ver nota **Rank de Fontes**). Use `"fontes"` no card só para mudar o rank (ex.: genérico → `["pixabay", "google"]`). Chave do Serper (Google) em `ProFootball/.env.fontes`.
+- Imagem: sem `"fontes"`, segue o rank em camadas do `config.json` (DuckDuckGo + Commons primeiro; Google/Serper é pago e fica por último; ver nota **Rank de Fontes**). Use `"fontes"` no card só para mudar o rank (ex.: genérico → `["pixabay", "google"]`). Chave do Serper (Google) no `.env` do canal (painel › APIs).
 - Card: `tipo` (foto/video/historica/recorte/logo/mapa/bandeira), `descricao`, `buscas`, opcionais `sobre`, `acima`, `legenda`, `sticker` (outro asset), `troca` (lista de assets que trocam no mesmo quadro), `png`, `entra`/`sai`.
 - Reaproveitar: `{"reusar": "<id>"}` (asset já pronto) ou `{"arquivo": "_work/candidatos/<id>/04.jpg"}` (alternativa já baixada).
 - Textos: `"texto"` ou `["texto", "gatilho", "cresce"|"2linhas"|"abaixo"]`.
@@ -149,7 +149,7 @@ $PY scripts/status.py <projeto> --pendentes
 - **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies).
 - Material da NFL (fotos de jogo, transmissões, logos) é protegido por direitos autorais; o Arthur escolheu usar busca na web sabendo disso. Mantenha o `creditos.txt` sempre gerado.
 - A busca do DuckDuckGo pode limitar a taxa de buscas: o script espera entre buscas e tenta de novo; se falhar muito, espere alguns minutos e rode `buscar.py` de novo (ele só busca o que falta).
-- Smithsonian só entra na busca com `SI_API_KEY` (grátis em api.data.gov) no `ProFootball/.env.fontes`; sem ela é pulado (a `DEMO_KEY` só dava 10 buscas/hora).
+- Smithsonian só entra na busca com `SI_API_KEY` (grátis em api.data.gov) no `.env` do canal; sem ela é pulado (a `DEMO_KEY` só dava 10 buscas/hora).
 
 ## Registrar o que aprendeu (pasta de conhecimento)
 O conhecimento do canal vive na pasta de conhecimento `conhecimento/Pro Football/` (arquivos `.md`, editados direto no disco). Ao terminar uma busca de assets:
@@ -160,6 +160,6 @@ O conhecimento do canal vive na pasta de conhecimento `conhecimento/Pro Football
 ## Controle de qualidade (obrigatório antes de entregar um bloco)
 Depois de renderizar a prévia no After:
 ```bash
-cd /Users/arthur/Canais/ProFootball/editor_ae && ../buscador_assets/.venv/bin/python qa/qa_bloco.py <projeto> --item <id>
+cd motor/edicao_ae && ../../.venv/bin/python qa/qa_bloco.py <projeto> --item <id>
 ```
 Leia `edicao/qa_<id>.md` e abra `edicao/qa_<id>.jpg`. Com qualquer ❌ FALHA: corrija o `cenas.json`, compile, remonte, renderize e rode o QA de novo — não entregue. Mostre ao Arthur as ⚠️ ATENÇÕES restantes junto com a prévia. Detalhes na pasta de conhecimento: `Pro Football/04 - Edição/Controle de Qualidade.md`.

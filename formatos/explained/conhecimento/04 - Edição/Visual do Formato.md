@@ -47,4 +47,4 @@ Objeto sem fundo com a mesma sombra, seguindo o contorno.
 - 3 cards: ~500–560 px de altura, gap ~20–30 px.
 - Pequenos desalinhamentos (5–10 px) são normais: dão ar orgânico.
 
-Frames de referência: `/Users/arthur/Canais/ProFootball/Videos Referencias/Analise_Edicao/frames/`
+Frames de referência: `formatos/explained/referencias/Analise_Edicao/ (frames: <dados>/referencias/explained/Analise_Edicao/frames/)frames/`

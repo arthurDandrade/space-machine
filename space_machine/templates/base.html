@@ -58,9 +58,9 @@ label.campo{display:block;margin:8px 0;font-size:13px;color:var(--muted)}label.c
 </head>
 <body>
 <header><span class="marca">Space Machine</span><nav>
-<a href="/">Início</a>
-{% for slug, nome in canais_menu() %}<a href="/canal/{{ slug }}/producao">Produção{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a><a href="/canal/{{ slug }}/calendario">Calendário{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a>{% endfor %}
-<a href="/consumo">Consumo</a><a href="/config/canais">Canais</a><a href="/config/apis">APIs</a><a href="/config/modelos">Modelos</a></nav></header>
+<a href="/">{{ t("nav.inicio") }}</a>
+{% for slug, nome in canais_menu() %}<a href="/canal/{{ slug }}/producao">{{ t("nav.producao") }}{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a><a href="/canal/{{ slug }}/calendario">{{ t("nav.calendario") }}{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a>{% endfor %}
+<a href="/consumo">{{ t("nav.consumo") }}</a><a href="/config/canais">{{ t("nav.canais") }}</a><a href="/config/apis">{{ t("nav.apis") }}</a><a href="/config/modelos">{{ t("nav.modelos") }}</a><a href="/primeiros-passos">{{ t("nav.primeiros_passos") }}</a></nav></header>
 <main>{% block corpo %}{% endblock %}</main>
 </body>
 </html>

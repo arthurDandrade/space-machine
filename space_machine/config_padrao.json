@@ -24,6 +24,9 @@
  },
  "storyboard_timeout_s": 2400,
  "storyboard_voltas": 4,
- "_travar_conferir": "true = a entrega para até o Arthur aprovar os itens de \"conferir\" no painel. Desligado a pedido dele (2026-10-12): a lista fica só como informação.",
- "travar_conferir": false
+ "_travar_conferir": "true = a entrega para até alguém aprovar os itens de \"conferir\" no painel.",
+ "travar_conferir": false,
+ "_after_app": "Nome do app do After Effects em /Applications (muda a cada versão anual).",
+ "after_app": "Adobe After Effects 2026",
+ "idioma_painel": "pt"
 }

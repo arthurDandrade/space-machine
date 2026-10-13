@@ -1,6 +1,6 @@
 ---
 tags: [pro-football, edicao, qa]
-pasta: /Users/arthur/Canais/ProFootball/editor_ae/qa/
+pasta: motor/edicao_ae/qa/
 ---
 
 # Controle de Qualidade
@@ -10,8 +10,8 @@ Voltar: [[00 - Pro Football (Índice)]] · Relacionado: [[Edição no After Effe
 Todo bloco passa pelo verificador **antes** de chegar ao Arthur. Ele mede a prévia renderizada + o plano de edição e compara com números medidos nas 4 referências.
 
 ```bash
-cd /Users/arthur/Canais/ProFootball/editor_ae
-../buscador_assets/.venv/bin/python qa/qa_bloco.py <projeto> --item 01      # usa a prévia mais recente
+cd motor/edicao_ae
+../../.venv/bin/python qa/qa_bloco.py <projeto> --item 01      # usa a prévia mais recente
 ```
 Saída: `edicao/qa_01.md` (✅ OK / ⚠️ ATENÇÃO / ❌ FALHA, com os tempos para corrigir) e `edicao/qa_01.jpg` (nosso frame × frame de referência do mesmo tipo de cena). FALHA = não entregar; corrigir e renderizar de novo.
 

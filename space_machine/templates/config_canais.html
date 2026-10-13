@@ -23,10 +23,33 @@
       <select name="fonte">{% for f in fontes %}<option value="{{ f }}" {{ 'selected' if f == id.get('fonte_marca_arquivo') }}>{{ f.split('/')[-1] }}</option>{% endfor %}</select></label>
     <button type="submit">Salvar identidade</button> <span class="sub">Vale para os próximos blocos montados no After.</span>
   </form>
+  {% set r = sugestao.get(c.slug) or {} %}{% set rg = c.canal_json.get("regras", {}) %}
+  {% set busca = rg.get("busca", {}) %}{% set qa = rg.get("qa", {}) %}
+  <details id="regras-{{ c.slug }}" style="margin-top:12px" {{ 'open' if r }}>
+  <summary><b>{{ t("regras.titulo") }}</b> <span class="sub">{{ t("regras.sub") }}</span></summary>
+  {% if r %}<div class="msg ok">{{ t("regras.sugeridas") }}</div>{% endif %}
+  <form method="post" action="/config/canais/{{ c.slug }}/regras" style="margin-top:8px">
+    <label class="campo">{{ t("regras.escolha") }}<textarea name="escolha" rows="4" placeholder="{{ t('regras.escolha_ex') }}">{{ (r.escolha if r else rg.get("escolha", [])) | join("\n") }}</textarea></label>
+    <label class="campo">{{ t("regras.storyboard") }}<textarea name="storyboard" rows="4" placeholder="{{ t('regras.storyboard_ex') }}">{{ (r.storyboard if r else rg.get("storyboard", [])) | join("\n") }}</textarea></label>
+    <div class="duas">
+      <label class="campo">{{ t("regras.genericas") }}<textarea name="genericas" rows="3">{{ (r.genericas if r else busca.get("genericas", {}).get("outros", [])) | join("\n") }}</textarea></label>
+      <label class="campo">{{ t("regras.genericas_hist") }}<textarea name="genericas_hist" rows="3">{{ (r.genericas_hist if r else busca.get("genericas", {}).get("historica", [])) | join("\n") }}</textarea></label>
+    </div>
+    <div class="duas">
+      <label class="campo">{{ t("regras.proibidos") }}<input name="proibidos" value="{{ (r.proibidos if r else qa.get('termos_proibidos', [])) | join(', ') }}" style="width:100%"></label>
+      <label class="campo">{{ t("regras.permitido_se") }}<input name="permitido_se" value="{{ r.permitido_se if r else qa.get('permitido_se', '') }}" style="width:100%"></label>
+    </div>
+    <label class="campo">{{ t("regras.trocas") }}<textarea name="trocas" rows="2" placeholder="{{ t('regras.trocas_ex') }}">{{ ((r.trocas if r else busca.get("trocar_termos", [])) | tojson) if (r.trocas if r else busca.get("trocar_termos")) else "" }}</textarea></label>
+    <button class="primario" type="submit">{{ t("regras.salvar") }}</button>
+  </form>
+  <form method="post" action="/config/canais/{{ c.slug }}/sugerir-regras" style="margin-top:8px" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Perguntando ao Claude…'">
+    <button type="submit">{{ t("regras.sugerir") }}</button> <span class="sub">{{ t("regras.sugerir_sub") }}</span>
+  </form>
+  </details>
 </div>
 {% endfor %}
 
-<h2>Novo canal</h2>
+<h2 id="novo">Novo canal</h2>
 <form method="post" action="/config/canais-novo" enctype="multipart/form-data" class="card">
   <div class="sub">Cria a pasta do canal em <code>{{ dados }}/canais/</code> (identidade, conhecimento, produções e chaves próprias). O motor é o mesmo para todos os canais; depois de criar, preencha as chaves em APIs e as regras do tema abaixo.</div>
   <div class="duas" style="margin-top:8px">

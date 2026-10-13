@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t("pp.titulo") }}{% endblock %}
+{% block corpo %}
+<h1>{{ t("pp.titulo") }}</h1>
+<div class="sub">{{ t("pp.sub") }}</div>
+{% if msg %}<div class="msg {{ 'ok' if ok else 'erro' }}">{{ msg }}</div>{% endif %}
+{% set faltam = itens | rejectattr("ok") | list %}
+{% if not faltam %}<div class="msg ok">{{ t("pp.tudo_ok") }}</div>{% endif %}
+<div class="card" style="margin-top:14px">
+<table>
+  {% for i in itens %}
+  <tr>
+    <td style="width:28px">{{ "✅" if i.ok else "❌" }}</td>
+    <td><b>{{ i.nome }}</b><div class="sub">{{ i.detalhe }}</div></td>
+    <td>{% if i.como %}<span class="sub">{{ t("pp.como") }}:</span> {{ i.como }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<form method="post" action="/primeiros-passos/testar-claude" style="margin-top:14px" onsubmit="this.querySelector('button').disabled=true">
+  <button type="submit">{{ t("pp.testar_claude") }}</button> <span class="sub">{{ t("pp.testar_claude_sub") }}</span>
+</form>
+{% endblock %}

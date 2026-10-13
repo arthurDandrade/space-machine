@@ -1,6 +1,6 @@
 ---
 tags: [pro-football, assets, fluxo]
-equivale: skill buscar-assets (/Users/arthur/Canais/ProFootball/.claude/skills/buscar-assets/SKILL.md)
+equivale: skill buscar-assets (.claude/skills/buscar-assets/SKILL.md)
 ---
 
 # Como Buscar Assets
@@ -37,7 +37,7 @@ Entrada: **roteiro + narração pronta**. Saída: **todos os assets prontos**, c
 ```
 
 ### 1–2. Projeto e transcrição
-- Pasta padrão: `/Users/arthur/Canais/ProFootball/producoes/videos/<slug>/`.
+- Pasta padrão: `<dados>/canais/<canal>/producoes/<slug>/`.
 - Transcrição local (whisper `small.en`, inglês) → `_work/transcricao.txt` com `[12.34]palavra`.
 
 ### 3. Planejar

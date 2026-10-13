@@ -1,6 +1,6 @@
 ---
 tags: [pro-football, assets, tecnico]
-pasta: /Users/arthur/Canais/ProFootball/buscador_assets/
+pasta: motor/busca/
 ---
 
 # Sistema Buscador de Assets
@@ -13,8 +13,8 @@ Voltar: [[00 - Pro Football (Índice)]] · Fluxo: [[Como Buscar Assets]]
 Parte técnica do sistema. O Claude roda tudo; esta nota é referência.
 
 ## Onde fica
-- Motor: `/Users/arthur/Canais/ProFootball/buscador_assets/` (Python 3.12 isolado em `.venv`)
-- Skill: `/Users/arthur/Canais/ProFootball/.claude/skills/buscar-assets/SKILL.md`
+- Motor: `motor/busca/` (Python 3.12 isolado em `.venv`)
+- Skill: `.claude/skills/buscar-assets/SKILL.md`
 - Configuração: `buscador_assets/config.json` (ordem das fontes, tamanho mínimo, nº de candidatos, domínios bloqueados, duração do preview)
 
 ## Scripts
@@ -82,7 +82,7 @@ Plugin `bgutil-ytdlp-pot-provider` 2.0.2 instalado no `.venv` (com `uv pip`; o v
 
 ## Vídeos fora do YouTube (2026-10-09)
 O tipo `video` agora busca primeiro em bancos livres e só depois no YouTube (`config.json` → `fontes_por_tipo.video`). Backup: `buscador_assets/_backup_antes_videos_livres/`.
-- **Pexels** e **Pixabay**: vídeos livres até 4K (baixamos até 1080p). Precisam de chave grátis: `PEXELS_API_KEY` / `PIXABAY_API_KEY` em `ProFootball/.env.fontes`. Sem chave, são pulados.
+- **Pexels** e **Pixabay**: vídeos livres até 4K (baixamos até 1080p). Precisam de chave grátis: `PEXELS_API_KEY` / `PIXABAY_API_KEY` em `.env do canal`. Sem chave, são pulados.
 - **Wikimedia Commons**: usa só as versões convertidas (`transcoded/...240p.webm` etc.). O arquivo original e várias conexões ao mesmo tempo dão **429**; a folha baixa a versão leve uma vez e tira os quadros localmente.
 - **Internet Archive**: filmes de época e do governo dos EUA (muito domínio público). A busca é fraca: as palavras precisam estar no título, assunto ou descrição, e o arquivo de TV (C-SPAN) fica de fora. Mesmo assim vem coisa sem relação; o subagente descarta pela folha.
 - Até `videos_livres_max` (3) candidatos livres, intercalando as fontes, + até `videos_por_asset` (3) do YouTube. A folha dos livres é feita pelo ffmpeg pulando para cada tempo (`preview: "direto"`); o trecho final é cortado pelo ffmpeg direto do arquivo (H.264, até 1080p, `setsar=1`). `detalhar_video.py` também funciona com eles.
@@ -90,10 +90,10 @@ O tipo `video` agora busca primeiro em bancos livres e só depois no YouTube (`c
 - O card pode limitar as fontes com `"fontes"` (ver Biblioteca de Cenas / agente `storyboard`): `["youtube"]` para lance/coletiva, `["pexels", "pixabay", "youtube"]` para plano genérico, `["archive", "commons", "youtube"]` para época.
 
 ## Fotos do Pixabay (2026-10-10)
-Fonte `pixabay` também para **foto** (`fontes.py` → `pixabay()`; última da lista em `fontes_por_tipo.foto`). Mesma chave dos vídeos (`PIXABAY_API_KEY` em `ProFootball/.env.fontes`; sem chave é pulada). Só `image_type=photo`, `safesearch`. Usa o `largeImageURL` (**máx. 1280 px no lado maior**; maior resolução exige acesso total aprovado pelo Pixabay). Serve para genérico (estádio, bola, gramado, torcida, cidade); quase nunca tem jogador ou lance real. Para um card só de genérico: `"fontes": ["pixabay", "commons", "openverse"]`. Limite da API: 100 buscas/min; os termos pedem para não fazer hotlink (a gente baixa, então ok).
+Fonte `pixabay` também para **foto** (`fontes.py` → `pixabay()`; última da lista em `fontes_por_tipo.foto`). Mesma chave dos vídeos (`PIXABAY_API_KEY` em `.env do canal`; sem chave é pulada). Só `image_type=photo`, `safesearch`. Usa o `largeImageURL` (**máx. 1280 px no lado maior**; maior resolução exige acesso total aprovado pelo Pixabay). Serve para genérico (estádio, bola, gramado, torcida, cidade); quase nunca tem jogador ou lance real. Para um card só de genérico: `"fontes": ["pixabay", "commons", "openverse"]`. Limite da API: 100 buscas/min; os termos pedem para não fazer hotlink (a gente baixa, então ok).
 
 ## Google Imagens pelo Serper (2026-10-10)
-Fontes `google` e `google_transparente` (`fontes.py` → `google()`), via API do Serper (`SERPER_API_KEY` em `ProFootball/.env.fontes`; sem chave, puladas). **É pago: fica na última camada de todos os tipos de imagem** e só entra se as fontes grátis trouxerem menos de 8 candidatos bons (ver [[Rank de Fontes]]). Filtros do Google: `isz:l` (grande), `ic:trans` (fundo transparente), `iar:t/w/s` (retrato/paisagem/quadrado). Licença sempre "desconhecida", como no `web`; os domínios bloqueados (bancos com marca d'água) valem igual. Cada consulta gasta 1 crédito. Card antigo com `buscas_por_fonte.web` usa as mesmas buscas no `google`.
+Fontes `google` e `google_transparente` (`fontes.py` → `google()`), via API do Serper (`SERPER_API_KEY` em `.env do canal`; sem chave, puladas). **É pago: fica na última camada de todos os tipos de imagem** e só entra se as fontes grátis trouxerem menos de 8 candidatos bons (ver [[Rank de Fontes]]). Filtros do Google: `isz:l` (grande), `ic:trans` (fundo transparente), `iar:t/w/s` (retrato/paisagem/quadrado). Licença sempre "desconhecida", como no `web`; os domínios bloqueados (bancos com marca d'água) valem igual. Cada consulta gasta 1 crédito. Card antigo com `buscas_por_fonte.web` usa as mesmas buscas no `google`.
 
 ## Rank de fontes em camadas (2026-10-10)
 `fontes_por_tipo` agora é uma lista de camadas; a busca só desce de camada se faltar candidato bom. Ordem e medição em [[Rank de Fontes]]. Backup: `buscador_assets/_backup_antes_rank_fontes/`.

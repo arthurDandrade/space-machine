@@ -1,44 +1,50 @@
-# Canal Pro Football — como trabalhar aqui
+# Space Machine: como trabalhar aqui
 
-Canal de futebol americano (NFL) no formato **"___ Explained"**: lista de tópicos narrada, sem apresentador, com cards de foto/vídeo sobre fundo de papel claro, textos grandes e animação de entrada/saída. Editado no **After Effects** por script.
+Este repo é um produto que qualquer pessoa instala no Mac para produzir vídeos no formato **"___ Explained"**: lista de tópicos narrada, sem apresentador, com cards de foto/vídeo sobre fundo de papel, editada no After Effects por script. O uso está no `README.md`; este arquivo é para quem mexe no código.
 
-## Fonte da verdade: pasta de conhecimento
-Todo o conhecimento do canal está na **pasta de conhecimento** `conhecimento/Pro Football/` (notas `.md`, lidas e escritas direto no disco). Leia e escreva direto nos arquivos. Antes de qualquer trabalho, leia `Pro Football/00 - Pro Football (Índice).md` e as notas do tópico da tarefa:
-- Formato e cenas: `01 - Formato/`, `02 - Cenas/` (principalmente **Biblioteca de Cenas** e **Da Narração às Cenas**)
-- Assets: `03 - Assets/` (Como Buscar Assets, Buscas que Funcionam, Critérios de Escolha)
-- Edição: `04 - Edição/` (**Identidade Visual** do canal, Visual do Formato, Animação e Ritmo, Edição no After Effects, **Controle de Qualidade**)
-- Erros já cometidos e corrigidos: `05 - Aprendizados/Log de Aprendizados.md` — leia para não repetir.
-- Status de cada vídeo: `06 - Produções/`
+Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico das duas está no git).
 
-A pasta de conhecimento fica dentro do projeto: `conhecimento/Pro Football/` (dá para abrir num leitor de Markdown, mas nada depende de app). Backup da base antiga do iCloud: `../ProFootball_backups/vault_icloud_2026-10-05.tar.gz`.
+## Duas coisas separadas: código × dados
+- **Código** (este repo, igual para todo mundo). Nada de caminho absoluto, nome de pessoa ou regra de um tema específico aqui.
+  - `space_machine/`: orquestrador (`rodar`, `fila`, `escolher`), painel FastAPI (`servidor` + `templates/`), `motor_claude.py` (`claude -p` enxuto, pela assinatura), `prompts/` das etapas, `textos/pt.json` (textos do painel; use `t("chave")` nos templates).
+  - `space_machine/sistema.py`: pasta de dados, `config()` (`config_padrao.json` + `space_machine.json`), `canais()` e `ambiente_motor()`. `primeiros_passos.py`: checagem do que falta instalar ou configurar.
+  - `motor/caminhos.py`: como os scripts do motor acham o canal (`SM_CANAL`), os dados (`SM_DADOS`), as chaves, o cache e as regras do tema. Rodando à mão, deduz o canal pelo caminho do bloco.
+  - `motor/busca/scripts/`: buscar, finalizar, compilar_cenas, storyboard.py, transcrever, gerar_narracao, gerar_mapa/tabela.
+  - `motor/edicao_ae/`: `gerar_ae2.py` → `montar_modelo2.jsx` → `renderizar.jsx`; `editar_bloco.sh` faz montar + render + QA; `qa/qa_bloco.py`.
+  - `formatos/explained/`: o que é do FORMATO. Notas em `conhecimento/` (Biblioteca de Cenas, Da Narração às Cenas, Critérios de Escolha, Controle de Qualidade...), regras do storyboard (`storyboard.md`), `exemplo_cenas.json` e as análises das referências.
+  - `docs/`: histórico das decisões do orquestrador.
+- **Dados** (fora do repo). Vêm de `SM_DADOS`; senão de `~/.config/spacemachine/dados`; senão de `~/SpaceMachine-dados`. No Mac do Arthur: `/Users/arthur/Canais/SpaceMachine-dados`.
+  - `space_machine.json`, `.env` (token do Claude), `space_machine.sqlite`, `cache/`, `logs/claude/`.
+  - `referencias/explained/`: vídeos de referência e detecções (direito autoral: nunca no repo).
+  - `canais/<slug>/`: `canal.json` (identidade + **regras do tema**), `.env` (chaves do canal), `identidade/`, `conhecimento/` (Índice, **Log de Aprendizados** do canal, Produções), `producoes/<vídeo>/blocos/NN/`.
 
-## Pipeline (roteiro + narração → vídeo editado)
-1. **Assets**: skill `buscar-assets` (`.claude/skills/buscar-assets/SKILL.md`). Ordem: transcrever → **storyboard pelo subagente `storyboard`** (`.claude/agents/storyboard.md`, um por bloco: escreve e compila o `cenas.json`, mede variedade/ritmo com `scripts/storyboard.py` e entrega `storyboard_NN.md` com tempo, tipo de cena e asset de cada cena) → buscar → escolher → finalizar.
-   Motor: `buscador_assets/` (Python em `buscador_assets/.venv/bin/python`).
-   Lance específico de um jogo: não há mais vídeo (o `achar_lance.py` dependia do YouTube e foi desativado). Use foto do lance, texto ou número.
-   **Escolher + baixar é sempre feito pelo subagente `escolher-assets`** (`.claude/agents/escolher-assets.md`), um por bloco, passando o caminho do bloco. As folhas de contato são imagens grandes: abertas na conversa principal, elas são relidas a cada passo (foi ~50% do gasto do vídeo de 2026-10-03). A conversa principal só lê o resumo que ele devolve.
-   Vídeo com vários tópicos: cada tópico é um bloco em `producoes/videos/<slug>/blocos/NN/`; prévia final copiada para `edicao/bloco N.mp4`. De preferência uma sessão nova por bloco.
-2. **Edição**: `editor_ae/gerar_ae2.py <projeto> --item NN` → rodar `edicao/montar_NN_v2.jsx` no After (`osascript -e 'tell application "Adobe After Effects 2026" to DoScriptFile "<jsx>"'`) → renderizar com `editor_ae/renderizar.jsx`.
-   Atalho que faz montar + renderizar + QA de uma vez: `editor_ae/editar_bloco.sh <pasta do bloco> NN [versao]` (rodar em segundo plano; demora alguns minutos).
-3. **QA (obrigatório)**: `editor_ae/qa/qa_bloco.py <projeto> --item NN`. Com qualquer FALHA, corrigir e renderizar de novo antes de mostrar ao Arthur.
-4. Produções ficam em `producoes/videos/<slug>/`. Exemplo completo (feito pelo Estúdio, cold open + 20 blocos): `producoes/videos/every-nfl-position-explained-in-x-minutes/`.
+## Formato × tema
+- O que vale para qualquer canal do formato vai em `formatos/explained/` e nos prompts.
+- O que é do ASSUNTO de um canal vai em `canal.json` › `regras`:
+  - `escolha` e `storyboard`: listas de regras que entram no fim dos prompts por `motor_claude.prompt(nome, canal)`;
+  - `busca.trocar_termos`: lido por `buscar.ajustar_consulta`;
+  - `busca.genericas`: buscas do resgate em `escolher.genericas`;
+  - `qa.termos_proibidos` + `qa.permitido_se`: lidos por `qa_bloco.checar_origem`.
+- O painel edita e sugere essas regras (Canais › Regras do tema). Exemplo completo: o canal `pro-football` (soccer × futebol americano).
 
-## Estúdio (sistema que roda o pipeline) — desde 2026-10-11
-O pipeline agora roda pelo **Estúdio** (`/Users/arthur/Canais/Estudio/`). É um orquestrador em Python que executa as etapas sozinho e só chama o Claude (`claude -p` enxuto, pela assinatura) nas decisões. Isso deu ~6× menos tokens na escolha de assets. Nota completa: `conhecimento/Pro Football/04 - Edição/Estúdio (orquestrador).md`.
-- **Painel:** `cd /Users/arthur/Canais/Estudio && .venv/bin/python -m estudio servidor` → http://localhost:8765. Páginas: kanban de blocos, Rodar/Parar, Produção (kanban do canal), Calendário, Canais (novo canal + identidade), APIs, Modelos (modelo e esforço por etapa) e Consumo. Erro "address already in use" = já tem um painel ligado.
-- **Um bloco do roteiro até a entrega:** `.venv/bin/python -m estudio rodar <pasta do bloco> [--de etapa] [--ate etapa] [--obs "..."]`. Pula o que já foi feito. Quando precisa do Arthur, para com o motivo em `<bloco>/_estudio/estado.json`.
-- **Só a escolha de assets:** `python -m estudio escolher <bloco>`. Os subagentes `storyboard` e `escolher-assets` continuam como plano B.
-- Config em `Estudio/estudio.json` (modelos/esforço), `Estudio/canais.json` (canais), `<canal>/canal.json` (cores/fonte) e `.env*` (chaves, editadas pelo painel). Consumo em `Estudio/dados/estudio.sqlite`.
-- O motor não cria nada sozinho: o Estúdio chama os mesmos scripts (`buscar.py`, `finalizar.py`, `editar_bloco.sh`, `qa_bloco.py`...).
+## Pipeline de um bloco (`python -m space_machine rodar <bloco>`)
+narração (Fish Audio) → transcrição (whisper-cli) → storyboard (Claude, com voltas de correção medidas por `compilar_cenas.py` + `storyboard.py`) → busca → escolha (Claude por asset, com folhas de contato) → editar (`editar_bloco.sh`: After + QA; uma correção automática se o QA reprovar) → entregar (`<vídeo>/edicao/bloco N.mp4`).
+- Cada etapa pula o que já está feito.
+- Quando precisa de gente, para com o motivo em `<bloco>/_estudio/estado.json`.
+- A fila (`fila`) roda até N blocos por vez e espera o limite da assinatura passar.
+- Os subagentes `.claude/agents/storyboard.md` e `escolher-assets.md` e a skill `buscar-assets` são o plano B dentro do Claude Code. Eles leem as mesmas regras do formato e do canal.
 
-## Regras que não podem ser esquecidas
-- **Git (desde 2026-10-13):** `ProFootball/` e `Estudio/` são repositórios git locais (sem GitHub). Antes de mexer em código, confira se o `git status` está limpo. Depois de cada mudança que funcionou, faça um commit com uma mensagem que explique o porquê. **Não crie mais cópias `_backup_*`**: o histórico do git já guarda as versões antigas. Produções, cache, `.venv` e `.env*` ficam fora do git (`.gitignore`).
-- **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies).
-- **Registrar na pasta de conhecimento tudo que for aprendido** (entrada datada no Log de Aprendizados + atualizar a nota do tópico + nota da produção).
-- Medir antes de afirmar: comparar com as referências em frame cheio (1920×1080), nunca em miniatura.
+## Regras de trabalho
+- **Git:** confira se o `git status` está limpo antes de mexer. Faça um commit por mudança que funcionou, com o porquê. Nunca crie `_backup_*`. Dados nunca entram no repo (`.gitignore`).
+- **Sem caminho fixo e sem nome de pessoa no código.** Use `sistema.py`/`caminhos.py`. Mensagem que a pessoa vê fala com "você". Para conferir:
+  ```bash
+  grep -rn "/Users/" space_machine motor formatos
+  ```
+  O resultado precisa sair vazio.
+- **Sem YouTube** (2026-10-11): buscas automáticas fizeram o Google bloquear o IP do Arthur. Nenhum script busca, abre ou baixa nada do YouTube. Vídeo só de Pexels, Pixabay, Wikimedia Commons e Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies).
+- Nunca gerar com IA imagem de pessoa real ou acontecimento real.
+- **Medir antes de afirmar.** Compare com as referências em frame cheio (1920×1080). As animações (entrada ease-out ~0,95 s, saída ease-in ~0,8 s) e o zoom por cena no `gerar_ae2.py` estão calibrados: não mexa sem medir. Teste de equivalência rápido: gere a montagem de um bloco pronto antes e depois da mudança e compare o `DADOS` do `montar_NN_v2.jsx`.
 - Texto sobre imagem é exceção (~30% das cenas de imagem; só nome/número/data/termo). Cada asset ≥ 1,8 s na tela.
-- Nunca gerar com IA imagem de jogador, técnico ou lance real.
-- Cores, fonte (Impact maiúscula em títulos/nomes) e caixa azul seguem a nota **Identidade Visual**; arquivos de marca em `identidade/`.
-- Animações (entrada ease-out ~0,95 s, saída ease-in ~0,8 s) e zoom limitado por cena já estão no `editor_ae/gerar_ae2.py`: não alterar sem medir contra as referências.
-- Vídeos de referência do formato: `Videos Referencias/` (análise em `Videos Referencias/Analise_Edicao/ANALISE_EDICAO.md`, estudo de cenas em `Videos Referencias/estudo_cenas/`).
-- O After às vezes trava num diálogo: se um script não responder, pedir ao Arthur para olhar a tela.
+- **Registrar o que for aprendido.** O que é do formato vai na nota certa de `formatos/explained/conhecimento/`. O que é de um canal vai no Log de Aprendizados dele (entrada datada; as 4 do topo vão para o storyboard). Regra nova de escolha também atualiza o prompt correspondente em `space_machine/prompts/`.
+- O After às vezes trava num diálogo. Se um script não responder, peça para alguém olhar a tela.
+- Painel para testar: `.venv/bin/python -m space_machine painel` (config `space-machine` no `.claude/launch.json`). "address already in use" quer dizer que já há um painel ligado.

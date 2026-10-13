@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block titulo %}Canais{% endblock %}
 {% block corpo %}
+{% if falta_algo %}<div class="msg erro" style="margin-bottom:16px">{{ t("inicio.falta_algo") }} <a href="/primeiros-passos">{{ t("inicio.ver_primeiros_passos") }}</a></div>{% endif %}
+{% if not canais %}<div class="card"><p>{{ t("inicio.sem_canais") }}</p><a class="botao" href="/config/canais#novo">{{ t("inicio.criar_canal") }}</a></div>{% endif %}
 {% for c in canais %}
 <div class="linha" style="justify-content:space-between">
   <div><h1>{{ c.nome }}</h1><div class="sub">{{ c.raiz }}{% if not c.ativo %} · inativo{% endif %}</div></div>

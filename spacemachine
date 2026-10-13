@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Atalho do Space Machine.
+#   ./spacemachine                 abre o painel (http://localhost:8765) no navegador
+#   ./spacemachine <comando> ...   qualquer comando de `python -m space_machine` (rodar, fila, checar, consumo...)
+cd ${0:A:h}
+[[ -x .venv/bin/python ]] || { echo "Rode ./instalar.sh primeiro."; exit 1; }
+if [[ $# -eq 0 || $1 == painel ]]; then
+  [[ $1 == painel ]] && shift
+  ( sleep 2; open http://localhost:8765 ) &
+  exec .venv/bin/python -m space_machine painel "$@"
+fi
+exec .venv/bin/python -m space_machine "$@"

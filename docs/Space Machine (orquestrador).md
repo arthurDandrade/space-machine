@@ -1,33 +1,35 @@
 ---
-tags: [pro-football, sistema, estudio, tokens]
+tags: [space-machine, sistema, orquestrador, tokens]
 criado: 2026-10-11
-pasta: /Users/arthur/Canais/Estudio/
+pasta: SpaceMachine/space_machine/
 ---
 
-# Estúdio (orquestrador)
+# Space Machine: o orquestrador (ex-Estúdio)
+
+> [!info] Desde 2026-10-13 o Estúdio e o ProFootball viraram um produto só, o **Space Machine** (ver `README.md` e `CLAUDE.md` na raiz do repo). Esta nota é o histórico das decisões do orquestrador: "Estúdio" = `space_machine/`, `<dados>/.env` = `<dados>/.env`, `estudio.json` = `<dados>/space_machine.json`, `canais.json` = pastas `<dados>/canais/*/`.
 
 > [!danger] YouTube REMOVIDO do sistema (2026-10-11)
 > As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (yt-dlp e plugin de PO token desinstalados; `yt_seguro.py` virou uma trava que sempre recusa; `achar_lance.py` desativado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies). Backup: `ProFootball_backups/antes_remover_youtube_2026-10-11.tar.gz` e `youtube_removido_2026-10-11/`.
 
 Voltar: [[00 - Pro Football (Índice)]] · Log: [[Log de Aprendizados]]
 
-O Estúdio é um sistema próprio, em `/Users/arthur/Canais/Estudio/`, que roda o pipeline sozinho e chama o Claude **só nas decisões**. Cada decisão é uma chamada isolada e curta (`claude -p`, pela assinatura). Ele serve para vários canais (`canais.json`); por enquanto só o Pro Football está ativo. Plano completo: `~/.claude/plans/sim-mas-planeje-tudo-splendid-eclipse.md`.
+O Estúdio é um sistema próprio, que roda o pipeline sozinho e chama o Claude **só nas decisões**. Cada decisão é uma chamada isolada e curta (`claude -p`, pela assinatura). Ele serve para vários canais (`canais.json`); por enquanto só o Pro Football está ativo. Plano completo: `~/.claude/plans/sim-mas-planeje-tudo-splendid-eclipse.md`.
 
 ## Por quê
-Dentro de uma conversa do Claude Code, cada saída de script e cada folha de contato fica no histórico, e o histórico é relido a cada passo. Medido em 2026-10-10 (`python -m estudio medir`): o subagente `escolher-assets` gastou **~47 mil tokens equivalentes por asset** (~720 mil por bloco; 27 execuções, 413 assets).
+Dentro de uma conversa do Claude Code, cada saída de script e cada folha de contato fica no histórico, e o histórico é relido a cada passo. Medido em 2026-10-10 (`python -m space_machine medir`): o subagente `escolher-assets` gastou **~47 mil tokens equivalentes por asset** (~720 mil por bloco; 27 execuções, 413 assets).
 
 ## Como a chamada é enxuta
-O código fica em `estudio/motor_claude.py`.
-- Sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão. Só vai o prompt curto da etapa (`estudio/prompts/*.md`).
+O código fica em `space_machine/motor_claude.py`.
+- Sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão. Só vai o prompt curto da etapa (`space_machine/prompts/*.md`).
 - A imagem vai em base64 direto na mensagem, sem um turno extra de Read.
 - A resposta volta em JSON validado (`--json-schema`).
 - **`--effort low` e `MAX_THINKING_TOKENS=0` nas escolhas.** Sem isso, o Sonnet "pensava" de 1,5 a 8,7 mil tokens de saída por resposta (a saída pesa 5×) e o gasto ficava em ~40 mil por asset, quase igual ao do subagente.
-- Cada chamada registra tokens e custo em `dados/estudio.sqlite`; o resumo sai com `python -m estudio consumo`.
+- Cada chamada registra tokens e custo em `<dados>/space_machine.sqlite`; o resumo sai com `python -m space_machine consumo`.
 - Se a assinatura bater no limite de uso, a rodada para e baixa o que já foi escolhido.
-- Login: token da assinatura (`claude setup-token`) gravado em `Estudio/.env` como `CLAUDE_CODE_OAUTH_TOKEN=...`.
+- Login: token da assinatura (`claude setup-token`) gravado em `<dados>/.env` como `CLAUDE_CODE_OAUTH_TOKEN=...`.
 
 ## Escolha de assets (Fase 1, pronta)
-`python -m estudio escolher <bloco>` (rodar de dentro de `/Users/arthur/Canais/Estudio`, com `.venv/bin/python`).
+`python -m space_machine escolher <bloco>` (de dentro do repo, com `.venv/bin/python`).
 - **Imagem:** uma chamada com a `folha.jpg` + o pedido + a lista dos candidatos → `{n, recortar, conferir}`.
 - **Vídeo:**
   - Uma chamada com as `v*_folha.jpg` → `{n, inicio, detalhar?}`.
@@ -48,13 +50,13 @@ O código fica em `estudio/motor_claude.py`.
 - Erro visto: no 01-09-a, o Estúdio escolheu um homem falando para a câmera em vez da tela pedida. Se isso se repetir, testar `esforco` `medium` só para `escolher_video` (em `estudio.json`).
 
 ## Versionamento (2026-10-13)
-`Estudio/` e `ProFootball/` são repositórios git locais. Mudança no código = commit (nada de `_backup_*`). Revisão de 2026-10-13 e o que ela corrigiu: [[Log de Aprendizados]].
+O Space Machine é um repositório git local (antes: `Estudio/` e `ProFootball/`). Mudança no código = commit (nada de `_backup_*`). Revisão de 2026-10-13 e o que ela corrigiu: [[Log de Aprendizados]].
 
 ## Regra de manutenção
-Os prompts em `estudio/prompts/` são **resumos** de [[Critérios de Escolha]] e da skill `buscar-assets`. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
+Os prompts em `space_machine/prompts/` são **resumos** de [[Critérios de Escolha]] e da skill `buscar-assets`. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
 
 ## Orquestrador (Fase 2, pronta)
-`python -m estudio rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]`: narração → transcrição → storyboard → busca → escolha → edição + QA → entrega (`edicao/bloco N.mp4`).
+`python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]`: narração → transcrição → storyboard → busca → escolha → edição + QA → entrega (`edicao/bloco N.mp4`).
 - Cada etapa pula o que já está feito. Se precisar de você, o bloco **para com o motivo** em `<bloco>/_estudio/estado.json`, e os logs ficam em `_estudio/log_<etapa>.txt`.
 - **Storyboard:** uma sessão `claude -p` com o prompt de sistema montado na hora (regras do agente storyboard + Biblioteca + Da Narração + topo do Log + um exemplo). O Python compila e mede, e devolve os avisos ao Claude (até 4 voltas). Nas correções, o Claude devolve só as cenas que mudaram.
 - **Nome do tópico:** vem sempre do roteiro. Se o Whisper escreveu diferente ("Lambo Field"), a forma transcrita vai em `"nome_fala"` (campo novo do `compilar_cenas.py`).
@@ -64,7 +66,7 @@ Os prompts em `estudio/prompts/` são **resumos** de [[Critérios de Escolha]] e
 - **QA reprovado:** uma correção automática do `cenas.json`; se reprovar de novo, para.
 
 ## Painel (Fase 3, pronto)
-`python -m estudio servidor` → http://localhost:8765. Também dá para abrir pelo painel de prévia do Claude Code, com o nome "estudio" no `.claude/launch.json`.
+`python -m space_machine painel` → http://localhost:8765. Também dá para abrir pelo painel de prévia do Claude Code, com o nome "estudio" no `.claude/launch.json`.
 - **Canais:** os vídeos de cada canal, com o progresso.
 - **Vídeo:** kanban dos blocos por etapa (atualiza a cada 5 s).
 - **Bloco:** Rodar (de/até/observação) e Parar, etapas, log ao vivo, prévia, QA, o que conferir e a revisão dos assets.
@@ -79,7 +81,7 @@ Os prompts em `estudio/prompts/` são **resumos** de [[Critérios de Escolha]] e
 ## Gestão e configuração (Fase 4, pronta em 2026-10-11)
 - **Produção** (`/canal/<canal>/producao`): kanban do canal com as colunas Ideias → Roteiro → Produção → Edição final → Agendado → Publicado. Roteiro e Produção andam sozinhos pelos blocos; as outras você marca no formulário "Publicação" do vídeo. Uma ideia pode "virar vídeo", que abre o formulário de vídeo novo já com o título.
 - **Calendário** (`/canal/<canal>/calendario`): mês com os vídeos na data de publicação.
-- **Publicação**, na página de cada vídeo: título no YouTube, descrição, tags, data, status, link e notas (guardados em `dados/estudio.sqlite`). **Sem upload pelo sistema** (decisão do Arthur): ele sobe no YouTube Studio e cola o link.
+- **Publicação**, na página de cada vídeo: título no YouTube, descrição, tags, data, status, link e notas (guardados em `<dados>/space_machine.sqlite`). **Sem upload pelo sistema** (decisão do Arthur): ele sobe no YouTube Studio e cola o link.
 - **Canais** (`/config/canais`):
   - nome e ativo;
   - identidade (5 cores + fonte), gravada no `canal.json` da raiz do canal;
@@ -92,11 +94,11 @@ Os prompts em `estudio/prompts/` são **resumos** de [[Critérios de Escolha]] e
 `/config/modelos`: para cada etapa com Claude (storyboard, escolher imagem, escolher vídeo, confirmar trecho, conferir download, corrigir QA), escolhe-se o modelo (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5.1) e o esforço (low → max). Fica gravado em `estudio.json` e vale a partir da próxima chamada. **Esforço low = sem raciocínio** (`MAX_THINKING_TOKENS=0`), o que deixa as escolhas baratas. A página mostra a média de tokens por chamada de cada etapa.
 
 ## Checagem do claude antes de rodar (2026-10-11)
-Antes da 1ª etapa, o `rodar` (e o `escolher` avulso) chama `checar_claude`: uma chamada mínima (`ok`, sem raciocínio) com cada modelo que as etapas pedidas usam (storyboard → `storyboard`; escolher → `escolher_imagem`, `escolher_video`, `confirmar_trecho`, `conferir`; editar → `qa`). O resultado fica guardado por 15 min em `dados/claude_checagem.json` (por versão + modelo). Se o claude for velho demais para o modelo, ele roda `claude update` sozinho e testa de novo. Se ainda falhar, o bloco para em **"checagem do Claude"** com o motivo e o que fazer: atualizar, gerar novo token (`claude setup-token` → página APIs), trocar o modelo ou esperar o limite. Teste manual: `python -m estudio checar`.
+Antes da 1ª etapa, o `rodar` (e o `escolher` avulso) chama `checar_claude`: uma chamada mínima (`ok`, sem raciocínio) com cada modelo que as etapas pedidas usam (storyboard → `storyboard`; escolher → `escolher_imagem`, `escolher_video`, `confirmar_trecho`, `conferir`; editar → `qa`). O resultado fica guardado por 15 min em `dados/claude_checagem.json` (por versão + modelo). Se o claude for velho demais para o modelo, ele roda `claude update` sozinho e testa de novo. Se ainda falhar, o bloco para em **"checagem do Claude"** com o motivo e o que fazer: atualizar, gerar novo token (`claude setup-token` → página APIs), trocar o modelo ou esperar o limite. Teste manual: `python -m space_machine checar`.
 
 **(2026-10-12: trava desligada, `travar_conferir: false`; lista só informativa.)** **Conferir antes de entregar (2026-10-11):** `entregar` para enquanto houver "conferir" ou asset pulado sem aprovação; o painel mostra a lista e o botão "Aprovei, pode entregar" (`_estudio/conferir_ok.json`, por texto: mudou a escolha, volta a travar).
 
-**Fila de produção (2026-10-11):** botão "Produzir todos (fila)" na página do vídeo: todos os blocos não entregues, até N por vez (padrão 3); parados ficam de fora; `python -m estudio fila <vídeo> --max 3`.
+**Fila de produção (2026-10-11):** botão "Produzir todos (fila)" na página do vídeo: todos os blocos não entregues, até N por vez (padrão 3); parados ficam de fora; `python -m space_machine fila <vídeo> --max 3`.
 
 **Rodada solta do painel (2026-10-11):** o painel lança cada rodada via `sh … &` com stdin em /dev/null; ela é adotada pelo launchd e sobrevive a fechar/reiniciar o painel.
 
@@ -117,7 +119,7 @@ Pendências, em ordem:
 6. Licença "desconhecida" em muitas fotos da web (inclusive resgates): risco de direitos a avaliar.
 7. Antigos: Every NFL Stadium (blocos 03–30), chave do Pexels, crédito do Fish Audio, Fase 5 (novos canais). YouTube: removido de propósito, não religar.
 
-**Como rodar o próximo vídeo:** painel → vídeo → **Produzir todos (fila)**, até 3 por vez. Rodadas e fila saem soltas do painel (fechar o painel não para nada) e o Mac fica acordado enquanto a fila existir (`fila.lancar_fila` lança `caffeinate -w <pid da fila>`; pela linha de comando `python -m estudio fila`, iniciar o caffeinate à mão).
+**Como rodar o próximo vídeo:** painel → vídeo → **Produzir todos (fila)**, até 3 por vez. Rodadas e fila saem soltas do painel (fechar o painel não para nada) e o Mac fica acordado enquanto a fila existir (`fila.lancar_fila` lança `caffeinate -w <pid da fila>`; pela linha de comando `python -m space_machine fila`, iniciar o caffeinate à mão).
 
 ## Próximas fases
 - Fase 2: um comando que leva o bloco do roteiro até a prévia aprovada pelo QA.

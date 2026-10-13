@@ -3,8 +3,12 @@
   "configurations": [
     {
       "name": "space-machine",
-      "runtimeExecutable": "/Users/arthur/Canais/SpaceMachine/.venv/bin/python",
-      "runtimeArgs": ["-c", "import sys, os; os.chdir('/Users/arthur/Canais/SpaceMachine'); sys.path.insert(0, '/Users/arthur/Canais/SpaceMachine'); from space_machine.servidor import main; main()"],
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "space_machine",
+        "painel"
+      ],
       "port": 8765
     }
   ]

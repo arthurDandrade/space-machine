@@ -6,6 +6,7 @@ Tudo o que o painel mostra vem das pastas (estado.py) e do registro de consumo (
 Os botões só disparam os mesmos comandos da linha de comando (python -m space_machine rodar ...), em segundo plano.
 """
 import hashlib
+import json
 import os
 import re
 import signal
@@ -23,15 +24,16 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from . import configuracao, estado, fila, gestao
+from . import configuracao, estado, fila, gestao, primeiros_passos, textos
 from .canal import gravar_json, ler_json
 from .motor_claude import _banco, canais
-from .sistema import DADOS, salvar_config
+from .sistema import DADOS, config, salvar_config
 from .rodar import ETAPAS as ETAPAS_RODAR
 
 app = FastAPI(title="Space Machine")
 tpl = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
-tpl.env.globals.update(dados=str(DADOS), ETAPAS=estado.ETAPAS, ETAPAS_RODAR=ETAPAS_RODAR, quando=estado.quando,
+tpl.env.globals.update(t=lambda chave: textos.t(chave, config().get("idioma_painel", "pt")),
+                       dados=str(DADOS), ETAPAS=estado.ETAPAS, ETAPAS_RODAR=ETAPAS_RODAR, quando=estado.quando,
                        COLUNAS=gestao.COLUNAS, canais_menu=lambda: [(k, c["nome"]) for k, c in canais().items()
                                                                      if c.get("ativo")])
 tpl.env.filters["milhar"] = lambda n: f"{int(n or 0):,}".replace(",", ".")
@@ -70,7 +72,24 @@ def inicio(request: Request):
     for c in estado.resumo_canais():
         vids = estado.videos(c["slug"]) if c.get("ativo") else []
         lista.append({**c, "videos": vids})
-    return tpl.TemplateResponse(request, "inicio.html", {"canais": lista})
+    return tpl.TemplateResponse(request, "inicio.html", {"canais": lista, "falta_algo": primeiros_passos.falta_algo()})
+
+
+@app.get("/primeiros-passos", response_class=HTMLResponse)
+def pagina_primeiros_passos(request: Request, msg: str = "", ok: str = ""):
+    return tpl.TemplateResponse(request, "primeiros_passos.html", {"itens": primeiros_passos.checar(),
+                                                                    "msg": msg, "ok": ok})
+
+
+@app.post("/primeiros-passos/testar-claude")
+def testar_claude():
+    from .motor_claude import CHECAGEM, ErroClaude, MODELOS_DA_ETAPA, checar_claude
+    CHECAGEM.unlink(missing_ok=True)
+    try:
+        checar_claude(list(MODELOS_DA_ETAPA))
+    except ErroClaude as e:
+        return RedirectResponse("/primeiros-passos?msg=" + quote(str(e)[:500]), status_code=303)
+    return RedirectResponse("/primeiros-passos?ok=1&msg=" + quote(textos.t("pp.claude_ok")), status_code=303)
 
 
 @app.get("/v/{canal}/{video}", response_class=HTMLResponse)
@@ -339,12 +358,13 @@ def _fontes():
 
 
 @app.get("/config/canais", response_class=HTMLResponse)
-def config_canais(request: Request, erro: str = ""):
+def config_canais(request: Request, erro: str = "", sugestao=None):
     lista = []
     for slug, c in canais().items():
         cj = ler_json(Path(c["raiz"]) / "canal.json", {}) or {}
         lista.append({"slug": slug, **c, "canal_json": cj})
-    return tpl.TemplateResponse(request, "config_canais.html", {"lista": lista, "fontes": _fontes(), "erro": erro})
+    return tpl.TemplateResponse(request, "config_canais.html", {"lista": lista, "fontes": _fontes(), "erro": erro,
+                                                                "sugestao": sugestao or {}})
 
 
 @app.post("/config/canais/{slug}")
@@ -375,6 +395,65 @@ def editar_identidade(slug: str, cor_fundo: str = Form(...), cor_texto: str = Fo
     return RedirectResponse("/config/canais", status_code=303)
 
 
+def _linhas(txt):
+    return [l.strip() for l in (txt or "").splitlines() if l.strip()]
+
+
+@app.post("/config/canais/{slug}/regras")
+def salvar_regras(slug: str, escolha: str = Form(""), storyboard: str = Form(""), genericas: str = Form(""),
+                  genericas_hist: str = Form(""), proibidos: str = Form(""), permitido_se: str = Form(""),
+                  trocas: str = Form("")):
+    if slug not in canais():
+        raise HTTPException(404)
+    try:
+        trocas_l = json.loads(trocas) if trocas.strip() else []
+        assert isinstance(trocas_l, list) and all({"padrao", "por"} <= set(x) for x in trocas_l)
+        for x in trocas_l + ([{"padrao": permitido_se}] if permitido_se.strip() else []):
+            re.compile(x["padrao"])
+    except (ValueError, AssertionError, TypeError, re.error) as e:
+        return RedirectResponse("/config/canais?erro=" + quote(f"Regras não salvas: trocas/expressão inválidas ({e})"),
+                                status_code=303)
+    genericas_d = {"outros": _linhas(genericas)}
+    if _linhas(genericas_hist):
+        genericas_d["historica"] = _linhas(genericas_hist)
+    configuracao.salvar_canal(slug, regras={
+        "escolha": _linhas(escolha), "storyboard": _linhas(storyboard),
+        "busca": {"trocar_termos": trocas_l, "genericas": genericas_d},
+        "qa": {"termos_proibidos": [x.strip().lower() for x in proibidos.split(",") if x.strip()],
+               "permitido_se": permitido_se.strip()}})
+    return RedirectResponse(f"/config/canais#regras-{slug}", status_code=303)
+
+
+@app.post("/config/canais/{slug}/sugerir-regras", response_class=HTMLResponse)
+def sugerir_regras(request: Request, slug: str):
+    c = canais().get(slug)
+    if not c:
+        raise HTTPException(404)
+    from .motor_claude import ErroClaude, chamar
+    schema = {"type": "object", "additionalProperties": False,
+              "required": ["escolha", "storyboard", "genericas", "genericas_hist", "proibidos", "permitido_se", "trocas"],
+              "properties": {"escolha": {"type": "array", "items": {"type": "string"}},
+                             "storyboard": {"type": "array", "items": {"type": "string"}},
+                             "genericas": {"type": "array", "items": {"type": "string"}},
+                             "genericas_hist": {"type": "array", "items": {"type": "string"}},
+                             "proibidos": {"type": "array", "items": {"type": "string"}},
+                             "permitido_se": {"type": "string"},
+                             "trocas": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                                        "required": ["padrao", "por", "exceto"],
+                                        "properties": {"padrao": {"type": "string"}, "por": {"type": "string"},
+                                                       "exceto": {"type": "string"}}}}}}
+    try:
+        r = chamar("regras", (Path(__file__).with_name("prompts") / "regras_tema.md").read_text(),
+                   f"Canal: {c['nome']}\nTema: {c['tema']}\nIdioma da narração: {c['idioma']}", schema=schema,
+                   modelo=config()["modelos"].get("storyboard"), ctx={"canal": slug})
+    except ErroClaude as e:
+        return RedirectResponse("/config/canais?erro=" + quote(f"O Claude não respondeu: {str(e)[:300]}"), status_code=303)
+    r.pop("_uso", None)
+    if r.get("permitido_se", "").strip() in ('""', "''"):       # o modelo às vezes devolve as aspas do exemplo
+        r["permitido_se"] = ""
+    return config_canais(request, sugestao={slug: r})
+
+
 @app.post("/config/canais-novo")
 async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str = Form("en"),
                      cor_fundo: str = Form(...), cor_texto: str = Form(...), cor_destaque: str = Form(...),
@@ -401,7 +480,7 @@ async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str =
         return RedirectResponse(f"/config/canais?erro={quote(str(e))}", status_code=303)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    return RedirectResponse(f"/config/apis?canal={slug}", status_code=303)
+    return RedirectResponse(f"/config/canais#regras-{slug}", status_code=303)
 
 
 @app.get("/config/apis", response_class=HTMLResponse)
@@ -462,7 +541,8 @@ def config_modelos(request: Request, msg: str = ""):
                "chamadas": medias.get(i, (0, 0))[0], "media": medias.get(i, (0, 0))[1], "ultimo": ultimos.get(i, "")}
               for i, n, a in ETAPAS_CLAUDE]
     return tpl.TemplateResponse(request, "config_modelos.html", {"linhas": linhas, "modelos": MODELOS,
-                                                                 "esforcos": ESFORCOS, "msg": msg})
+                                                                 "esforcos": ESFORCOS, "msg": msg,
+                                                                 "after_app": cfg.get("after_app", "")})
 
 
 @app.post("/config/modelos")
@@ -476,7 +556,11 @@ async def salvar_modelos(request: Request):
             modelos[etapa] = m
         if e in ESFORCOS:
             esforco[etapa] = e
-    salvar_config({"modelos": modelos, "esforco": esforco})
+    mud = {"modelos": modelos, "esforco": esforco}
+    after = (form.get("after_app") or "").strip()
+    if after and re.fullmatch(r"[\w .-]+", after):
+        mud["after_app"] = after
+    salvar_config(mud)
     return RedirectResponse("/config/modelos?msg=" + quote("Salvo. Vale a partir da próxima chamada."), status_code=303)
 
 

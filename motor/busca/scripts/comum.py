@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-RAIZ = Path(__file__).resolve().parent.parent          # motor/busca (config padrão, dados/, ocr/)
+RAIZ = Path(__file__).resolve().parent.parent          # motor/busca (config padrão, dados/)
 sys.path.insert(0, str(RAIZ.parent))
 import caminhos  # noqa: E402  (motor/caminhos.py: canal, dados, cache, chaves)
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "

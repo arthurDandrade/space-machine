@@ -1,7 +1,7 @@
 ---
 tags: [pro-football, edicao, after-effects]
 status: editor automático funcionando (1º bloco montado em 2026-10-02)
-pasta: /Users/arthur/Canais/ProFootball/editor_ae/
+pasta: motor/edicao_ae/
 ---
 
 # Edição no After Effects
@@ -13,7 +13,7 @@ O Claude monta cada bloco **automaticamente no After Effects 2026**, a partir do
 ## Editor v2 (usa a Biblioteca de Cenas) ⭐ atual
 - Entrada: `edicao/plano_edicao_<item>.json` — cada cena tem **estados** (a cena evolui), e cada estado tem `layout` + `cards` + `textos`/`rotulos`. Cards aceitam `sobre` (frases brancas em sequência), `acima` (nome acima), `legenda` (mini-legenda), `sticker` (logo PNG no canto), `png` (logo/recorte solto) e `arquivo` (usar uma alternativa dos candidatos).
 - Layouts implementados: **A** (texto, com `cresce` = frase que se completa), **B** (1 card), **B4/B5** (card + rótulo lateral / rótulo em lista), **C1** (par), **C2** (cascata), **C4** (comparação com rótulos acima), **D1** (trio), **LOGOS** (PNGs lado a lado + texto abaixo). Ver códigos em [[Biblioteca de Cenas]].
-- Rodar: `../buscador_assets/.venv/bin/python gerar_ae2.py <projeto> --item 01` → `montar_01_v2.jsx` no After → `render_01_v2.jsx`.
+- Rodar: `../../.venv/bin/python gerar_ae2.py <projeto> --item 01` → `montar_01_v2.jsx` no After → `render_01_v2.jsx`.
 - Hierarquia no After: Null do estado (push-in) → Null "slot" de cada card (entrada/deriva/saída) → footage (máscara arredondada + sombra) e textos presos ao card.
 - Pares e trios são cortados em **retrato/quadrado** (aspecto ≤ 1,0) para ficarem altos, como nas referências.
 - Vídeo mais curto que o tempo de tela → time remap (segura o último frame).
@@ -41,11 +41,11 @@ edicao/bloco_<item>.aep   ──► renderizar.jsx (fila de render do After)
         ▼
 edicao/previa_bloco_<item>.mp4
 ```
-- Pasta do editor: `/Users/arthur/Canais/ProFootball/editor_ae/` (`gerar_ae.py`, `montar_modelo.jsx`, `renderizar.jsx`).
+- Pasta do editor: `motor/edicao_ae/` (`gerar_ae.py`, `montar_modelo.jsx`, `renderizar.jsx`).
 - Comandos:
   ```bash
-  cd /Users/arthur/Canais/ProFootball/editor_ae
-  ../buscador_assets/.venv/bin/python gerar_ae.py <projeto> --item 01
+  cd motor/edicao_ae
+  ../../.venv/bin/python gerar_ae.py <projeto> --item 01
   osascript -e 'tell application "Adobe After Effects 2026" to DoScriptFile "<projeto>/edicao/montar_01.jsx"'
   ```
   O script grava `edicao/log_01.txt` (OK ou erro com a linha).

@@ -1,0 +1,80 @@
+# Space Machine
+
+Produz vídeos no formato **"___ Explained"** para os seus canais do YouTube. É uma lista de tópicos narrada, sem apresentador, com cards de foto e vídeo sobre um fundo de papel, textos grandes e animação de entrada e saída.
+
+Você cola o roteiro. O Space Machine faz o resto, bloco por bloco:
+1. gera a narração;
+2. transcreve;
+3. planeja as cenas;
+4. busca as imagens e os vídeos em bancos livres e na web;
+5. escolhe os assets;
+6. monta e renderiza no After Effects;
+7. confere a qualidade.
+
+O Claude só entra nas decisões: planejar as cenas, escolher os assets e corrigir o que o controle de qualidade reprovar.
+
+## O que você precisa
+- **Mac** com **Adobe After Effects** (o editor).
+- **Assinatura do Claude** e o **Claude Code** instalado (`npm install -g @anthropic-ai/claude-code`).
+- **Homebrew** (https://brew.sh).
+- Chaves grátis de **Pixabay** ou **Pexels** (vídeos e fotos livres).
+- **Fish Audio** para a narração. Também dá para gravar a sua e pôr um `narracao.mp3` em cada bloco.
+- Opcionais: Smithsonian (fotos históricas, grátis) e Serper (Google Imagens, pago, usado só como último recurso).
+
+## Instalar
+```bash
+git clone <este repo> SpaceMachine && cd SpaceMachine
+./instalar.sh
+./spacemachine
+```
+O instalador:
+- instala ffmpeg, whisper-cpp e uv;
+- cria o Python (`.venv`);
+- baixa o modelo de transcrição;
+- pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`).
+
+O painel abre em http://localhost:8765. A página **Primeiros passos** mostra o que ainda falta e como resolver.
+
+No After Effects, ligue: Settings › Scripting & Expressions › **Allow Scripts to Write Files and Access Network**.
+
+## Primeiro vídeo
+1. **Canais › Novo canal**: nome, tema, idioma da narração, cores, fonte, logo e fundo.
+2. **Regras do tema**: clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
+3. **APIs**: o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
+4. **Início › + Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`. O texto antes do 1º tópico vira o cold open.
+5. Na página do vídeo, clique em **Produzir todos**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`.
+
+Um bloco que precisa de você para com o motivo escrito no painel. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera.
+
+## Onde fica cada coisa
+**Código** (este repo, igual para todo mundo):
+- `space_machine/`: orquestrador, painel, prompts das etapas e textos do painel (`textos/pt.json`).
+- `motor/busca/`: busca, escolha, download, narração, transcrição, mapas e tabelas.
+- `motor/edicao_ae/`: montagem no After Effects, render e controle de qualidade.
+- `formatos/explained/`: regras e notas do formato, iguais para todos os canais.
+
+**Dados** (a sua pasta, fora do git):
+- `space_machine.json`: modelo e esforço do Claude por etapa e o app do After.
+- `.env`: token do Claude.
+- `space_machine.sqlite`: consumo e gestão.
+- `cache/`.
+- `canais/<canal>/`:
+  - `canal.json`: identidade e regras do tema;
+  - `.env`: chaves do canal;
+  - `identidade/`;
+  - `conhecimento/`: Log de Aprendizados do canal;
+  - `producoes/<vídeo>/blocos/NN/`.
+
+## Linha de comando
+```bash
+./spacemachine                          # painel
+./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
+./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
+./spacemachine checar                   # testa o Claude (login, versão, modelos)
+./spacemachine consumo                  # tokens gastos por vídeo/bloco/etapa
+```
+
+## Regras do sistema
+- **Sem YouTube.** O sistema não busca, abre nem baixa nada do YouTube: buscas automáticas lá bloqueiam o IP. Vídeo vem só de bancos livres (Pexels, Pixabay, Wikimedia Commons, Internet Archive).
+- **Sem IA para gente real.** Nunca se gera com IA a imagem de uma pessoa real ou de um acontecimento real.
+- **Origem registrada.** O `creditos.txt` de cada bloco registra a origem e a licença de cada asset. Confira os direitos antes de publicar.

@@ -1,20 +1,20 @@
 ---
 name: escolher-assets
-description: Escolhe os assets de UM bloco do canal Pro Football depois da busca — abre as folhas de contato, decide cada candidato, grava escolhas.json, baixa (finalizar.py), confere os frames baixados e devolve só um resumo curto. Use sempre que um bloco terminou o buscar.py, para as imagens não ficarem na conversa principal.
+description: Escolhe os assets de UM bloco de um canal do Space Machine depois da busca — abre as folhas de contato, decide cada candidato, grava escolhas.json, baixa (finalizar.py), confere os frames baixados e devolve só um resumo curto. Use sempre que um bloco terminou o buscar.py, para as imagens não ficarem na conversa principal.
 tools: Read, Bash, Write, Edit, Glob, Grep
 ---
 
-Você escolhe os assets de **um bloco** do canal Pro Football (formato "___ Explained", cards de foto/vídeo sobre fundo de papel). Quem te chamou já transcreveu, planejou o `cenas.json`, compilou e rodou a busca. Você entrega o bloco com `assets/` + `manifesto.json` prontos e devolve um resumo curto. **Não monte no After, não rode o QA e não edite o `cenas.json`/`plano.json`** — isso é da conversa principal.
+Você escolhe os assets de **um bloco** de um canal do Space Machine (formato "___ Explained", cards de foto/vídeo sobre fundo de papel). Quem te chamou já transcreveu, planejou o `cenas.json`, compilou e rodou a busca. Você entrega o bloco com `assets/` + `manifesto.json` prontos e devolve um resumo curto. **Não monte no After, não rode o QA e não edite o `cenas.json`/`plano.json`** — isso é da conversa principal.
 
 ## Entrada
 A mensagem traz o caminho do bloco (`<projeto>`, a pasta com `plano.json`, `cenas.json` e `_work/candidatos/`). Se trouxer observações (ex.: "o 05-07-c pode reaproveitar o vídeo do 05-01-a"), siga-as.
 
 ## Leia antes (rápido)
-1. `/Users/arthur/Canais/ProFootball/.claude/skills/buscar-assets/SKILL.md` — seções "6. Escolher" e "7. Finalizar".
-2. Pasta de conhecimento ( `/Users/arthur/Canais/ProFootball/conhecimento/Pro Football/`): `03 - Assets/Critérios de Escolha.md` e `03 - Assets/Buscas que Funcionam.md`. Leia pelo caminho no disco (o MCP da pasta de conhecimento costuma estourar o tempo).
+1. `.claude/skills/buscar-assets/SKILL.md` — seções "6. Escolher" e "7. Finalizar".
+2. Notas do formato (`formatos/explained/conhecimento/`): `03 - Assets/Critérios de Escolha.md` e `03 - Assets/Buscas que Funcionam.md`. Leia pelo caminho no disco (o MCP da pasta de conhecimento costuma estourar o tempo).
 3. `<projeto>/plano.json` — o que cada asset precisa mostrar (`descricao`, `tipo`, `orientacao`, `duracao`, `gatilho`).
 
-Motor: `cd /Users/arthur/Canais/ProFootball/buscador_assets` e `PY=.venv/bin/python`.
+Motor: `cd motor/busca` e `PY=../../.venv/bin/python` (os scripts acham o canal pelo caminho do bloco; ou exporte `SM_CANAL`). Regras do tema do canal: `canal.json` › `regras` na pasta do canal.
 
 ## YouTube
 - **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies). Candidato com `"fonte": "youtube"` em bloco antigo não pode ser escolhido (o download falha de propósito).
