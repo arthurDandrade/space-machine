@@ -32,6 +32,7 @@ O pipeline agora roda pelo **Estúdio** (`/Users/arthur/Canais/Estudio/`). É um
 - O motor não cria nada sozinho: o Estúdio chama os mesmos scripts (`buscar.py`, `finalizar.py`, `editar_bloco.sh`, `qa_bloco.py`...).
 
 ## Regras que não podem ser esquecidas
+- **Git (desde 2026-10-13):** `ProFootball/` e `Estudio/` são repositórios git locais (sem GitHub). Antes de mexer em código, confira se o `git status` está limpo. Depois de cada mudança que funcionou, faça um commit com uma mensagem que explique o porquê. **Não crie mais cópias `_backup_*`**: o histórico do git já guarda as versões antigas. Produções, cache, `.venv` e `.env*` ficam fora do git (`.gitignore`).
 - **YouTube REMOVIDO do sistema (2026-10-11).** As buscas automáticas fizeram o Google bloquear o IP do Arthur e acusá-lo de fraude/proxy. Nenhum script busca, abre ou baixa nada do YouTube (o yt-dlp foi desinstalado). Vídeo só de bancos livres: Pexels, Pixabay, Wikimedia Commons, Internet Archive. Nunca religar nem contornar (VPN, proxy, cookies).
 - **Registrar na pasta de conhecimento tudo que for aprendido** (entrada datada no Log de Aprendizados + atualizar a nota do tópico + nota da produção).
 - Medir antes de afirmar: comparar com as referências em frame cheio (1920×1080), nunca em miniatura.

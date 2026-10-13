@@ -47,6 +47,9 @@ O código fica em `estudio/motor_claude.py`.
 - Concordância com o subagente: 12–45% por bloco. Isso **não mede qualidade**. O Arthur olhou as folhas de divergência e concluiu: "apesar de não terem escolhido os mesmos assets, a qualidade não caiu". Muitas diferenças são o mesmo vídeo em outro momento ou uma alternativa igualmente boa. Os "pulados" do sombra acontecem porque ele não faz busca nova.
 - Erro visto: no 01-09-a, o Estúdio escolheu um homem falando para a câmera em vez da tela pedida. Se isso se repetir, testar `esforco` `medium` só para `escolher_video` (em `estudio.json`).
 
+## Versionamento (2026-10-13)
+`Estudio/` e `ProFootball/` são repositórios git locais. Mudança no código = commit (nada de `_backup_*`). Revisão de 2026-10-13 e o que ela corrigiu: [[Log de Aprendizados]].
+
 ## Regra de manutenção
 Os prompts em `estudio/prompts/` são **resumos** de [[Critérios de Escolha]] e da skill `buscar-assets`. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
 
