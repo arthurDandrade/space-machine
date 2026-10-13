@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}APIs{% endblock %}
+{% block corpo %}
+<div class="linha" style="justify-content:space-between">
+  <h1>APIs</h1>
+  <form method="get" class="linha"><span class="sub">Canal</span>
+    <select name="canal" onchange="this.form.submit()">{% for slug, c in lista.items() %}<option value="{{ slug }}" {{ 'selected' if slug == canal }}>{{ c.nome }}</option>{% endfor %}</select></form>
+</div>
+<div class="sub">As chaves ficam em arquivos .env dentro da pasta do canal (permissão só sua). O painel nunca mostra a chave inteira. Campo de chave vazio = mantém a atual.</div>
+{% if msg %}<div class="msg {{ 'ok' if ok else 'erro' }}">{{ msg }}</div>{% endif %}
+{% for a in apis %}
+<div class="card" id="{{ a.id }}" style="margin-top:14px">
+  <div class="linha" style="justify-content:space-between">
+    <h3 style="margin:0">{{ a.nome }} {% if a.configurada %}<span class="pill p-ok">configurada</span>{% else %}<span class="pill p-warn">sem chave</span>{% endif %}
+      {% if a.escopo == "estudio" %}<span class="pill p-neu">vale para todos os canais</span>{% endif %}</h3>
+    <form method="post" action="/config/apis/{{ canal }}/{{ a.id }}/testar"><button type="submit">Testar</button></form>
+  </div>
+  <div class="sub">{{ a.ajuda }} · <code>{{ a.caminho }}</code></div>
+  <form method="post" action="/config/apis/{{ canal }}/{{ a.id }}" style="margin-top:6px" autocomplete="off">
+    {% for f in a.campos %}
+    <label class="campo">{{ f.rotulo }}{% if f.secreta and f.valor %} — atual: {{ f.mostrar }}{% endif %}
+      {% if f.secreta %}<input type="password" name="{{ f.chave }}" placeholder="{{ 'cole a nova chave para trocar' if f.valor else 'cole a chave' }}" autocomplete="new-password">
+      {% else %}<input name="{{ f.chave }}" value="{{ f.valor }}" placeholder="{{ f.dica }}">{% endif %}
+    </label>
+    {% if f.secreta and f.valor %}<label class="sub"><input type="checkbox" name="apagar_{{ f.chave }}" value="1"> apagar esta chave</label>{% endif %}
+    {% endfor %}
+    <div style="margin-top:8px"><button class="primario" type="submit">Salvar</button></div>
+  </form>
+</div>
+{% endfor %}
+{% endblock %}

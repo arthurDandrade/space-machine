@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Estúdio{% endblock %} · Estúdio</title>
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script>
+// 286 = "pare de atualizar" (bloco parado e sem mudança). O htmx trocava o conteúdo pela resposta vazia e o
+// kanban/painel sumia (2026-10-11): aqui ele só para, sem mexer na página.
+document.addEventListener("htmx:beforeSwap", function (e) {
+  if (e.detail.xhr.status === 286) { e.detail.shouldSwap = false; }
+});
+</script>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d1d1b;--muted:#6b6a64;--line:#e2dfd6;--accent:#1f5fbf;--accent-bg:#e7effb;
+--ok:#2f7d32;--ok-bg:#e6f2e6;--warn:#9a6200;--warn-bg:#fbf0d9;--bad:#b3261e;--bad-bg:#fbe5e3;--run:#5b3fc4;--run-bg:#ece7fb}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1f1f1d;--ink:#ecebe6;--muted:#a3a19a;--line:#33322f;
+--accent:#7aa7ff;--accent-bg:#1c2a44;--ok:#7fc683;--ok-bg:#1d2c1e;--warn:#e7b65a;--warn-bg:#33281a;--bad:#f08a80;--bad-bg:#3a1f1d;--run:#b3a2ff;--run-bg:#2a2445}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+header{display:flex;gap:20px;align-items:center;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--card)}
+header .marca{font-weight:700;letter-spacing:.02em}header nav{display:flex;gap:16px;font-size:14px;flex-wrap:wrap}
+main{max-width:1280px;margin:0 auto;padding:24px}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:28px 0 10px}h3{font-size:15px;margin:0 0 8px}
+.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.p-ok{background:var(--ok-bg);color:var(--ok)}.p-warn{background:var(--warn-bg);color:var(--warn)}
+.p-bad{background:var(--bad-bg);color:var(--bad)}.p-run{background:var(--run-bg);color:var(--run)}.p-neu{background:var(--accent-bg);color:var(--accent)}
+.barra{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:8px 0}.barra>i{display:block;height:100%;background:var(--ok)}
+.kanban{display:flex;gap:10px;overflow-x:auto;padding-bottom:10px}
+.coluna{flex:0 0 190px;background:transparent}.coluna h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);display:flex;justify-content:space-between}
+.coluna .card{padding:9px 11px;margin-bottom:8px;font-size:13px}.coluna .card b{display:block;font-size:13px}
+button,.botao{font:inherit;font-size:14px;padding:7px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.primario{background:var(--accent);border-color:var(--accent);color:#fff}button.perigo{color:var(--bad)}
+select,input,textarea{font:inherit;font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+textarea{width:100%}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;overflow:auto;max-height:340px;white-space:pre-wrap;margin:0}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.linha{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.etapas{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.duas{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.duas{grid-template-columns:1fr}main{padding:16px}}
+video{width:100%;border-radius:8px;background:#000}
+code{word-break:break-all;font-size:12px}
+.mais{font-size:12px;color:var(--muted);padding:4px 2px}
+.md{font-size:13px;overflow:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.cal .dia{min-height:96px;padding:6px 8px;font-size:12px}
+.cal .fora{opacity:.45}.cal .hoje{border-color:var(--accent)}.cal .num{color:var(--muted);font-weight:600}
+.msg{padding:10px 14px;border-radius:8px;margin:12px 0}.msg.ok{background:var(--ok-bg);color:var(--ok)}.msg.erro{background:var(--bad-bg);color:var(--bad)}
+label.campo{display:block;margin:8px 0;font-size:13px;color:var(--muted)}label.campo input,label.campo select,label.campo textarea{display:block;width:100%;margin-top:3px;color:var(--ink)}
+.cores{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.cores input[type=color]{height:36px;padding:2px}.md table{font-size:12px}
+</style>
+</head>
+<body>
+<header><span class="marca">Estúdio</span><nav>
+<a href="/">Início</a>
+{% for slug, nome in canais_menu() %}<a href="/canal/{{ slug }}/producao">Produção{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a><a href="/canal/{{ slug }}/calendario">Calendário{% if canais_menu()|length > 1 %} · {{ nome }}{% endif %}</a>{% endfor %}
+<a href="/consumo">Consumo</a><a href="/config/canais">Canais</a><a href="/config/apis">APIs</a><a href="/config/modelos">Modelos</a></nav></header>
+<main>{% block corpo %}{% endblock %}</main>
+</body>
+</html>

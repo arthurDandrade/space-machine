@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}{{ v.titulo }}{% endblock %}
+{% block corpo %}
+<div class="sub"><a href="/">Canais</a> ›</div>
+<h1>{{ v.titulo }}</h1>
+<div class="sub">{{ v.n_blocos }} blocos · {{ v.entregues }} entregues · Claude neste vídeo: {{ v.consumo.chamadas }} chamadas, {{ v.consumo.equivalente|milhar }} tokens equiv. · <code>{{ v.pasta }}</code></div>
+<h2>Kanban dos blocos</h2>
+<div hx-get="/v/{{ canal }}/{{ v.slug }}/kanban" hx-trigger="every 5s" hx-swap="innerHTML"
+     hx-vals='js:{ver: window._kanbanVer || ""}'>
+{% include "_kanban.html" %}
+</div>
+
+<h2>Publicação</h2>
+<form method="post" action="/v/{{ canal }}/{{ v.slug }}/publicacao" class="card">
+  <div class="duas">
+    <div>
+      <label class="campo">Título no YouTube<input name="titulo_pub" value="{{ g.titulo_pub or '' }}" placeholder="{{ v.titulo }}"></label>
+      <label class="campo">Descrição<textarea name="descricao" rows="6">{{ g.descricao or '' }}</textarea></label>
+      <label class="campo">Tags (separadas por vírgula)<input name="tags" value="{{ g.tags or '' }}"></label>
+    </div>
+    <div>
+      <label class="campo">Status
+        <select name="status">
+          <option value="" {{ 'selected' if not g.status }}>automático (pelos blocos)</option>
+          <option value="edicao_final" {{ 'selected' if g.status == 'edicao_final' }}>Edição final</option>
+          <option value="agendado" {{ 'selected' if g.status == 'agendado' }}>Agendado</option>
+          <option value="publicado" {{ 'selected' if g.status == 'publicado' }}>Publicado</option>
+        </select></label>
+      <label class="campo">Data de publicação<input type="date" name="data_pub" value="{{ (g.data_pub or '')[:10] }}"></label>
+      <label class="campo">Link no YouTube (depois de subir no Studio)<input name="link" value="{{ g.link or '' }}" placeholder="https://youtu.be/..."></label>
+      <label class="campo">Notas<textarea name="notas" rows="3">{{ g.notas or '' }}</textarea></label>
+    </div>
+  </div>
+  <button class="primario" type="submit">Salvar</button> {% if g.atualizado %}<span class="sub">salvo em {{ g.atualizado }}</span>{% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{
+ "_modelos": "Modelo do Claude por etapa (editável no painel em Configurações › Modelos).",
+ "modelos": {
+  "escolher_imagem": "claude-sonnet-5-5",
+  "escolher_video": "claude-sonnet-5-5",
+  "conferir": "claude-haiku-5-5",
+  "storyboard": "claude-opus-5-5",
+  "qa": "claude-opus-5-5",
+  "confirmar_trecho": "claude-sonnet-5-5"
+ },
+ "claude_paralelo": 3,
+ "claude_timeout_s": 300,
+ "imagem_lado_max": 1568,
+ "nova_busca_max": 2,
+ "finalizar_tentativas": 3,
+ "_esforco": "--effort do claude -p por etapa: low (sem raciocínio, mais barato), medium, high, xhigh, max.",
+ "esforco": {
+  "escolher_imagem": "low",
+  "escolher_video": "low",
+  "conferir": "low",
+  "storyboard": "medium",
+  "qa": "medium",
+  "confirmar_trecho": "low"
+ },
+ "storyboard_timeout_s": 2400,
+ "storyboard_voltas": 4,
+ "_travar_conferir": "true = a entrega para até o Arthur aprovar os itens de \"conferir\" no painel. Desligado a pedido dele (2026-10-12): a lista fica só como informação.",
+ "travar_conferir": false
+}

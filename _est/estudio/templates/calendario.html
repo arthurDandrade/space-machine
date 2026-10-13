@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titulo %}Calendário · {{ nome }}{% endblock %}
+{% block corpo %}
+<div class="linha" style="justify-content:space-between">
+  <h1>Calendário · {{ titulo_mes }}</h1>
+  <div class="linha"><a class="botao" href="?mes={{ ant }}">‹ anterior</a><a class="botao" href="?">hoje</a><a class="botao" href="?mes={{ prox }}">próximo ›</a></div>
+</div>
+<div class="sub">A data vem do campo "Data de publicação" de cada vídeo (na página do vídeo).</div>
+<div class="cal" style="margin-top:14px">
+  {% for d in ["seg","ter","qua","qui","sex","sáb","dom"] %}<div class="sub" style="text-align:center">{{ d }}</div>{% endfor %}
+  {% for semana in semanas %}{% for dia in semana %}
+  <div class="card dia {{ 'fora' if not dia.no_mes }} {{ 'hoje' if dia.hoje }}">
+    <div class="num">{{ dia.data.day }}</div>
+    {% for x in dia.videos %}
+      <a href="/v/{{ canal }}/{{ x.v.slug }}" style="display:block;margin-top:4px"><span class="pill {{ {'publicado':'p-ok','agendado':'p-run','edicao_final':'p-neu'}.get(x.coluna,'p-warn') }}" style="white-space:normal">{{ x.g.titulo_pub or x.v.titulo }}</span></a>
+    {% endfor %}
+  </div>
+  {% endfor %}{% endfor %}
+</div>
+{% if sem_data %}
+<h2>Sem data</h2>
+<div class="linha">{% for v in sem_data %}<a class="pill p-neu" href="/v/{{ canal }}/{{ v.slug }}">{{ v.titulo }}</a>{% endfor %}</div>
+{% endif %}
+{% endblock %}
