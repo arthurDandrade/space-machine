@@ -1,0 +1,12 @@
+{
+  "pro-football": {
+    "nome": "Pro Football",
+    "raiz": "/Users/arthur/Canais/ProFootball",
+    "python": "/Users/arthur/Canais/ProFootball/buscador_assets/.venv/bin/python",
+    "scripts": "/Users/arthur/Canais/ProFootball/buscador_assets/scripts",
+    "editor": "/Users/arthur/Canais/ProFootball/editor_ae",
+    "producoes": "/Users/arthur/Canais/ProFootball/producoes/videos",
+    "conhecimento": "/Users/arthur/Canais/ProFootball/conhecimento/Pro Football",
+    "ativo": true
+  }
+}

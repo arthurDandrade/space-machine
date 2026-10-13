@@ -1,0 +1,50 @@
+<script>window._painelVer = "{{ ver }}";</script>
+<div class="etapas">
+{% for etapa, rotulo in ETAPAS %}
+  <span class="pill {{ 'p-ok' if b.feito[etapa] else 'p-neu' }}">{{ rotulo }}</span>
+{% endfor %}
+{% if b.rodando %}<span class="pill p-run">rodando</span>{% endif %}
+</div>
+{% if b.parado and not b.rodando %}
+<div class="card" style="border-color:var(--warn);background:var(--warn-bg);margin-bottom:12px">
+  <b>Parado em {{ b.parado.etapa }}</b><div>{{ b.parado.motivo }}</div>
+</div>
+{% endif %}
+<div class="duas">
+  <div>
+    {% if b.previas %}
+    <h3>Prévia {{ b.previas[-1].split('_v')[-1].split('.')[0] and 'v' ~ b.previas[-1].split('_v')[-1].split('.')[0] }} {% if b.aprovado %}<span class="pill p-ok">QA aprovado</span>{% else %}<span class="pill p-bad">QA não aprovado</span>{% endif %}</h3>
+    <video controls preload="metadata" src="/arquivo?p={{ b.previas[-1]|urlencode }}"></video>
+    {% endif %}
+    {% if b.conferir_pendentes %}
+    <h3 style="margin-top:14px">{{ 'Para conferir antes de entregar' if b.travar_conferir else 'Para conferir (não trava a entrega)' }} <span class="pill p-warn">{{ b.conferir_pendentes|length }}</span></h3>
+    <ul style="margin:0 0 8px;padding-left:18px">
+      {% for aid, t in b.conferir_pendentes.items() %}<li><b>{{ aid }}</b>: {{ t }}</li>{% endfor %}
+    </ul>
+    {% if not b.rodando %}
+    <form method="post" action="/b/{{ canal }}/{{ video }}/{{ b.nn }}/conferir_ok" style="margin:0">
+      {% if not b.travar_conferir %}<button type="submit">Marcar como visto</button>
+      <span class="sub">Algo errado? Escreva na observação e rode de "escolher".</span>{% else %}
+      <button class="primario" type="submit">Aprovei, pode entregar</button>
+      <span class="sub">Algo errado? Escreva na observação e rode de "escolher".</span>{% endif %}
+    </form>
+    {% endif %}
+    {% elif b.conferir or b.pulados %}
+    <p class="sub" style="margin-top:14px">Conferências aprovadas ({{ (b.conferir|length) + (b.pulados|length) }}).</p>
+    {% endif %}
+    {% if b.revisao %}<p><a href="/arquivo?p={{ b.revisao|urlencode }}" target="_blank">Abrir revisão dos assets ↗</a></p>{% endif %}
+  </div>
+  <div>
+    <h3>Etapas (Estúdio)</h3>
+    <table>
+    {% for etapa in ETAPAS_RODAR %}{% set e = b.etapas_estudio.get(etapa) %}
+      <tr><td>{{ etapa }}</td>
+      <td>{% if e %}<span class="pill {{ {'ok':'p-ok','rodando':'p-run','parado':'p-warn','corrigindo':'p-run'}.get(e.status,'p-neu') }}">{{ e.status }}</span>{% endif %}</td>
+      <td class="sub">{{ e.detalhe if e else '' }}</td></tr>
+    {% endfor %}
+    </table>
+    {% if log_rodar %}<h3 style="margin-top:14px">Saída</h3><pre>{{ log_rodar }}</pre>{% endif %}
+    {% if log_etapa %}<h3 style="margin-top:14px">{{ log_nome }}</h3><pre>{{ log_etapa }}</pre>{% endif %}
+  </div>
+</div>
+{% if b.qa %}<h3 style="margin-top:16px">QA</h3><div class="card md"><pre>{{ b.qa }}</pre></div>{% endif %}

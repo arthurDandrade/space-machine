@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block titulo %}Consumo{% endblock %}
+{% block corpo %}
+<h1>Consumo do Claude</h1>
+<div class="sub">Tokens equivalentes = entrada + escrita de cache ×1,25 + leitura de cache ×0,1 + saída ×5. Linha de base do subagente escolher-assets: ~47.000 por asset.</div>
+<h2>Por etapa</h2>
+<div class="card"><table><tr><th>Etapa</th><th class="n">Chamadas</th><th class="n">Tokens equiv.</th><th class="n">Média por asset/bloco</th></tr>
+{% for l in por_etapa %}<tr><td>{{ l[0] }}</td><td class="n">{{ l[1] }}</td><td class="n">{{ l[2]|milhar }}</td><td class="n">{{ l[3]|milhar }}</td></tr>{% endfor %}
+</table></div>
+<h2>Por vídeo, bloco e etapa</h2>
+<div class="card"><table><tr><th>Vídeo</th><th>Bloco</th><th>Etapa</th><th>Modelo</th><th class="n">Chamadas</th><th class="n">Tokens equiv.</th><th class="n">Falhas</th><th>Última</th></tr>
+{% for l in linhas %}<tr><td>{{ l[1] }}</td><td>{{ l[2] }}</td><td>{{ l[3] }}</td><td>{{ l[4] }}</td><td class="n">{{ l[5] }}</td><td class="n">{{ l[6]|milhar }}</td><td class="n">{{ l[8] or '' }}</td><td class="sub">{{ l[9] }}</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

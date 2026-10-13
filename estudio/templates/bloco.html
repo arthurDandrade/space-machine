@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}{{ b.nn }} · {{ b.topico }}{% endblock %}
+{% block corpo %}
+<div class="sub"><a href="/">Canais</a> › <a href="/v/{{ canal }}/{{ video }}">{{ titulo }}</a> ›</div>
+<h1>Bloco {{ b.nn }} · {{ b.topico }}</h1>
+<div class="sub"><code>{{ b.caminho }}</code></div>
+
+<div class="card" style="margin-top:16px">
+  <form method="post" action="/b/{{ canal }}/{{ video }}/{{ b.nn }}/rodar" class="linha">
+    <button class="primario" type="submit">Rodar</button>
+    <label class="sub">de <select name="de"><option value="">onde parou</option>{% for e in ETAPAS_RODAR %}<option>{{ e }}</option>{% endfor %}</select></label>
+    <label class="sub">até <select name="ate"><option value="">o fim</option>{% for e in ETAPAS_RODAR %}<option>{{ e }}</option>{% endfor %}</select></label>
+    <input name="obs" placeholder="observação para o Claude (opcional)" style="flex:1;min-width:220px">
+  </form>
+  <form method="post" action="/b/{{ canal }}/{{ video }}/{{ b.nn }}/parar" style="margin-top:8px">
+    <button class="perigo" type="submit">Parar</button> <span class="sub">Rodar continua de onde parou: cada etapa pula o que já está feito.</span>
+  </form>
+</div>
+
+<div hx-get="/b/{{ canal }}/{{ video }}/{{ b.nn }}/painel" hx-trigger="load, every 4s" hx-swap="innerHTML"
+     hx-vals='js:{ver: window._painelVer || ""}'></div>
+
+{% if storyboard %}
+<h2>Storyboard</h2>
+<div class="card md"><pre>{{ storyboard }}</pre></div>
+{% endif %}
+{% endblock %}
