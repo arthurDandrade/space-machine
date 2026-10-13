@@ -1,0 +1,133 @@
+{
+  "whisper_cli": "/opt/homebrew/bin/whisper-cli",
+  "whisper_modelo": "~/.cache/whisper/ggml-small.en.bin",
+  "candidatos_por_asset": 8,
+  "videos_por_asset": 3,
+  "lado_menor_minimo": {
+    "foto": 700,
+    "mapa": 600,
+    "logo": 300,
+    "recorte": 500,
+    "bandeira": 300
+  },
+  "preview_video_max_s": 300,
+  "video_duracao_max_busca_s": 900,
+  "video_margem_s": 1.0,
+  "videos_livres_max": 3,
+  "cache_busca_dias": 7,
+  "fontes_pagas": [
+    "google",
+    "google_transparente"
+  ],
+  "video_duracao_max_livre_s": 3600,
+  "_youtube": "YouTube REMOVIDO do sistema em 2026-10-11 (bloqueio de IP do Arthur / acusação de fraude). Vídeo só de bancos livres.",
+  "_rank_fontes": "Cada tipo é uma lista de camadas, da melhor para a pior. O buscar.py usa a 1ª camada e só desce se faltar candidato bom (< 2x candidatos_por_asset). Fontes pagas (fontes_pagas) ficam por último e só entram se faltar candidato mesmo (< candidatos_por_asset). Rank medido nas escolhas de 2026-10-02 a 10-09: ver nota Rank de Fontes na pasta de conhecimento.",
+  "fontes_por_tipo": {
+    "foto": [
+      [
+        "web",
+        "commons"
+      ],
+      [
+        "pixabay"
+      ],
+      [
+        "openverse",
+        "smithsonian"
+      ],
+      [
+        "google"
+      ]
+    ],
+    "historica": [
+      [
+        "commons",
+        "web"
+      ],
+      [
+        "smithsonian"
+      ],
+      [
+        "openverse"
+      ],
+      [
+        "google"
+      ]
+    ],
+    "recorte": [
+      [
+        "web_transparente",
+        "web"
+      ],
+      [
+        "commons"
+      ],
+      [
+        "google_transparente",
+        "google"
+      ]
+    ],
+    "mapa": [
+      [
+        "commons",
+        "web"
+      ],
+      [
+        "google"
+      ]
+    ],
+    "logo": [
+      [
+        "web_transparente",
+        "commons"
+      ],
+      [
+        "web"
+      ],
+      [
+        "google_transparente",
+        "google"
+      ]
+    ],
+    "bandeira": [
+      [
+        "commons",
+        "web_transparente"
+      ],
+      [
+        "google_transparente"
+      ]
+    ],
+    "video": [
+      [
+        "pexels",
+        "pixabay"
+      ],
+      [
+        "commons",
+        "archive"
+      ]
+    ]
+  },
+  "dominios_bloqueados": [
+    "alamy.com",
+    "shutterstock.com",
+    "gettyimages",
+    "istockphoto.com",
+    "dreamstime.com",
+    "depositphotos.com",
+    "123rf.com",
+    "stock.adobe.com",
+    "adobestock",
+    "vectorstock.com",
+    "freepik.com",
+    "canstockphoto.com",
+    "bigstockphoto.com",
+    "pond5.com",
+    "agefotostock.com",
+    "lookaside.fbsbx.com",
+    "lookaside.instagram.com",
+    "vecteezy"
+  ],
+  "smithsonian_api_key_env": "SI_API_KEY"
+}

@@ -1,0 +1,68 @@
+{
+  "fonte": "4 vídeos de referência, detecção a 4 fps (estudo_cenas/det)",
+  "eventos_por_min": {
+    "min": 10.1,
+    "max": 21.4
+  },
+  "frac_so_texto": {
+    "media": 0.136,
+    "min": 0.105,
+    "max": 0.176
+  },
+  "altura_texto_solo_px": [
+    108.0,
+    108.0,
+    132.0,
+    136.0,
+    136.0
+  ],
+  "largura_texto_solo_px": [
+    608.0,
+    1084.0,
+    1364.0,
+    1548.0,
+    1664.0
+  ],
+  "altura_texto_junto_px": [
+    84.0,
+    96.0,
+    112.0,
+    136.0,
+    158.4
+  ],
+  "altura_1card_px": [
+    740.0,
+    808.0,
+    904.0,
+    944.0,
+    976.0
+  ],
+  "altura_2cards_px": [
+    659.2,
+    764.0,
+    844.0,
+    908.0,
+    951.6
+  ],
+  "tempo_assets_s": [
+    0.75,
+    1.5,
+    2.75,
+    5.25,
+    8.25
+  ],
+  "frac_vazio": {
+    "media": 0.047
+  },
+  "palco_vazio_entre_cenas_s": {
+    "mediana": 0.15,
+    "p90": 0.25,
+    "max_no_conteudo": 0.3
+  },
+  "texto_sobre_imagem_frac": 0.3,
+  "palavras_texto_solo": [
+    2,
+    6
+  ],
+  "max_textos_solo_seguidos": 4
+}
