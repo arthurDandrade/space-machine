@@ -1,0 +1,14 @@
+# Só o código vai para o git. Dados (canais, produções, cache, chaves) ficam na pasta de dados (SM_DADOS).
+.venv/
+.env*
+.DS_Store
+__pycache__/
+*.pyc
+*.aep
+Auto-Save/
+formatos/explained/referencias/*.mp4
+formatos/explained/referencias/estudo_cenas/videos2/
+formatos/explained/referencias/estudo_cenas/tiras/
+formatos/explained/referencias/estudo_cenas/det/
+formatos/explained/referencias/estudo_cenas/exemplos/
+formatos/explained/referencias/Analise_Edicao/frames/
