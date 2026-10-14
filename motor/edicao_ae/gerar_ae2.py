@@ -858,7 +858,17 @@ def main():
             else:
                 prox = saida_ini if (anim and modo == "abaixo") else fim
             t_in = max(ini - 0.02, tt_ - 0.05)
-            if modo == "abaixo":
+            if modo == "faixa":
+                # texto branco na faixa azul (o estilo do "sobre"), no lugar livre do layout: no E3 ao lado do
+                # recorte. "52 diamonds = Super Bowl 52" preto por cima do anel ficou ruim (rings, bloco 06, 2026-10-14)
+                if e["layout"] == "E3" and geo:
+                    dir_card = geo[0][0] + geo[0][2] / 2
+                    pos_, larg_ = [(dir_card + 60 + W - 200) / 2 - CX, 0], W - 200 - dir_card - 60
+                else:
+                    pos_, larg_ = [0, 0], 1300
+                M.texto(txt.upper(), t_in, prox, pai, pos_, larg_, 120, [1, 1, 1], None, fonte=FONTE_MARCA,
+                        caixa=COR_CAIXA)
+            elif modo == "abaixo":
                 M.texto(txt.upper(), t_in, prox, pai, [0, 830 - CY], 1400, 130, COR_TEXTO, SOMBRA_PRETO, fonte=FONTE_MARCA)
             elif modo == "2linhas":
                 M.texto(duas_linhas(txt, 10), t_in, prox, pai, [0, 0], 1500, 140, COR_TEXTO, SOMBRA_PRETO)

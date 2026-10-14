@@ -5,7 +5,7 @@ Lidas pelo orquestrador (`rodar._sistema_storyboard`), junto com as regras do te
 ## As 60 variações, não os 34 nomes
 O compilador aceita ~34 nomes em `"layout"`, mas **as 60 variações da biblioteca funcionam todas**: muitas são um layout genérico + um campo no card. Planeje pela biblioteca:
 - A1/A2/A3 = `A` (+ `"cresce"`/`"2linhas"`); A4 = `A4`.
-- B1/B2 = `B`; B3/B7 = `"sobre"`; B6 = `"troca"`; B8 = `"acima"` (só em par/trio); E4 = `"sticker"`.
+- B1/B2 = `B`; B3/B7 = `"sobre"`; B6 = `"troca"`; B8 = `"acima"` (só em par/trio); E4 = `"sticker"`; texto com `"faixa"` = branco na faixa azul (no E3, ao lado do recorte).
 - C5 = `C1` com um card `"mapa"`; M4 = `C1` com 2 mapas; C4 = `C1` com `"acima"` nos dois; C8 = `C1` com `"troca"` num card.
 - F1–F7 = **uma cena com vários `"estados"`** (1 card → 2 → 3; card → mapa → texto…).
 - M1/M2 = card com `"mapa": {...}` (gerado, sem busca); T1–T3 = `"sai"`, `"entra"`, `"dissolve"`.

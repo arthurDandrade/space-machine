@@ -30,7 +30,8 @@ Formato de cenas.json:
 - "nome_fala" no item (opcional): o nome como está na transcrição quando o Whisper erra (ex.: "Lambo Field");
   o "nome" fica com o texto certo, que vai na tela.
 - Um asset pode ser {"reusar": "<id já existente>"} ou {"arquivo": "caminho relativo ao projeto"}.
-- Textos/rótulos/sobre: "texto" ou ["texto", "gatilho"] ou ["texto", "gatilho", "cresce"|"2linhas"|"abaixo"].
+- Textos/rótulos/sobre: "texto" ou ["texto", "gatilho"] ou ["texto", "gatilho", "cresce"|"2linhas"|"abaixo"|"faixa"]
+  ("faixa" = branco na faixa azul; no E3 fica ao lado do recorte).
   Sem gatilho, o gatilho são as 2 primeiras palavras do texto.
 - "png": true num card = recorte/logo solto (sem quadro).
 - "tabela": {...} / "grafico": {...} num card = imagem GERADA por scripts/gerar_tabela.py (dados reais + "fonte").
