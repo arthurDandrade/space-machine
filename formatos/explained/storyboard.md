@@ -12,10 +12,10 @@ O compilador aceita ~34 nomes em `"layout"`, mas **as 60 variações da bibliote
 - G2/G3 = `"tabela"`/`"grafico"` com **dados reais do roteiro** + `"fonte"`; G1 = `"citacao"` com texto real.
 
 ## Regras (o `storyboard.py` confere as que dá para medir)
-1. **≥ 8 variações diferentes** no bloco; nenhuma família domina.
+1. **Nenhum tipo de cena repete no bloco** (2026-10-13): cada código da biblioteca (B1, C1, D1, M1, A1...) aparece **uma vez só**; A1, A2, A3 e A4 contam como tipos diferentes. Se a ideia pede de novo o mesmo arranjo, use outra variação (C1 → C4 com rótulos, C8 âncora, C2 cascata; B1 → B10, B4, E4; A1 → A2 que cresce, A3 em 2 linhas) ou junte as duas falas numa sequência F. **≥ 8 variações** no bloco.
 2. **Card único (B1/B2/B4/B5/B6/B7/B9/B10/M1) ≤ 35% dos estados** e **nunca 3 seguidos**.
 3. **≥ 40% das cenas evoluem** (2–4 estados, família F), sem palco vazio.
-4. **Texto solo 12–35% do tempo**, frases de 2–6 palavras (frase longa encolhe a fonte: o QA reprova texto < 108 px). Texto sobre imagem só nome/número/data/termo (~30% das cenas de imagem).
+4. **Texto solo 12–20% do tempo** (2026-10-13: menos texto, mais imagem; frase abstrata que não cabe vira imagem com rótulo B4/B7 ou G1 citação), frases de 2–6 palavras (frase longa encolhe a fonte: o QA reprova texto < 108 px). Texto sobre imagem só nome/número/data/termo (~30% das cenas de imagem).
 5. **Cada asset e cada item de `troca` ≥ 1,8 s** na tela. Confira na transcrição a distância entre os gatilhos **antes** de escrever (trocas com gatilhos colados reprovaram nos blocos 02 e 08 de "Who Makes the NFL Possible").
 6. **15–25 assets/min** (meta da nota: 20–25).
 7. **Título ≥ 1 s**: se o narrador emenda o título na frase seguinte, a 1ª cena começa na frase depois.

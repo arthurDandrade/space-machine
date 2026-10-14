@@ -165,7 +165,7 @@ Detalhes de como os elementos entram/saem que aparecem em v5–v8 (o padrão con
 ## Como isso muda o trabalho
 **Planejamento** ([[Da Narração às Cenas]]):
 - Planejar **sequências**: uma frase de 4–8 s com 2–4 gatilhos vira uma cena F, não várias cenas soltas.
-- ~30% texto (A), e nas cenas de imagem usar todas as famílias, evitando repetir o mesmo código duas vezes seguidas.
+- 12–20% texto (A) e **cada código uma vez só por bloco** (2026-10-13), usando todas as famílias.
 - Densidade sobe: uma sequência consome 2–5 assets → **~20–25 assets por minuto**.
 
 **Busca de assets** ([[Como Buscar Assets]]):

@@ -10,6 +10,7 @@ Criado em 2026-10-06 (vídeo "Who Makes the NFL Possible": 76% das cenas ficaram
 60 tipos usados, ritmo 3–8 mudanças/min contra 10–21 nas referências).
 """
 import argparse
+import collections
 import json
 import sys
 from pathlib import Path
@@ -33,7 +34,10 @@ TEXTO_SOLO = {"A1", "A2", "A3", "A4"}
 # metas (referências v1–v8 + o que o QA mede)
 MIN_VARIACOES, MAX_CARD_UNICO, MAX_SEGUIDOS = 8, 0.35, 2
 MIN_ASSET_S, MIN_ASSETS_MIN, MIN_CENAS_F = 1.8, 15.0, 0.40   # assets/min: meta da nota 20–25, aviso abaixo de 15
-TEXTO_SOLO_FAIXA = (0.12, 0.35)
+# 2026-10-13, decisão do Arthur (mais variedade): texto solo até 20% (as referências têm ~30%) e nenhum tipo de
+# cena repetido no bloco (A1/A2/A3/A4 são tipos diferentes). Medido nos 21 blocos do Every NFL Position: média de
+# 23% de texto e 3–10 repetições por bloco, quase todas A1, C1 e B1.
+TEXTO_SOLO_FAIXA = (0.12, 0.20)
 
 
 def variacao(est_plan, est_ed):
@@ -198,11 +202,15 @@ def main():
         avisos.append(f"{mud_min:.1f} assets/min (meta 20–25; mínimo {MIN_ASSETS_MIN:.0f})")
     if cenas_f < MIN_CENAS_F:
         avisos.append(f"só {cenas_f:.0%} das cenas evoluem com mais de um estado (meta ≥ {MIN_CENAS_F:.0%})")
+    repetidos = {v: n for v, n in collections.Counter(vars_).items() if n > 1}
+    if repetidos:
+        avisos.append("tipo de cena repetido no bloco (cada um só uma vez; troque por outra variação da biblioteca): "
+                      + ", ".join(f"{v} {NOMES.get(v, '')} ×{n}".replace("  ", " ") for v, n in sorted(repetidos.items())))
     if not TEXTO_SOLO_FAIXA[0] <= t_texto / dur_total <= TEXTO_SOLO_FAIXA[1]:
         avisos.append(f"texto solo em {t_texto/dur_total:.0%} do tempo (meta {TEXTO_SOLO_FAIXA[0]:.0%}–{TEXTO_SOLO_FAIXA[1]:.0%})")
 
     resumo = (f"{len(item['cenas'])} cenas, {len(estados)} estados, {sum(1 for e in estados for _ in e['ed'].get('cards', []))} cards · "
-              f"{len(distintas)} variações ({', '.join(distintas)}) · card único {n_unico/len(vars_):.0%} · "
+              f"{len(distintas)} variações ({', '.join(distintas)}) · repetidas {len(vars_) - len(distintas)} · card único {n_unico/len(vars_):.0%} · "
               f"máx. {maior} seguidos · {mud_min:.1f} assets/min · cenas que evoluem {cenas_f:.0%} · "
               f"texto solo {t_texto/dur_total:.0%}")
     md = [f"# Storyboard — {item['nome']} (bloco {iid})", "",

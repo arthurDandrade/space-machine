@@ -24,10 +24,10 @@ Motivo: em [[Who Makes the NFL Possible]] 76% das cenas ficaram em B/C1/A, só 1
 2. **Corte em cenas pela troca de ideia.** Cada asset fica em média **~4 s** na tela (v5–v8), **nunca menos de 1,8 s**. Cena de vídeo bom pode durar 5–15 s. Não picotar para acompanhar cada palavra.
 3. **Pense em sequências, não em cenas paradas** (família F): uma frase de 4–8 s com 2–4 gatilhos vira **uma cena com vários estados** (1 card → par → troca → texto), sem palco vazio.
 4. **Todo nome próprio, lugar, data, número, time, objeto concreto ou ação visível vira asset**, com `gatilho` = a palavra exata da narração.
-5. **Frases abstratas viram texto solo** (A1, ou A4 se a frase for longa e der para quebrar em trechos), sem asset: ~28–32% do tempo.
+5. **Frases abstratas viram texto solo** (A1, ou A4 se a frase for longa e der para quebrar em trechos), sem asset: **12–20% do tempo** (2026-10-13, decisão do Arthur para dar mais variedade; as referências têm ~28–32%). O que não couber vira imagem com rótulo (B4/B7) ou citação (G1).
 6. **Densidade-alvo: 20–25 assets por minuto** (sequências consomem 2–5 assets cada).
 7. **Nunca o mesmo asset duas vezes.** Para repetir um jogador, outra foto/outro momento.
-8. **Variedade:** não repetir o mesmo código 3 vezes seguidas nem encadear 4 cards únicos (B). O QA avisa.
+8. **Variedade:** **nenhum código da biblioteca repete no mesmo bloco** (2026-10-13; antes era só "não 3 seguidos") e nunca 3 cards únicos (B) seguidos. Nos 21 blocos do Every NFL Position o que mais repetia era A1, C1 e B1. O `storyboard.py` avisa e o storyboard corrige.
 9. Trabalhe **um item por vez** (planejar o vídeo inteiro de uma vez fica superficial).
 
 ## Que layout usar para cada situação ⭐
