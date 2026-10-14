@@ -514,13 +514,15 @@ def cta(M, e, pai, ini, fim):
     pasta = caminhos.canal()
     botao = pasta / _id.get("cta_botao", "identidade/cta_botao.png")
     cursor = pasta / _id.get("cta_cursor", "identidade/cta_cursor.png")
-    if not botao.exists():
-        sys.exit(f"CTA sem o botão do canal: falta {botao}")
     tc = e.get("clique", ini + 1.2)
     sai = fim - 0.3
-    arq, bw, bh, _ = M.info(botao, CTA_BOTAO_W, 600, png=True)
-    s = CTA_BOTAO_W / bw
-    M.caixa(pai, -CTA_BOTAO_W / 2, CTA_BOTAO_Y - bh * s / 2, CTA_BOTAO_W / 2, CTA_BOTAO_Y + bh * s / 2)
+    if botao.exists():
+        arq, bw, bh, _ = M.info(botao, CTA_BOTAO_W, 600, png=True)
+        s = CTA_BOTAO_W / bw
+        alt = bh * s
+    else:
+        alt = 240           # canal sem o PNG (canal novo): "SUBSCRIBE" branco na faixa da cor do canal
+    M.caixa(pai, -CTA_BOTAO_W / 2, CTA_BOTAO_Y - alt / 2, CTA_BOTAO_W / 2, CTA_BOTAO_Y + alt / 2)
     # pop na entrada; no clique afunda (92%) e volta com um pulo (104%); sai encolhendo junto com o cursor
     sk = [[ini, 0, [0, 0, 800, 18]], [ini + POP, 100, [0, 85, 0, 0]],
           [tc, 100, [0, 0, 0, 60]], [tc + 0.08, 92], [tc + 0.22, 104], [tc + 0.38, 100, [0, 60, 0, 0]],
@@ -528,8 +530,12 @@ def cta(M, e, pai, ini, fim):
     sk = [k for k in sk if k[0] <= fim]
     slot = M.add(kind="null", name="cta botão", parent=pai, pos=[0, CTA_BOTAO_Y], anchor=[0, 0],
                  **{"in": ini, "out": fim}, scale_keys=sk)
-    M.add(kind="footage", name="cta botão", file=str(arq), parent=slot, src=[bw, bh], scale=s * 100, pos=[0, 0],
-          start=0, **{"in": ini, "out": fim}, shadow={"op": 110, "soft": 30 / s, "dist": 5 / s})
+    if botao.exists():
+        M.add(kind="footage", name="cta botão", file=str(arq), parent=slot, src=[bw, bh], scale=s * 100,
+              pos=[0, 0], start=0, **{"in": ini, "out": fim}, shadow={"op": 110, "soft": 30 / s, "dist": 5 / s})
+    else:
+        M.texto("SUBSCRIBE", ini, fim, slot, [0, 0], CTA_BOTAO_W * 0.85, 190, [1, 1, 1], None, fade=False,
+                fonte=FONTE_MARCA, caixa=COR_CAIXA)
     if not cursor.exists():
         return
     arq, cw, ch, _ = M.info(cursor, 400, CTA_CURSOR_H, png=True)
