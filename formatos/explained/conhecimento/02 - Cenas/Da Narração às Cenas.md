@@ -15,8 +15,8 @@ Como transformar roteiro + narração em cenas, e cada cena numa lista de assets
 - **Cada asset fica no mínimo ~1,8 s na tela.** Cenas de imagem podem (e devem) durar 5–15 s quando o vídeo é bom. Não picotar a cena para acompanhar cada palavra.
 - O `compilar_cenas.py` avisa quando mais de 45% das cenas de imagem têm texto ou quando um asset fica menos de 1,8 s.
 
-## Storyboard (subagente `storyboard`, desde 2026-10-06)
-O planejamento de cada bloco agora é feito pelo subagente `storyboard` (`.claude/agents/storyboard.md`), que entrega `storyboard_<NN>.md`: cena por cena, tempo na narração, tipo de cena (das **60 variações**) e o que cada asset mostra. O script `buscador_assets/scripts/storyboard.py` mede e avisa: **≥ 8 variações**, **card único ≤ 35%** e nunca 3 seguidos, **≥ 40% de cenas que evoluem**, texto solo 12–35%, cada asset/troca ≥ 1,8 s, 15–25 assets/min.
+## Storyboard (etapa `storyboard` do orquestrador; antes, subagente, 2026-10-06 a 10-10)
+O planejamento de cada bloco é feito pela etapa `storyboard` do `rodar` (Claude com voltas de correção), que entrega `storyboard_<NN>.md`: cena por cena, tempo na narração, tipo de cena (das **60 variações**) e o que cada asset mostra. O script `motor/busca/scripts/storyboard.py` mede e avisa: **≥ 8 variações**, **card único ≤ 35%** e nunca 3 seguidos, **≥ 40% de cenas que evoluem**, texto solo 12–35%, cada asset/troca ≥ 1,8 s, 15–25 assets/min.
 Motivo: em [[Who Makes the NFL Possible]] 76% das cenas ficaram em B/C1/A, só 15 dos 60 tipos foram usados e 19 layouts prontos nunca apareceram (G1–G3, mapas M3/M6/M7, recortes E2/E3, D4/D5, C4, B11).
 
 ## Regras
@@ -94,7 +94,7 @@ Repertório completo, com medidas e sintaxe do `cenas.json`, na [[Biblioteca de 
 Com o repertório novo, a mesma frase poderia virar: "Patrick Mahomes…" → **B10** (retrato desliza, "Patrick Mahomes" entra); "Against Baltimore in December 2018" → **E5** (vídeo do jogo + logo dos Ravens ao lado) com B7 "December 2018".
 
 ## Formato do planejamento (`cenas.json`)
-O planejamento agora é escrito em `cenas.json` (formato completo no topo de `buscador_assets/scripts/compilar_cenas.py` e na skill `buscar-assets`):
+O planejamento agora é escrito em `cenas.json` (formato completo no topo de `motor/busca/scripts/compilar_cenas.py`):
 - cada **cena** tem um ou mais **estados** (a cena evolui — família F da [[Biblioteca de Cenas]]);
 - cada estado tem `layout` (código da biblioteca), `fala` (as primeiras palavras do trecho) e `cards`/`textos`/`rotulos`;
 - cada card descreve o asset a buscar (`tipo`, `descricao`, `buscas`) e a palavra em que entra (`gatilho`), ou reaproveita um asset (`reusar`) / uma alternativa já baixada (`arquivo`).

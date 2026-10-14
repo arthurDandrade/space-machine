@@ -14,8 +14,8 @@ Parte técnica do sistema. O Claude roda tudo; esta nota é referência.
 
 ## Onde fica
 - Motor: `motor/busca/` (Python 3.12 isolado em `.venv`)
-- Skill: `.claude/skills/buscar-assets/SKILL.md`
-- Configuração: `buscador_assets/config.json` (ordem das fontes, tamanho mínimo, nº de candidatos, domínios bloqueados, duração do preview)
+- Quem roda: o orquestrador (`space_machine/rodar.py`), etapa por etapa
+- Configuração: `motor/busca/config.json` (o canal pode sobrepor em `canal.json` › `busca`) (ordem das fontes, tamanho mínimo, nº de candidatos, domínios bloqueados, duração do preview)
 
 ## Scripts
 | Script | Faz |
@@ -63,15 +63,8 @@ Nenhuma chave de API obrigatória (Smithsonian usa `DEMO_KEY`; `SI_API_KEY` opci
 - Wikimedia exige User-Agent identificado (já configurado).
 
 
-## YouTube com freio (`scripts/yt_seguro.py`, 2026-10-06)
-Depois que o YouTube bloqueou o IP (vídeo [[Who Makes the NFL Possible]], ~8 h com 5–6 processos em paralelo), toda chamada ao YouTube passa por um "yt-dlp com freio":
-- **uma chamada por vez em todo o Mac** (trava `buscador_assets/_youtube/trava`); blocos/subagentes em paralelo esperam a vez;
-- ≥ 4 s entre chamadas + `--sleep-requests 1`;
-- motor JavaScript **deno** (`/opt/homebrew/bin/deno`, instalado com o Homebrew) para os desafios do YouTube;
-- bloqueio detectado → grava `_youtube/BLOQUEADO` e todas as chamadas falham na hora (código 75) por 2 h. Liberar antes: apagar o arquivo (só depois de trocar de rede).
-- `buscar.py --refazer` guarda os candidatos antigos (`<id>_antes_refazer`) e os devolve se a busca nova vier vazia; com bloqueio, os vídeos são pulados (rodar de novo depois).
-- Timeouts das chamadas subiram (fila conta no tempo). Backup dos scripts antes da mudança: `buscador_assets/_backup_antes_yt_seguro/`.
-- Limite combinado com o Arthur: **no máximo 3 subagentes ao mesmo tempo** (limite de uso da API; erro 529 = sobrecarga do servidor → esperar ~10 min e retomar).
+## YouTube: removido (2026-10-11)
+O freio `yt_seguro.py` (2026-10-06) e o `achar_lance.py` saíram junto com o YouTube, depois de dois bloqueios de IP. Vídeo só de bancos livres (Pexels, Pixabay, Commons, Archive).
 
 ### Preview de vídeo por storyboard (2026-10-06)
 O `buscar.py` monta a folha `v<n>_folha.jpg` pelas **miniaturas do storyboard do YouTube** (as da barra de progresso, 320x180, grades 3x3 no i.ytimg.com): 1 chamada `yt-dlp -j` + ~400 KB de imagens, **~7 s por vídeo** e cobrindo o vídeo inteiro (até 48 quadros). Antes baixava até 5 min do vídeo em 360p (2+ min por vídeo, e com a fila única do `yt_seguro` travava os outros blocos). Sem storyboard, cai no preview antigo. O título da folha termina em `[storyboard]`. Os tempos de cada quadro são os do storyboard (intervalo irregular de ~5 s); para precisão continua valendo `detalhar_video.py`.

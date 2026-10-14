@@ -1,12 +1,12 @@
 """Etapa "escolher": escolhe os assets de um bloco com chamadas isoladas ao Claude (uma por asset),
-grava escolhas.json no formato da skill buscar-assets, baixa (finalizar.py --asset) e confere.
+grava escolhas.json, baixa (finalizar.py --asset) e confere.
 
-Substitui o subagente escolher-assets (que continua de plano B).
+Substituiu o subagente escolher-assets (~6× menos tokens por asset; o subagente saiu em 2026-10-13).
 
 Uso:
   python -m space_machine escolher <bloco> [--asset ID ...] [--modelo haiku] [--sem-finalizar] [--sem-conferir]
   python -m space_machine escolher <bloco> --sombra      # refaz as escolhas que já existem em escolhas_estudio.json
-                                                   # e compara com as do subagente (nada é baixado)
+                                                   # e compara com as que já existem (nada é baixado)
 """
 import argparse
 import json
@@ -573,7 +573,7 @@ class Bloco:
                f"- Diferentes: {len(difs) - perto}",
                f"- Consumo registrado para este bloco: {uso['chamadas']} chamadas, {uso['equivalente']:,} tokens "
                f"equiv. ({uso['equivalente'] // max(1, total):,} por asset)", "",
-               "| asset | subagente | Estúdio | obs. |", "|---|---|---|---|"]
+               "| asset | atual | nova | obs. |", "|---|---|---|---|"]
         for aid, o, e, obs in difs:
             rel.append(f"| {aid} | {json.dumps(o, ensure_ascii=False)} | {json.dumps(e, ensure_ascii=False)} | {obs} |")
         (self.p / "_estudio" / "sombra.md").write_text("\n".join(rel) + "\n")
@@ -615,7 +615,7 @@ class Bloco:
             desc = a.get("descricao", "")
             for j in range(0, min(len(desc), 200), 34):
                 d.text((cel[0] * 2 + 12, y + 36 + j // 34 * 22), desc[j:j + 34], fill=(60, 60, 60), font=fonte)
-            for col, (nome, esc) in enumerate((("subagente", o), ("Estúdio", e))):
+            for col, (nome, esc) in enumerate((("atual", o), ("nova", e))):
                 im, rotulo = self.miniatura(aid, esc)
                 x = col * cel[0]
                 if im:

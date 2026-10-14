@@ -1,6 +1,6 @@
 # Regras do storyboard (formato "___ Explained")
 
-Lidas pelo orquestrador (`rodar._sistema_storyboard`) e pelo subagente `.claude/agents/storyboard.md`. O `storyboard.py` mede as que dá.
+Lidas pelo orquestrador (`rodar._sistema_storyboard`), junto com as regras do tema do canal. O `storyboard.py` mede as que dá.
 
 ## As 60 variações, não os 34 nomes
 O compilador aceita ~34 nomes em `"layout"`, mas **as 60 variações da biblioteca funcionam todas**: muitas são um layout genérico + um campo no card. Planeje pela biblioteca:

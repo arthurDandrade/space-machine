@@ -1,6 +1,6 @@
 ---
 tags: [pro-football, assets, fluxo]
-equivale: skill buscar-assets (.claude/skills/buscar-assets/SKILL.md)
+equivale: etapas buscar e escolher do orquestrador (space_machine/rodar.py, escolher.py)
 ---
 
 # Como Buscar Assets
@@ -63,11 +63,10 @@ Preenche o `tempo` de cada asset (início da palavra-gatilho) e a `duracao` dos 
 - Fotos pequenas só entram se faltar candidato, marcadas **BAIXA** no fim da folha.
 - Receitas de busca: [[Buscas que Funcionam]].
 
-### 6. Escolher — feito pelo subagente `escolher-assets` ⭐ (desde 2026-10-03)
-A escolha (6), o lance exato (6b) e o download (7) são feitos por um **subagente** (`.claude/agents/escolher-assets.md`), um por bloco: ele abre as folhas de contato, grava `escolhas.json`, roda `finalizar.py`, confere 2 frames de cada asset baixado (`conferir_assets.py`) e devolve só um resumo com o que ficou para conferir.
-- **Por quê:** as folhas são imagens grandes; abertas na conversa principal, são relidas a cada passo até o fim da sessão. No vídeo "How Elite NFL Players Actually Work" (10 blocos), olhar folhas + escolher foi **~50% do gasto** da sessão. No subagente, cada folha é vista uma vez.
-- Como pedir: *"faz o bloco 3 usando o subagente para escolher os assets"* (ou automático, pela regra no `CLAUDE.md`).
-- Ajudantes: `juntar_folhas.py`, `reusar_candidato.py` (mesmo vídeo oficial em vários cards), `conferir_assets.py`.
+### 6. Escolher — etapa `escolher` do orquestrador (`space_machine/escolher.py`)
+Uma chamada isolada ao Claude por asset, com a folha de contato em anexo: grava `escolhas.json`, roda `finalizar.py --asset` só com os novos e confere os vídeos/recortes baixados (tarja preta, texto por cima, cena errada). Nada serve → nova busca (até 2×) → resgate (foto genérica, candidato da mesma cena, repetir o vizinho), tudo marcado "conferir".
+- **Por quê assim:** dentro de uma conversa do Claude Code, as folhas (imagens grandes) eram relidas a cada passo: o subagente `escolher-assets` (2026-10-03 a 10-10) gastava ~47 mil tokens por asset; a chamada isolada, ~7,5 mil. O subagente foi removido em 2026-10-13.
+- Ajudantes à mão: `juntar_folhas.py`, `reusar_candidato.py` (mesmo vídeo em vários cards), `conferir_assets.py`.
 
 Critérios em [[Critérios de Escolha]]. Para vídeo, quando a folha de 2 em 2 s não basta: `detalhar_video.py` (frames a cada 0,5 s numa janela).
 - Escolha duvidosa → `"conferir": "motivo"` (aparece em vermelho na revisão).

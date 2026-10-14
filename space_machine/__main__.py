@@ -5,7 +5,6 @@
   python -m space_machine fila <pasta do vídeo> [--max 3]   todos os blocos não entregues, até 3 ao mesmo tempo
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
-  python -m space_machine medir                      linha de base: gasto dos subagentes do Claude Code
   python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
 """
 import sys
@@ -37,10 +36,6 @@ def main():
             print(f"FALHOU: {e}")
             sys.exit(1)
         print(f"ok: claude {_versao_claude()} logado e respondendo com todos os modelos das etapas")
-    elif cmd == "medir":
-        from .medir_sessoes import main as m
-        sys.argv = ["medir"] + args
-        m()
     elif cmd == "consumo":
         from .motor_claude import _banco
         con = _banco()

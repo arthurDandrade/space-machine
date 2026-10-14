@@ -1,4 +1,4 @@
-<!-- Resumo de: formatos/explained/conhecimento/03 - Assets/Critérios de Escolha.md + skill buscar-assets §6/6b + agents/escolher-assets.md. -->
+<!-- Resumo de: formatos/explained/conhecimento/03 - Assets/Critérios de Escolha.md. -->
 <!-- Regra nova no Log de Aprendizados sobre escolha de vídeo => atualizar este arquivo também. -->
 Você escolhe UM trecho de vídeo para um card de um vídeo no formato "___ Explained" (cards sobre fundo de papel claro, narração sem apresentador, sem áudio do clipe). Você recebe o pedido do asset (com a duração do trecho em segundos) e uma folha por vídeo candidato: título no topo (fonte, canal, duração total, resolução) e quadros com o tempo "vN t=XXs" na faixa preta.
 

@@ -16,7 +16,7 @@ Voltar: [[00 - Pro Football (Índice)]] · Log: [[Log de Aprendizados]]
 O Estúdio é um sistema próprio, que roda o pipeline sozinho e chama o Claude **só nas decisões**. Cada decisão é uma chamada isolada e curta (`claude -p`, pela assinatura). Ele serve para vários canais (`canais.json`); por enquanto só o Pro Football está ativo. Plano completo: `~/.claude/plans/sim-mas-planeje-tudo-splendid-eclipse.md`.
 
 ## Por quê
-Dentro de uma conversa do Claude Code, cada saída de script e cada folha de contato fica no histórico, e o histórico é relido a cada passo. Medido em 2026-10-10 (`python -m space_machine medir`): o subagente `escolher-assets` gastou **~47 mil tokens equivalentes por asset** (~720 mil por bloco; 27 execuções, 413 assets).
+Dentro de uma conversa do Claude Code, cada saída de script e cada folha de contato fica no histórico, e o histórico é relido a cada passo. Medido em 2026-10-10 (ferramenta `medir`, removida em 2026-10-13 junto com os subagentes): o subagente `escolher-assets` gastou **~47 mil tokens equivalentes por asset** (~720 mil por bloco; 27 execuções, 413 assets).
 
 ## Como a chamada é enxuta
 O código fica em `space_machine/motor_claude.py`.
@@ -42,7 +42,7 @@ O código fica em `space_machine/motor_claude.py`.
   - Tarja preta: o `ffmpeg cropdetect` acha e corta (com `setsar=1`), sem Claude.
   - Texto por cima ou cena errada: o Haiku olha 2 quadros e, se reprovar, o asset é trocado automaticamente.
 - **Modo sombra** (`--sombra`): refaz as escolhas de um bloco pronto em `escolhas_estudio.json`, sem baixar nada. Gera `_estudio/sombra.md` e `_estudio/sombra_divergencias.jpg`.
-- O subagente `escolher-assets` continua como plano B.
+- O subagente `escolher-assets` foi o plano B até 2026-10-13, quando saiu (sem uso desde 2026-10-10).
 
 ## Resultado do modo sombra (2026-10-10, "Who Makes the NFL Possible", 14 blocos, 186 assets)
 - **~7.500 tokens equivalentes por asset**, contra 47 mil do subagente (cerca de 6× menos). Imagem: ~3.700. Vídeo: ~8.400.
@@ -53,7 +53,7 @@ O código fica em `space_machine/motor_claude.py`.
 O Space Machine é um repositório git local (antes: `Estudio/` e `ProFootball/`). Mudança no código = commit (nada de `_backup_*`). Revisão de 2026-10-13 e o que ela corrigiu: [[Log de Aprendizados]].
 
 ## Regra de manutenção
-Os prompts em `space_machine/prompts/` são **resumos** de [[Critérios de Escolha]] e da skill `buscar-assets`. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
+Os prompts em `space_machine/prompts/` são **resumos** de [[Critérios de Escolha]]. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
 
 ## Orquestrador (Fase 2, pronta)
 `python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]`: narração → transcrição → storyboard → busca → escolha → edição + QA → entrega (`edicao/bloco N.mp4`).

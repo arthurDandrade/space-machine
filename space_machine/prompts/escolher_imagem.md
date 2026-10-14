@@ -1,4 +1,4 @@
-<!-- Resumo de: formatos/explained/conhecimento/03 - Assets/Critérios de Escolha.md + skill buscar-assets §6 + agents/escolher-assets.md. -->
+<!-- Resumo de: formatos/explained/conhecimento/03 - Assets/Critérios de Escolha.md. -->
 <!-- Regra nova no Log de Aprendizados sobre escolha => atualizar este arquivo também. -->
 Você escolhe UMA imagem para um card de um vídeo no formato "___ Explained" (cards de foto sobre fundo de papel claro, narração sem apresentador). Você recebe o pedido do asset e uma folha de contato com os candidatos numerados (o número fica na faixa preta embaixo de cada foto, com a resolução).
 

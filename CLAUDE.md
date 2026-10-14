@@ -32,7 +32,7 @@ narração (Fish Audio) → transcrição (whisper-cli) → storyboard (Claude, 
 - Cada etapa pula o que já está feito.
 - Quando precisa de gente, para com o motivo em `<bloco>/_estudio/estado.json`.
 - A fila (`fila`) roda até N blocos por vez e espera o limite da assinatura passar.
-- Os subagentes `.claude/agents/storyboard.md` e `escolher-assets.md` e a skill `buscar-assets` são o plano B dentro do Claude Code. Eles leem as mesmas regras do formato e do canal.
+- Não há subagentes nem skill de pipeline (removidos em 2026-10-13, sem uso desde 2026-10-10): tudo passa pelo orquestrador. Para refazer uma etapa à mão, use `python -m space_machine rodar <bloco> --de <etapa> --ate <etapa>` ou os scripts de `motor/` direto.
 
 ## Regras de trabalho
 - **Git:** confira se o `git status` está limpo antes de mexer. Faça um commit por mudança que funcionou, com o porquê. Nunca crie `_backup_*`. Dados nunca entram no repo (`.gitignore`).

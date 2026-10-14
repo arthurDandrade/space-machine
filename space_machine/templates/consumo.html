@@ -2,7 +2,7 @@
 {% block titulo %}Consumo{% endblock %}
 {% block corpo %}
 <h1>Consumo do Claude</h1>
-<div class="sub">Tokens equivalentes = entrada + escrita de cache ×1,25 + leitura de cache ×0,1 + saída ×5. Linha de base do subagente escolher-assets: ~47.000 por asset.</div>
+<div class="sub">Tokens equivalentes = entrada + escrita de cache ×1,25 + leitura de cache ×0,1 + saída ×5.</div>
 <h2>Por etapa</h2>
 <div class="card"><table><tr><th>Etapa</th><th class="n">Chamadas</th><th class="n">Tokens equiv.</th><th class="n">Média por asset/bloco</th></tr>
 {% for l in por_etapa %}<tr><td>{{ l[0] }}</td><td class="n">{{ l[1] }}</td><td class="n">{{ l[2]|milhar }}</td><td class="n">{{ l[3]|milhar }}</td></tr>{% endfor %}
