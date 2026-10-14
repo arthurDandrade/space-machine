@@ -23,6 +23,7 @@ FONTE = "AvenirNext-Heavy"
 # entrada = desaceleração cúbica de ~0,7 s (50% em 0,13 s, 90% em 0,38 s); saída = aceleração cúbica de ~0,6 s.
 ENTRADA, DERIVA, DERIVA_T = 0.95, 0, 0
 SAIDA, SOBREPOE, ANTECIPA = 0.80, 0.12, 0.20
+PILHA_ESCALONA = 0.40          # C9: atraso do card da frente quando os dois caem na mesma palavra
 PUSH, PUSH_MAX = 2.5, 115
 MARGEM = 50            # nada pode passar desta margem da borda durante o zoom da cena
 FADE, POP = 0.18, 0.27
@@ -582,10 +583,17 @@ def main():
                 geo[j] = (x, y, w, h)
 
         sobre_pend = []
+        t_ant = None
         for j, (c, (x, y, w, h)) in enumerate(zip(cards, geo)):
             t_in = max(ini - 0.05, c["t"] - ANTECIPA)
             if j == 0 and e["layout"] != "A":
                 t_in = min(t_in, ini + 0.1)
+            # pilha (C9): cards na mesma palavra subiam juntos, já empilhados, e pareciam um card só (cold open do
+            # Super Bowl Rings, 2026-10-13). O de trás entra primeiro e o da frente pousa por cima PILHA_ESCALONA s
+            # depois, sem passar de 1,8 s na tela.
+            if e["layout"] == "C9" and t_ant is not None and t_in < t_ant + PILHA_ESCALONA:
+                t_in = max(t_in, t_ant + max(0.0, min(PILHA_ESCALONA, fim - t_ant - 1.8)))
+            t_ant = t_in
             png = c.get("png")
             arq, sw, sh, dur = M.info(M.arquivo(c), w, h, png=png)
             rel = [x - CX, y - CY]

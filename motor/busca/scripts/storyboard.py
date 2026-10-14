@@ -202,6 +202,12 @@ def main():
         avisos.append(f"{mud_min:.1f} assets/min (meta 20–25; mínimo {MIN_ASSETS_MIN:.0f})")
     if cenas_f < MIN_CENAS_F:
         avisos.append(f"só {cenas_f:.0%} das cenas evoluem com mais de um estado (meta ≥ {MIN_CENAS_F:.0%})")
+    # pilha (C9) com os cards na mesma palavra: entram juntos e parecem um card só (2026-10-13)
+    pilhas = [f"{e['ini']:.1f}s" for e in estados if e["ed"].get("layout") == "C9"
+              and len({round(c.get("t", 0), 2) for c in e["ed"].get("cards", [])}) < len(e["ed"].get("cards", []))]
+    if pilhas:
+        avisos.append("pilha (C9) com os cards na mesma palavra em " + ", ".join(pilhas)
+                      + ": dê um gatilho para cada card (o de trás numa palavra, o da frente numa palavra depois)")
     repetidos = {v: n for v, n in collections.Counter(vars_).items() if n > 1}
     if repetidos:
         avisos.append("tipo de cena repetido no bloco (cada um só uma vez; troque por outra variação da biblioteca): "
