@@ -31,8 +31,10 @@ Formato de cenas.json:
   o "nome" fica com o texto certo, que vai na tela.
 - Um asset pode ser {"reusar": "<id já existente>"} ou {"arquivo": "caminho relativo ao projeto"}.
 - Textos/rótulos/sobre: "texto" ou ["texto", "gatilho"] ou ["texto", "gatilho", "cresce"|"2linhas"|"abaixo"|"faixa"]
-  ("faixa" = branco na faixa azul; no E3 fica ao lado do recorte).
+  ("faixa" = branco na faixa azul; no E3 fica ao lado do recorte; no CTA, embaixo do botão).
   Sem gatilho, o gatilho são as 2 primeiras palavras do texto.
+- {"layout": "CTA", "fala": "...", "clique": "subscribe", "textos": [["Nome do canal", "Inside", "faixa"]]}:
+  botão de inscrever do canal (identidade/cta_botao.png) com pop e o cursor (cta_cursor.png) clicando na palavra.
 - "png": true num card = recorte/logo solto (sem quadro).
 - "tabela": {...} / "grafico": {...} num card = imagem GERADA por scripts/gerar_tabela.py (dados reais + "fonte").
 - "lateral": {"asset"/busca de bandeira | "mapa": {..., "globo": true}, "gatilho": ...} = bandeira (E5/F9) ou globo (M5)
@@ -287,6 +289,9 @@ def main():
                 k = R.achar(gat, k0, max(k1, k0 + 1), f"{onde} {local}")
                 return T(k) if k is not None else ini
 
+            if e.get("clique"):          # CTA: palavra em que o cursor clica no botão
+                est["clique"] = rel(tempo(e["clique"], "clique"))
+
             cards = []
             orient = ORIENTACAO.get(e["layout"], "qualquer")
             for j, c in enumerate(e.get("cards", [])):
@@ -359,7 +364,7 @@ def main():
                             item_t.append(modo)
                         seq.append(item_t)
                     # estado só de texto: o 1º texto entra junto com o estado (senão o palco fica vazio)
-                    if campo == "textos" and not cards and seq and seq[0][1] - est["ini"] > 0.5:
+                    if campo == "textos" and not cards and e["layout"] != "CTA" and seq and seq[0][1] - est["ini"] > 0.5:
                         seq[0][1] = est["ini"]
                     est[campo] = seq
             ed["cenas"][-1]["estados"].append(est)

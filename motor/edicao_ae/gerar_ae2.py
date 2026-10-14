@@ -503,6 +503,49 @@ def geometria(layout, asps, pngs, inteiros=None):
     return out
 
 
+CTA_BOTAO_Y, CTA_BOTAO_W, CTA_CURSOR_H = -60, 1250, 230
+CTA_PONTA = (0.04, 0.03)        # ponta da seta no PNG do cursor (fração da largura/altura, já cortado no contorno)
+
+
+def cta(M, e, pai, ini, fim):
+    """CTA: botão de inscrever do canal com pop, o cursor entra de baixo à direita e clica na palavra "clique".
+    O botão vermelho genérico com "subscribe: Inside the NFL World" ao lado ficou ruim (rings, bloco 07, 2026-10-14).
+    PNGs da identidade do canal: canal.json › identidade › cta_botao / cta_cursor (padrão identidade/cta_*.png)."""
+    pasta = caminhos.canal()
+    botao = pasta / _id.get("cta_botao", "identidade/cta_botao.png")
+    cursor = pasta / _id.get("cta_cursor", "identidade/cta_cursor.png")
+    if not botao.exists():
+        sys.exit(f"CTA sem o botão do canal: falta {botao}")
+    tc = e.get("clique", ini + 1.2)
+    sai = fim - 0.3
+    arq, bw, bh, _ = M.info(botao, CTA_BOTAO_W, 600, png=True)
+    s = CTA_BOTAO_W / bw
+    M.caixa(pai, -CTA_BOTAO_W / 2, CTA_BOTAO_Y - bh * s / 2, CTA_BOTAO_W / 2, CTA_BOTAO_Y + bh * s / 2)
+    # pop na entrada; no clique afunda (92%) e volta com um pulo (104%); sai encolhendo junto com o cursor
+    sk = [[ini, 0, [0, 0, 800, 18]], [ini + POP, 100, [0, 85, 0, 0]],
+          [tc, 100, [0, 0, 0, 60]], [tc + 0.08, 92], [tc + 0.22, 104], [tc + 0.38, 100, [0, 60, 0, 0]],
+          [sai, 100, [0, 0, 0, 85]], [fim, 0, [0, 30, 0, 0]]]
+    sk = [k for k in sk if k[0] <= fim]
+    slot = M.add(kind="null", name="cta botão", parent=pai, pos=[0, CTA_BOTAO_Y], anchor=[0, 0],
+                 **{"in": ini, "out": fim}, scale_keys=sk)
+    M.add(kind="footage", name="cta botão", file=str(arq), parent=slot, src=[bw, bh], scale=s * 100, pos=[0, 0],
+          start=0, **{"in": ini, "out": fim}, shadow={"op": 110, "soft": 30 / s, "dist": 5 / s})
+    if not cursor.exists():
+        return
+    arq, cw, ch, _ = M.info(cursor, 400, CTA_CURSOR_H, png=True)
+    sc = CTA_CURSOR_H / ch
+    alvo = [CTA_BOTAO_W * 0.22, CTA_BOTAO_Y + 25]        # em cima do "SUBSCRIBE", à direita do centro
+    t0 = max(ini + 0.15, tc - 0.75)
+    # o null fica na ponta da seta: escalar no clique afunda a seta no lugar, sem escorregar
+    nc = M.add(kind="null", name="cta cursor", parent=pai, anchor=[0, 0], **{"in": t0, "out": fim},
+               pos_keys=[[t0, [W / 2 + 120, H / 2 + 80], [0, 0, 0, 80]], [tc - 0.05, alvo, [0, 90, 0, 0]],
+                         [sai, alvo, [0, 0, 0, 85]], [fim, [alvo[0] + 60, alvo[1] + 40], [0, 30, 0, 0]]],
+               scale_keys=[[tc - 0.05, 100], [tc + 0.07, 82], [tc + 0.25, 100], [sai, 100], [fim, 0]])
+    M.add(kind="footage", name="cta cursor", file=str(arq), parent=nc, src=[cw, ch], scale=sc * 100,
+          pos=[(0.5 - CTA_PONTA[0]) * cw * sc, (0.5 - CTA_PONTA[1]) * ch * sc], start=0, **{"in": t0, "out": fim},
+          shadow={"op": 110, "soft": 30 / sc, "dist": 5 / sc})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("projeto")
@@ -777,6 +820,8 @@ def main():
                     sobre_pend[p_] = A_[:2] + (B_[1] - 0.05,) + A_[3:]
         for txt, t0_, t1_, slot_, larg_, _c in sobre_pend:
             M.texto(txt, t0_, t1_, slot_, [0, 0], larg_, 120, [1, 1, 1], None, fonte=FONTE_MARCA, caixa=COR_CAIXA)
+        if e["layout"] == "CTA":
+            cta(M, e, pai, ini, fim)
         # rótulos ao lado (B4/B5) e textos do estado
         if e.get("rotulos"):
             dir_card = geo[0][0] + geo[0][2] / 2
@@ -864,6 +909,8 @@ def main():
                 if e["layout"] == "E3" and geo:
                     dir_card = geo[0][0] + geo[0][2] / 2
                     pos_, larg_ = [(dir_card + 60 + W - 200) / 2 - CX, 0], W - 200 - dir_card - 60
+                elif e["layout"] == "CTA":
+                    pos_, larg_ = [0, 260], 1300        # embaixo do botão (nome do canal)
                 else:
                     pos_, larg_ = [0, 0], 1300
                 M.texto(txt.upper(), t_in, prox, pai, pos_, larg_, 120, [1, 1, 1], None, fonte=FONTE_MARCA,
