@@ -135,12 +135,17 @@ def fracao_ocupada(video, bg_arq, fps):
     return out
 
 
-def checar_render(video, plano, det, R):
+def checar_render(video, plano, det, R, layout=None):
     fr = ler_det(det)
     fps = 4
     fim = plano["fim"]
     fr_cont = [f for f in fr if f["t"] <= fim]
-    m = medir_deteccao(fr_cont, fps)
+    ha_texto = None
+    if layout and layout.exists():
+        tx = [(r["in"], r["out"]) for r in json.loads(layout.read_text())
+              if r["tipo"] == "texto" and r.get("estado") != "Título"]
+        ha_texto = lambda t: any(a - 0.3 <= t <= b + 0.3 for a, b in tx)
+    m = medir_deteccao(fr_cont, fps, ha_texto)
     # eventos por minuto
     ev = eventos_por_min(str(video), fim)
     lo, hi = REF["eventos_por_min"]["min"], REF["eventos_por_min"]["max"]
@@ -361,7 +366,7 @@ def main():
                        stdout=subprocess.DEVNULL)
     R = Relatorio()
     checar_plano(plano, R)
-    checar_render(video, plano, det, R)
+    checar_render(video, plano, det, R, ed / f"layout_{a.item}.json")
     checar_layout(proj, a.item, R)
     checar_origem(proj, R)
     folha(video, plano, ed / f"qa_{a.item}.jpg")

@@ -49,7 +49,9 @@ def tempos_assets(fr, fps):
     return [t["n"] / fps for t in fim if t["n"] >= 2]
 
 
-def medir_deteccao(fr, fps):
+def medir_deteccao(fr, fps, ha_texto=None):
+    """ha_texto(t): o plano tem texto na tela em t (nossas prévias, pelo layout_NN.json). Sem isso (referências),
+    vale tudo o que o detector achou."""
     est = estaveis(fr)
     so_texto = [f for f in est if not cards_validos(f) and f["textos"] and not f["recortes"]]
     um_card = [cards_validos(f)[0] for f in est if len(cards_validos(f)) == 1]
@@ -77,7 +79,9 @@ def medir_deteccao(fr, fps):
     junto = []
     for f in est:
         fora = [t for t in f["_rot"] if persiste(t, f)]
-        if fora:
+        # sem texto no plano, o "rótulo" é o detector lendo a foto: um card que ele perdeu (Putin de fundo claro)
+        # virava rótulo de 50 px "fora" do outro card e reprovava sem ter texto nenhum (rings, bloco 13, 2026-10-14)
+        if fora and (ha_texto is None or ha_texto(f["t"])):
             junto.append(max(t[3] for t in fora))
     vazio = [f for f in fr if not f["cards"] and not f["textos"] and not f["recortes"]]
     return {
