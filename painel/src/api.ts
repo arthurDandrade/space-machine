@@ -64,6 +64,7 @@ export interface Video {
   consumo: number;
   tem_capa: boolean;
   capa_v: number;
+  thumb: { url: string; nome: string } | null;
 }
 
 export interface Esperando {

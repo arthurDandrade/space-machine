@@ -9,6 +9,7 @@ import {
 import { DetalheBloco, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
+import { TituloCopiavel } from "../componentes/Copiar";
 import { Markdown } from "../componentes/Markdown";
 import { useT } from "../textos";
 
@@ -88,7 +89,7 @@ export function BlocoTela() {
     <>
       <Cabecalho
         onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={rota.video(canal, video)}>{b.video_titulo}</Link> › <b>{t("app.bloco.bloco_n", { nn })}</b></>}
-        titulo={<>{nn} · {b.topico}</>}>
+        titulo={<>{nn} · <TituloCopiavel texto={b.topico} /></>}>
         <div className="navega">
           {b.anterior ? <Link className="bt redondo" to={rota.bloco(canal, video, b.anterior)} title={t("app.bloco.anterior")}><ChevronLeft size={18} /></Link> : <span className="bt redondo apagado"><ChevronLeft size={18} /></span>}
           {b.proximo ? <Link className="bt redondo" to={rota.bloco(canal, video, b.proximo)} title={t("app.bloco.proximo")}><ChevronRight size={18} /></Link> : <span className="bt redondo apagado"><ChevronRight size={18} /></span>}

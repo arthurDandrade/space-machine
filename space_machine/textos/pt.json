@@ -375,7 +375,7 @@
  "app.thumb.trocar": "Trocar thumbnail",
  "app.thumb.remover": "Remover",
  "app.thumb.abrir": "Ver inteira",
- "app.thumb.dica": "ou arraste a imagem aqui · ⌘V cola",
+ "app.thumb.dica": "Arraste a imagem aqui ou cole com ⌘V",
  "app.thumb.e_thumb": "thumbnail",
  "app.thumb.e_quadro": "quadro do vídeo",
  "app.thumb.enviada": "enviada em {quando}",
@@ -383,5 +383,10 @@
  "app.thumb.ok_youtube": "pronta para o YouTube",
  "app.thumb.aviso_tamanho": "{mb} MB: o YouTube aceita até 2 MB",
  "app.thumb.aviso_proporcao": "{l}×{a} não é 16:9: o YouTube corta",
- "app.thumb.aviso_pequena": "{l} px de largura: o YouTube recomenda 1280 ou mais"
+ "app.thumb.aviso_pequena": "{l} px de largura: o YouTube recomenda 1280 ou mais",
+ "app.thumb.ampliar": "Ver em tamanho grande",
+ "app.thumb.baixar": "Baixar a thumbnail",
+ "app.thumb.remover_sim": "Remover?",
+ "app.copiar.dica": "Clique para copiar",
+ "app.copiar.feito": "Copiado"
 }

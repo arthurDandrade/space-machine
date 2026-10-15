@@ -9,6 +9,7 @@ import {
 import { Coluna, enviar, PainelCanal, rota, urlCapa, Video } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
+import { TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { AnelConsumo, CartaoVideo, ItemEsperando, LinhaRodando, Segmentos } from "../componentes/Pecas";
 import { saudacao, useT } from "../textos";
@@ -51,7 +52,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
       {ultimoEntregue && <div className="arte b"><Capa src={urlCapa(canal, v.slug, ultimoEntregue.nn)} icone={false} /></div>}
       <div className="txt">
         <span className="tag">{v.rodando > 0 && <span className="pulso branco" />}{t("app.coluna.producao")}</span>
-        <h2>{v.titulo_pub || v.titulo}</h2>
+        <h2><TituloCopiavel texto={v.titulo_pub || v.titulo} /></h2>
         <p>{resumo}</p>
         <Segmentos estados={v.blocos} className="segs" />
         <div className="legenda">

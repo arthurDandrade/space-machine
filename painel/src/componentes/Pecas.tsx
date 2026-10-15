@@ -1,9 +1,11 @@
 // Peças das telas de canal: cartão de vídeo, item "esperando você", rodada em andamento e anel de consumo.
 import { Link } from "react-router-dom";
-import { ChevronRight, Play, Square } from "lucide-react";
+import { ChevronRight, Square } from "lucide-react";
 import { EstadoBloco, Esperando, Rodando, rota, urlCapa, Video } from "../api";
 import { compacto, haQuanto, useT } from "../textos";
+import { TituloCopiavel } from "./Copiar";
 import { Capa } from "./Imagens";
+import { BarraThumb, useSoltar, useThumbnail } from "./Thumbnail";
 
 export function Segmentos({ estados, className = "segmentos" }: { estados: { nn: string; estado: EstadoBloco; topico?: string }[]; className?: string }) {
   return (
@@ -18,20 +20,23 @@ export function Segmentos({ estados, className = "segmentos" }: { estados: { nn:
 export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video; atraso?: number }) {
   const t = useT();
   const pct = v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0;
+  const { enviar } = useThumbnail(canal, v.slug);
+  const soltar = useSoltar(enviar);
+  const capa = urlCapa(canal, v.slug, undefined, v.capa_v);
   const detalhe =
     v.coluna === "producao" || v.coluna === "roteiro"
       ? t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })
       : t("app.video.blocos_pronto", { n: v.n_blocos });
   return (
     <Link className="video" to={rota.video(canal, v.slug)} style={{ animationDelay: `${atraso}ms` }}>
-      <div className="cv">
-        <Capa src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} />
+      <div className={`cv ${soltar.sobre ? "sobre" : ""}`} {...soltar.props}>
+        <Capa src={capa} existe={v.tem_capa} />
+        <BarraThumb canal={canal} video={v.slug} thumb={v.thumb} capa={capa} />
         <span className={`st ${v.coluna === "producao" ? "p" : ""}`}>{t(`app.coluna.${v.coluna}`)}</span>
         {v.rodando > 0 && <span className="vivo"><span className="pulso" />{v.rodando}</span>}
-        <span className="play"><Play size={16} /></span>
       </div>
       <div className="info">
-        <b>{v.titulo_pub || v.titulo}</b>
+        <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
         <span>{detalhe}{v.esperando > 0 && <em> · {t("app.esperando_n", { n: v.esperando })}</em>}</span>
         <div className="progresso">
           <i style={{ width: `${pct}%`, background: v.coluna === "producao" ? "var(--accent)" : undefined }} />

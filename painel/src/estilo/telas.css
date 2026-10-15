@@ -111,8 +111,6 @@
 .video .cv { aspect-ratio: 16 / 10; position: relative; }
 .video .cv .capa-img { position: absolute; inset: 0; }
 .video:hover .cv img { transform: scale(1.06); }
-.video .play { position: absolute; left: 12px; bottom: 12px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); color: #14151a; display: grid; place-items: center; opacity: 0; transform: translateY(6px); transition: 0.25s var(--ease); }
-.video:hover .play { opacity: 1; transform: none; }
 .video .st { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: rgba(255, 255, 255, 0.92); color: #14151a; backdrop-filter: blur(6px); }
 .video .st.p { background: var(--accent); color: #fff; }
 .video .vivo { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); color: #3a2c99; font-size: 11.5px; font-weight: 800; }
@@ -486,9 +484,6 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .capa-video { position: relative; align-self: start; border-radius: 24px; }
 .capa-video .capa-grande { width: 100%; }
 .capa-video .origem-capa { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(20, 21, 26, 0.6); color: #fff; font-size: 11.5px; font-weight: 700; backdrop-filter: blur(6px); }
-.capa-video .sobre-capa { position: absolute; inset: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(20, 21, 26, 0.45); color: #fff; font-size: 12.5px; font-weight: 600; opacity: 0; transition: opacity 0.2s; }
-.capa-video:hover .sobre-capa, .capa-video.sobre .sobre-capa { opacity: 1; }
-.capa-video.sobre .sobre-capa { background: color-mix(in oklab, var(--accent) 55%, transparent); outline: 3px dashed #fff; outline-offset: -10px; }
 .erro-capa { margin-top: 8px !important; }
 .campo-thumb { margin-bottom: 20px; }
 .thumb-linha { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
@@ -500,3 +495,32 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .thumb-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; align-items: flex-start; }
 .thumb-info b { word-break: break-all; }
 .aviso-thumb { display: inline-flex; align-items: center; gap: 6px; color: var(--wait); font-size: 12.5px; font-weight: 600; }
+
+/* botões da thumbnail sobre a capa (ampliar, trocar, baixar, remover) */
+.barra-thumb { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(12, 13, 18, 0.5); opacity: 0; transition: opacity 0.18s; cursor: default; z-index: 2; }
+.cv:hover .barra-thumb, .capa-video:hover .barra-thumb, .cv.sobre .barra-thumb, .capa-video.sobre .barra-thumb { opacity: 1; }
+.barra-thumb button, .barra-thumb a { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(8px); transition: background 0.15s, transform 0.15s; }
+.barra-thumb button:hover, .barra-thumb a:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+.barra-thumb .perigo { color: #ff8a80; background: rgba(201, 55, 44, 0.25); }
+.barra-thumb .perigo:hover { background: rgba(201, 55, 44, 0.45); }
+.barra-thumb .perigo.sim { width: auto; padding: 0 12px; font-size: 12.5px; font-weight: 800; color: #fff; background: var(--bad); }
+.capa-video .barra-thumb { border-radius: 24px; gap: 12px; }
+.capa-video .barra-thumb button, .capa-video .barra-thumb a { width: 46px; height: 46px; border-radius: 14px; }
+.cv.sobre .barra-thumb, .capa-video.sobre .barra-thumb { background: color-mix(in oklab, var(--accent) 60%, transparent); outline: 3px dashed #fff; outline-offset: -8px; }
+.capa-video .origem-capa { z-index: 3; display: inline-flex; align-items: center; gap: 6px; }
+.capa-video .dica-capa { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: #fff; font-size: 12px; font-weight: 600; opacity: 0; transition: opacity 0.18s; z-index: 3; pointer-events: none; }
+.capa-video:hover .dica-capa { opacity: 0.9; }
+.erro-barra { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 3; padding: 6px 8px; border-radius: 8px; background: var(--bad); color: #fff; font-size: 11.5px; font-weight: 600; }
+.ampliar { position: fixed; inset: 0; z-index: 120; background: rgba(8, 9, 12, 0.82); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 32px; cursor: zoom-out; animation: aparece 0.15s ease-out; }
+.ampliar img { max-width: min(1280px, 100%); max-height: 100%; border-radius: 14px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.fechar-ampliar { position: fixed; top: 18px; right: 18px; background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+/* título que copia ao clicar */
+.copiavel { position: relative; cursor: copy; border-radius: 6px; transition: background 0.15s; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.copiavel:hover { background: color-mix(in oklab, var(--accent) 14%, transparent); }
+.copiavel .sinal-copiar { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; vertical-align: middle; font-size: 11px; font-weight: 700; letter-spacing: 0; color: var(--ink3); opacity: 0; transition: opacity 0.15s; }
+.copiavel:hover .sinal-copiar { opacity: 1; }
+.copiavel.copiado .sinal-copiar { opacity: 1; color: var(--ok); }
+.heroi .copiavel:hover { background: rgba(255, 255, 255, 0.14); }
+.heroi .copiavel .sinal-copiar { color: rgba(255, 255, 255, 0.8); }
+.heroi .copiavel.copiado .sinal-copiar { color: #5be39a; }

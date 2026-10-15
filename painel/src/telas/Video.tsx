@@ -1,5 +1,5 @@
 // Página de um vídeo: capa e andamento, a fila (produzir todos / parar), os blocos em grade e a publicação.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, Clapperboard, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2 } from "lucide-react";
@@ -7,7 +7,9 @@ import { BlocoDoVideo, DetalheVideo, enviar, pegar, Publicacao, rota, urlCapa } 
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { Dialogo } from "../componentes/Dialogo";
+import { TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
+import { BarraThumb, soltarArquivo, useSoltar, useThumbnail } from "../componentes/Thumbnail";
 import { compacto, haQuanto, useT } from "../textos";
 
 export const useVideo = (canal: string, video: string) =>
@@ -131,42 +133,12 @@ function FormPublicacao({ canal, v }: { canal: string; v: DetalheVideo }) {
 }
 
 // ---------------- thumbnail ----------------
-function useThumbnail(canal: string, video: string) {
-  const qc = useQueryClient();
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState("");
-  const mandar = useCallback(async (f: File) => {
-    setErro("");
-    if (!f.type.startsWith("image/")) return setErro("Envie uma imagem PNG, JPG ou WEBP.");
-    setEnviando(true);
-    const corpo = new FormData();
-    // imagem colada vem sem nome (ou "image.png"): dá um nome com a extensão certa
-    const nome = f.name && f.name !== "image.png" ? f.name : `thumbnail-colada.${f.type.split("/")[1] || "png"}`;
-    corpo.append("arquivo", f, nome);
-    const r = await fetch(`/api/c/${canal}/v/${video}/thumbnail`, { method: "POST", body: corpo });
-    setEnviando(false);
-    if (!r.ok) setErro((await r.json().catch(() => ({}))).detail || r.statusText);
-    qc.invalidateQueries();
-  }, [canal, video, qc]);
-  const remover = useCallback(async () => {
-    await enviar(`/api/c/${canal}/v/${video}/thumbnail/remover`);
-    qc.invalidateQueries();
-  }, [canal, video, qc]);
-  return { enviar: mandar, remover, enviando, erro };
-}
-
-function soltarArquivo(e: React.DragEvent, enviar: (f: File) => void) {
-  e.preventDefault();
-  const f = [...e.dataTransfer.files].find((x) => x.type.startsWith("image/"));
-  if (f) enviar(f);
-}
-
 // a capa grande da página do vídeo também recebe a thumbnail: clicar, arrastar ou colar (⌘V) em qualquer lugar da página
 function CapaVideo({ canal, v }: { canal: string; v: DetalheVideo }) {
   const t = useT();
   const { enviar, enviando, erro } = useThumbnail(canal, v.slug);
-  const campo = useRef<HTMLInputElement>(null);
-  const [sobre, setSobre] = useState(false);
+  const soltar = useSoltar(enviar);
+  const capa = urlCapa(canal, v.slug, undefined, v.capa_v);
   useEffect(() => {
     const colar = (e: ClipboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea, [contenteditable]")) return;
@@ -177,19 +149,11 @@ function CapaVideo({ canal, v }: { canal: string; v: DetalheVideo }) {
     return () => window.removeEventListener("paste", colar);
   }, [enviar]);
   return (
-    <div className={`capa-video ${sobre ? "sobre" : ""}`} onDragOver={(e) => { e.preventDefault(); setSobre(true); }}
-         onDragLeave={() => setSobre(false)} onDrop={(e) => { setSobre(false); soltarArquivo(e, enviar); }}>
-      <Capa className="capa-grande" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} />
-      <span className="origem-capa">{t(v.thumbnail ? "app.thumb.e_thumb" : "app.thumb.e_quadro")}</span>
-      <div className="sobre-capa">
-        <button className="bt branco" disabled={enviando} onClick={() => campo.current?.click()}>
-          {enviando ? <Loader size={16} className="gira" /> : <ImagePlus size={16} />}
-          {t(enviando ? "app.enviando" : v.thumbnail ? "app.thumb.trocar" : "app.thumb.enviar")}
-        </button>
-        <span>{t("app.thumb.dica")}</span>
-      </div>
-      <input ref={campo} type="file" accept="image/png,image/jpeg,image/webp" hidden
-             onChange={(e) => { const f = e.target.files?.[0]; if (f) enviar(f); e.target.value = ""; }} />
+    <div className={`capa-video ${soltar.sobre ? "sobre" : ""}`} {...soltar.props}>
+      <Capa className="capa-grande" src={capa} existe={v.tem_capa} />
+      <span className="origem-capa">{enviando ? <><Loader size={12} className="gira" /> {t("app.enviando")}</> : t(v.thumbnail ? "app.thumb.e_thumb" : "app.thumb.e_quadro")}</span>
+      <BarraThumb canal={canal} video={v.slug} thumb={v.thumb} capa={capa} />
+      <span className="dica-capa">{t("app.thumb.dica")}</span>
       {erro && <p className="erro erro-capa">{erro}</p>}
     </div>
   );
@@ -339,7 +303,7 @@ export function VideoTela() {
     <>
       <Cabecalho
         onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={`/c/${canal}/videos`}>{t("app.nav.videos")}</Link> › <b>{t(`app.coluna.${v.coluna}`)}</b></>}
-        titulo={v.titulo_pub || v.titulo}>
+        titulo={<TituloCopiavel texto={v.titulo_pub || v.titulo} />}>
         <button className="bt" onClick={abrir} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} />{t("app.abrir_pasta")}</button>
         <ExcluirVideo canal={canal} v={v} />
       </Cabecalho>

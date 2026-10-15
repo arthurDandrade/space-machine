@@ -92,7 +92,7 @@ def _video(slug, v):
         "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
         "mudou": v["mudou"], "data_pub": (g.get("data_pub") or "")[:10], "link": g.get("link") or "",
         "fila": _resumo_fila(f), "consumo": (v.get("consumo") or {}).get("equivalente") or 0,
-        "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"]),
+        "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"]), "thumb": _thumb(v["pasta"]),
     }
 
 
@@ -100,6 +100,14 @@ def _versao_capa(vd):
     """Muda quando a thumbnail muda: vai no endereço da capa para o navegador não mostrar a antiga do cache."""
     t = capas.thumbnail(vd)
     return int(t.stat().st_mtime) if t else 0
+
+
+def _thumb(vd):
+    """Thumbnail para os botões da capa nas listas (ampliar, baixar): endereço e nome do arquivo enviado."""
+    info = capas.info_thumbnail(vd)
+    if not info:
+        return None
+    return {"url": _arquivo(info["arquivo"]) + f"&v={info['versao']}", "nome": info.get("nome") or Path(info["arquivo"]).name}
 
 
 def _consumo_7d(slug=None):

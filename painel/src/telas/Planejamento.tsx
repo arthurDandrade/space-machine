@@ -8,6 +8,7 @@ import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Clapperboard, Grip
 import { Coluna, enviar, pegar, rota, urlCapa, Video } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
+import { TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { useT } from "../textos";
 
@@ -94,7 +95,7 @@ function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
     <div ref={setNodeRef} style={estilo} className={`card-quadro ${isDragging ? "arrastando" : ""}`} {...attributes} {...listeners}>
       <Link to={rota.video(canal, v.slug)} draggable={false} onClick={(e) => isDragging && e.preventDefault()}>
         <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
-        <b>{v.titulo_pub || v.titulo}</b>
+        <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
         <span className="sub">{t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
         <div className="progresso"><i style={{ width: `${v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0}%` }} /></div>
       </Link>
