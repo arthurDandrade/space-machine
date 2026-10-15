@@ -1,6 +1,8 @@
 // Topo de cada tela de canal: onde você está, o título e as ações da tela; o botão de tema fica sempre à direita.
 import { ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
+import { Sino } from "../componentes/Avisos";
+import { BotaoBusca } from "../componentes/Busca";
 import { useTema } from "../tema";
 import { useT } from "../textos";
 
@@ -23,6 +25,8 @@ export function Cabecalho({ onde, titulo, children }: { onde: ReactNode; titulo:
       </div>
       <div className="acoes">
         {children}
+        <BotaoBusca />
+        <Sino />
         <BotaoTema />
       </div>
     </header>

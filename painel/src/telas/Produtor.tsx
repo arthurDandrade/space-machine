@@ -178,22 +178,22 @@ export function ConsumoTela() {
           <AnelConsumo total={total} etapas={data.por_etapa.map((e) => ({ etapa: e.etapa, tokens: e.tokens }))} /></div>
         <div className="cartao">
           <div className="titulo-secao"><h3>{t("app.consumo.por_etapa")}</h3></div>
-          <table className="tabela">
+          <div className="rola-x"><table className="tabela">
             <thead><tr><th>{t("app.consumo.etapa")}</th><th className="n">{t("app.consumo.chamadas")}</th><th className="n">{t("app.consumo.tokens_col")}</th><th className="n">{t("app.consumo.media")}</th></tr></thead>
             <tbody>{data.por_etapa.map((e) => (
               <tr key={e.etapa}><td>{t(`app.consumo.${e.etapa}`, undefined, e.etapa)}</td><td className="n">{e.chamadas}</td><td className="n">{compacto(e.tokens)}</td><td className="n">{compacto(e.media)}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         </div>
       </div>
       <div className="cartao" style={{ marginTop: 20 }}>
         <div className="titulo-secao"><h3>{t("app.consumo.por_video")}</h3></div>
-        <table className="tabela">
+        <div className="rola-x"><table className="tabela">
           <thead><tr><th>{t("app.consumo.canal")}</th><th>{t("app.consumo.video")}</th><th className="n">{t("app.consumo.chamadas")}</th><th className="n">{t("app.consumo.tokens_col")}</th><th>{t("app.consumo.ultima")}</th></tr></thead>
           <tbody>{data.por_video.map((v) => (
             <tr key={v.canal + v.video}><td>{v.canal}</td><td>{v.video || "—"}</td><td className="n">{v.chamadas}</td><td className="n">{compacto(v.tokens)}</td><td className="sub">{v.ultima}</td></tr>
           ))}</tbody>
-        </table>
+        </table></div>
       </div>
       <details className="cartao recolhe" style={{ marginTop: 20 }}>
         <summary><h3>{t("app.consumo.detalhe")}</h3><span className="sub">{t("app.consumo.ultimas", { n: data.linhas.length })}</span></summary>

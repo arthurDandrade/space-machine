@@ -201,9 +201,5 @@ def videos(canal_slug):
     return out
 
 
-def resumo_canais():
-    return [{"slug": s, **c} for s, c in canais().items()]
-
-
 def quando(ts):
     return time.strftime("%d/%m %H:%M", time.localtime(ts)) if ts else "—"

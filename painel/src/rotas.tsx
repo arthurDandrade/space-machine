@@ -1,6 +1,8 @@
 // Dois níveis: /  = seus canais (do produtor) · /c/<canal>/... = a produção daquele canal.
 import { createBrowserRouter, Navigate, Outlet, useRouteError } from "react-router-dom";
 import { useAoVivo } from "./aoVivo";
+import { BaloesDeAviso } from "./componentes/Avisos";
+import { Busca } from "./componentes/Busca";
 import { CascaCanal } from "./casca/CascaCanal";
 import { CascaProdutor } from "./casca/TopoProdutor";
 import { AprendizadosTela, ChavesTela, IdentidadeTela, RegrasTela } from "./telas/ConfigCanal";
@@ -18,7 +20,14 @@ function Raiz() {
   // sem os textos, a tela mostraria as chaves ("app.canais...") por um instante
   const { data, error } = useSistema();
   if (error) throw error;
-  return data ? <Outlet /> : null;
+  if (!data) return null;
+  return (
+    <>
+      <Outlet />
+      <Busca />
+      <BaloesDeAviso />
+    </>
+  );
 }
 
 function Erro() {
@@ -29,7 +38,7 @@ function Erro() {
     <div className="erro-tela">
       <h1>{erro?.status === 404 ? t("app.erro.nao_achei") : t("app.erro.titulo")}</h1>
       <p className="sub">{erro?.message}</p>
-      <a className="bt" href="/app/">{t("app.erro.voltar")}</a>
+      <a className="bt" href="/">{t("app.erro.voltar")}</a>
     </div>
   );
 }
@@ -75,5 +84,4 @@ export const rotas = createBrowserRouter(
       ],
     },
   ],
-  { basename: "/app" },
 );

@@ -1,4 +1,4 @@
-"""Gestão do canal (Fase 4): kanban de produção, ideias e calendário de publicação.
+"""Gestão do canal: colunas do quadro de produção, ideias, calendário de publicação e criação de vídeos novos.
 
 O andamento da produção vem das pastas (estado.py). O que não está nas pastas (ideia, título/descrição/tags de
 publicação, data, "agendado"/"publicado", link) fica em <dados>/space_machine.sqlite. Upload pelo sistema: não (2026-10-11) — sobe-se no YouTube
@@ -91,17 +91,6 @@ def apagar_ideia(canal, ideia_id):
     con.execute("delete from ideias where canal=? and id=?", (canal, ideia_id))
     con.commit()
     con.close()
-
-
-def quadro(canal):
-    """{coluna: [cards]} do kanban de produção do canal."""
-    cols = {c: [] for c, _ in COLUNAS}
-    for i in ideias(canal):
-        cols["ideia"].append({"tipo": "ideia", **i})
-    for v in estado.videos(canal):
-        g = dados_video(canal, v["slug"])
-        cols[coluna_do_video(v, g)].append({"tipo": "video", "v": v, "g": g})
-    return cols
 
 
 def calendario(canal, ano, mes):

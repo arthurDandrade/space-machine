@@ -1,4 +1,4 @@
-"""Textos do painel em um lugar só (textos/<idioma>.json). Uso nos templates: {{ t("nav.inicio") }}."""
+"""Textos do painel em um lugar só (textos/<idioma>.json). Uso no painel (React): t("app.nav.producao"), entregue por /api/sistema."""
 import json
 from functools import lru_cache
 from pathlib import Path

@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ChartPie, Settings } from "lucide-react";
 import { Canais, pegar } from "../api";
 import { useT } from "../textos";
+import { Sino } from "../componentes/Avisos";
+import { BotaoBusca } from "../componentes/Busca";
 import { BotaoTema } from "./Cabecalho";
 
 export function Marca() {
@@ -28,11 +30,13 @@ export function TopoProdutor() {
     <div className="topo-produtor">
       <Marca />
       <div className="esp" />
+      <BotaoBusca />
       <Link className={`chip ${data?.falta_algo ? "alerta" : ""}`} to="/config/passos">
         <span className="ponto" /><span className="txt">{t(data?.falta_algo ? "app.produtor.falta" : "app.produtor.tudo_ok")}</span>
       </Link>
       <Link className="chip" to="/config/consumo"><ChartPie size={16} /><span className="txt">{t("app.produtor.consumo")}</span></Link>
       <Link className="chip" to="/config/canais" title={t("app.produtor.config")}><Settings size={16} /></Link>
+      <Sino />
       <BotaoTema />
     </div>
   );

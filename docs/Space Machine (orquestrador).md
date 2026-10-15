@@ -107,6 +107,17 @@ Antes da 1ª etapa, o `rodar` (e o `escolher` avulso) chama `checar_claude`: uma
 ## Roteiro com cold open (2026-10-11)
 No "Novo vídeo", um tópico é qualquer linha começando com `#` (`# Nome`, `#Nome` ou `#Nome.`; o ponto sai do nome). Cada tópico vira `blocos/NN/roteiro.txt` com `# Nome` (não narrado) + `Nome.` (narrado) + texto. O texto **antes** do 1º `#` é o **cold open**: vira o `blocos/00`, marcado com `#! cold open`. O storyboard dele sai com `"sem_titulo": true` e `"nome_fala"` igual às 3 primeiras palavras, e o compilador e o editor pulam o card de título (backups `_backup_*_antes_sem_titulo`). A prévia entregue é `edicao/bloco 0.mp4`.
 
+## Painel novo em React (2026-10-14)
+As seções "Painel (Fase 3)", "Gestão e configuração (Fase 4)" e "Modelos por etapa" acima descrevem o painel antigo (páginas Jinja + htmx). Ele foi trocado por um painel em React (`painel/`, Vite + TypeScript), servido na raiz; os endereços antigos redirecionam.
+- **Dois níveis:** o sistema é do produtor, não de um canal. Abre na escolha de canais (cards com banner/logo, números e o vídeo atual; teclas 1–9) e entra na produção do canal (`/c/<canal>`), com barra lateral própria e a cor de destaque do canal.
+- **Produção do canal:** vídeo em produção com um segmento por bloco, "esperando você", processo de produção filtrável com as capas, rodando agora, próximas publicações e consumo da semana.
+- **Vídeo e bloco:** grade de blocos com capa e barra das etapas; no bloco, linha do tempo das etapas (clicar roda a partir dela), prévias, conferir com miniaturas, QA e storyboard renderizados, roteiro, logs recolhidos.
+- **Planejamento:** ideias, quadro com arrastar (Edição final / Agendado / Publicado), calendário com capas, novo vídeo com a divisão em blocos ao vivo.
+- **Configurações:** do canal (identidade com prévia e troca de logo/banner, regras do tema, Log de Aprendizados, chaves) e do produtor (`/config`: canais, modelos, consumo, primeiros passos).
+- **Ao vivo:** `/api/eventos` (SSE) avisa quando uma pasta de produção muda e a tela se atualiza sem recarregar (o player não reinicia). Sino de avisos e balões quando um bloco para ou é entregue; aviso no Mac se permitido. ⌘K busca canais, vídeos, blocos e telas.
+- **API:** `space_machine/api.py` lê o mesmo que o painel antigo e chama as mesmas funções (`fila.lancar_rodada`, `fila.parar_rodada`, `gestao.criar_video`, `configuracao.salvar_regras`...). Chave secreta nunca vai ao navegador: só a máscara.
+- **Capas:** `space_machine/capas.py` tira um quadro dos blocos entregues ou da prévia (fica o JPEG maior, que é o quadro com foto) e recorta o banner do YouTube na faixa do meio; cache em `<dados>/cache/capas/`.
+
 ## Próximos passos (onde paramos em 2026-10-12)
 **Every NFL Position Explained in x Minutes: 21/21 blocos entregues** em `edicao/bloco N.mp4` (QA 0 falhas; 0,7 s depois da última palavra). Consumo: 1.038 chamadas, ~7,0 mi tokens equiv. (~US$ 32 em API); 2 limites de sessão vencidos pela fila sozinha. Detalhes do dia no [[Log de Aprendizados]] (entradas de 2026-10-11 e 2026-10-12).
 

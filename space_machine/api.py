@@ -293,6 +293,55 @@ def calendario(slug: str, mes: str = ""):
     }
 
 
+@api.get("/busca")
+def busca():
+    """Tudo o que a busca (⌘K) encontra: canais, vídeos e blocos dos canais ativos."""
+    out = {"canais": [], "videos": [], "blocos": []}
+    for slug, c in canais().items():
+        out["canais"].append({"slug": slug, "nome": c["nome"], "tema": c.get("tema", "")})
+        if not c.get("ativo"):
+            continue
+        for v in estado.videos(slug):
+            g = gestao.dados_video(slug, v["slug"])
+            titulo = g.get("titulo_pub") or v["titulo"]
+            out["videos"].append({"canal": slug, "canal_nome": c["nome"], "slug": v["slug"], "titulo": titulo})
+            out["blocos"] += [{"canal": slug, "video": v["slug"], "video_titulo": titulo, "nn": b["nn"],
+                               "topico": b["topico"]} for b in v["blocos"]]
+    return out
+
+
+@api.get("/avisos")
+def avisos():
+    """O que pede atenção, de todos os canais ativos: blocos parados esperando você, filas pausadas e blocos
+    entregues nas últimas 24 h. Mais novo em cima."""
+    itens, agora = [], time.time()
+    for slug, c in canais().items():
+        if not c.get("ativo"):
+            continue
+        for v in estado.videos(slug):
+            f = v.get("fila") or {}
+            base = {"canal": slug, "canal_nome": c["nome"], "video": v["slug"], "video_titulo": v["titulo"]}
+            if f.get("ativa") and f.get("status") == "pausada":
+                arq = Path(v["pasta"]) / "_estudio" / "fila.json"
+                itens.append({**base, "tipo": "fila", "nn": "", "topico": "", "texto": f.get("motivo", ""),
+                              "quando": arq.stat().st_mtime if arq.exists() else agora})
+            for b in v["blocos"]:
+                est = _estado_bloco(b, f)
+                if est == "wait":
+                    itens.append({**base, "tipo": "esperando", "nn": b["nn"], "topico": b["topico"],
+                                  "texto": (b["parado"] or {}).get("motivo", ""), "etapa": (b["parado"] or {}).get("etapa", ""),
+                                  "quando": b["mudou"] or agora})
+                elif est == "ok":
+                    arq = Path(v["pasta"]) / "edicao" / f"bloco {int(b['nn'])}.mp4"
+                    quando = arq.stat().st_mtime if arq.exists() else 0
+                    if agora - quando < 86400:
+                        itens.append({**base, "tipo": "entregue", "nn": b["nn"], "topico": b["topico"], "texto": "",
+                                      "quando": quando})
+    for i in itens:
+        i["id"] = f"{i['tipo']}:{i['canal']}:{i['video']}:{i['nn']}:{int(i['quando'])}"
+    return {"itens": sorted(itens, key=lambda i: -i["quando"])[:50]}
+
+
 # ---------------- imagens ----------------
 @api.get("/c/{slug}/marca/{qual}")
 def imagem_marca(slug: str, qual: str):

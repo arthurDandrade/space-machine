@@ -33,22 +33,24 @@ O instalador:
 - baixa o modelo de transcrição;
 - pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`).
 
-O painel abre em http://localhost:8765. A página **Primeiros passos** mostra o que ainda falta e como resolver.
+O painel abre em http://localhost:8765, na escolha de canais. Em ⚙ › **Primeiros passos** você vê o que ainda falta e como resolver.
 
 No After Effects, ligue: Settings › Scripting & Expressions › **Allow Scripts to Write Files and Access Network**.
 
 ## Primeiro vídeo
-1. **Canais › Novo canal**: nome, tema, idioma da narração, cores, fonte, logo e fundo.
-2. **Regras do tema**: clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
-3. **APIs**: o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
-4. **Início › + Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`. O texto antes do 1º tópico vira o cold open.
-5. Na página do vídeo, clique em **Produzir todos**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`.
+O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher um, entra na produção daquele canal.
+1. **Novo canal** (o último card da escolha de canais): nome, tema, idioma da narração, cores, fonte, logo, banner e fundo.
+2. **Regras do tema** (na barra lateral do canal): clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
+3. **Chaves** (na barra lateral do canal): o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
+4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.
+5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`.
 
-Um bloco que precisa de você para com o motivo escrito no painel. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera.
+Um bloco que precisa de você para com o motivo escrito no painel, em **Esperando você** e no sino. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera. ⌘K busca qualquer vídeo, bloco ou tela.
 
 ## Onde fica cada coisa
 **Código** (este repo, igual para todo mundo):
-- `space_machine/`: orquestrador, painel, prompts das etapas e textos do painel (`textos/pt.json`).
+- `space_machine/`: orquestrador, servidor e API do painel, prompts das etapas e textos do painel (`textos/pt.json`).
+- `painel/`: o painel (React). O instalador monta e o `./spacemachine` remonta quando ele muda.
 - `motor/busca/`: busca, escolha, download, narração, transcrição, mapas e tabelas.
 - `motor/edicao_ae/`: montagem no After Effects, render e controle de qualidade.
 - `formatos/explained/`: regras e notas do formato, iguais para todos os canais.
