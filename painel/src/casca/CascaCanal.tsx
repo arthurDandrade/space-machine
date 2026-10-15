@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen, CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, ListChecks,
-  Palette, Plus, Settings,
+  Palette, Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { PainelCanal, pegar, rota } from "../api";
@@ -80,7 +80,7 @@ export function CascaCanal() {
         <div className="pe">
           <Link className="bt escuro" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
           <Link className="conta" to="/config">
-            <span className="av"><Settings size={16} /></span>
+            <img className="av" src="/icone-128.png" alt="" />
             {t("app.nav.space_machine")}
           </Link>
         </div>

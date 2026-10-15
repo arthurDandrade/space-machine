@@ -12,12 +12,7 @@ import { BotaoTema } from "./Cabecalho";
 export function Marca() {
   return (
     <Link to="/" className="marca-sm">
-      <i>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M3 12c0-2 4-4.5 9-4.5s9 2.5 9 4.5-4 4.5-9 4.5S3 14 3 12z" />
-        </svg>
-      </i>
+      <img src="/icone-128.png" alt="" />
       Space Machine
     </Link>
   );

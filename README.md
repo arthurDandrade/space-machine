@@ -31,7 +31,8 @@ O instalador:
 - instala ffmpeg, whisper-cpp e uv;
 - cria o Python (`.venv`);
 - baixa o modelo de transcrição;
-- pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`).
+- pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`);
+- cria o app **Space Machine** na área de trabalho (se você quiser): clicar abre o painel e, se ele não estiver ligado, liga em segundo plano. Para refazer: `./spacemachine atalho`.
 
 O painel abre em http://localhost:8765, na escolha de canais. Em ⚙ › **Primeiros passos** você vê o que ainda falta e como resolver.
 
@@ -72,7 +73,9 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 
 ## Linha de comando
 ```bash
-./spacemachine                          # painel
+./spacemachine                          # painel (preso ao terminal)
+./spacemachine abrir                    # abre o painel; se não estiver ligado, liga em segundo plano
+./spacemachine atalho                   # cria o app Space Machine na área de trabalho
 ./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
 ./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
 ./spacemachine final <pasta do vídeo>   # junta os blocos entregues num projeto do After (--render: e o MP4)

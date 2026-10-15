@@ -6,6 +6,7 @@
   python -m space_machine final <pasta do vídeo> [--render]   junta os blocos entregues num projeto do After
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
+  python -m space_machine atalho [--pasta ~/Desktop]  cria o app "Space Machine" na área de trabalho
   python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
 """
 import sys
@@ -21,6 +22,9 @@ def main():
         m(args)
     elif cmd == "fila":
         from .fila import main as m
+        m(args)
+    elif cmd == "atalho":
+        from .atalho import main as m
         m(args)
     elif cmd == "final":
         from .final import main as m

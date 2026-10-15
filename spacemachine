@@ -1,6 +1,8 @@
 #!/bin/zsh
 # Atalho do Space Machine.
 #   ./spacemachine                 abre o painel (http://localhost:8765) no navegador
+#   ./spacemachine abrir           igual, mas sem prender o terminal: se o painel já está ligado só abre o navegador,
+#                                  senão liga em segundo plano (log em <dados>/logs/painel.log). É o que o atalho usa.
 #   ./spacemachine <comando> ...   qualquer comando de `python -m space_machine` (rodar, fila, checar, consumo...)
 cd ${0:A:h}
 [[ -x .venv/bin/python ]] || { echo "Rode ./instalar.sh primeiro."; exit 1; }
@@ -14,6 +16,17 @@ montar_painel() {
     [[ -d node_modules && ! package-lock.json -nt node_modules/.package-lock.json ]] || npm ci --no-audit --no-fund --loglevel=error
     npm run build --silent >/dev/null ) || echo "Não consegui montar o painel (rode: cd painel && npm run build)."
 }
+if [[ $1 == abrir ]]; then
+  painel_ligado() { curl -s -o /dev/null --max-time 1 http://127.0.0.1:8765/api/sistema; }
+  if ! painel_ligado; then
+    montar_painel
+    dados=${SM_DADOS:-$(cat ~/.config/spacemachine/dados 2>/dev/null || echo ~/SpaceMachine-dados)}
+    mkdir -p $dados/logs
+    nohup .venv/bin/python -m space_machine painel >> $dados/logs/painel.log 2>&1 &
+    for i in {1..60}; do painel_ligado && break; sleep 0.25; done
+  fi
+  exec open http://localhost:8765
+fi
 if [[ $# -eq 0 || $1 == painel ]]; then
   [[ $1 == painel ]] && shift
   montar_painel

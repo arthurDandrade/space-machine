@@ -42,6 +42,10 @@ else
 fi
 
 chmod +x spacemachine motor/edicao_ae/editar_bloco.sh
+
+echo "-- atalho na área de trabalho"
+read "resp?Criar o app Space Machine na área de trabalho? [S/n] "
+[[ $resp == [nN]* ]] || .venv/bin/python -m space_machine atalho
 echo
 echo "Pronto. Abra o painel com:  ./spacemachine"
 echo "A página Primeiros passos mostra o que ainda falta (token do Claude, After Effects, chaves do canal)."
