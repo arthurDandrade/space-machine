@@ -1,6 +1,6 @@
 // Planejamento do canal: ideias, quadro de produção (arrastar para Edição final / Agendado / Publicado),
 // calendário de publicação e o formulário de novo vídeo (roteiro → blocos, com a divisão mostrada ao vivo).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DndContext, DragEndEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
@@ -93,7 +93,7 @@ function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
   const estilo = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 20 } : undefined;
   return (
     <div ref={setNodeRef} style={estilo} className={`card-quadro ${isDragging ? "arrastando" : ""}`} {...attributes} {...listeners}>
-      <Link to={rota.video(canal, v.slug)} draggable={false} onClick={(e) => isDragging && e.preventDefault()}>
+      <Link to={rota.video(canal, v.slug)} draggable={false}>
         <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
         <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
         <span className="sub">{t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
@@ -124,6 +124,29 @@ export function QuadroTela() {
   const t = useT();
   const qc = useQueryClient();
   const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // ao soltar um card, o navegador manda um clique para ele. O dnd-kit para a propagação desse clique (o React nem
+  // fica sabendo), mas não cancela a ação padrão: como o card é um link, o navegador abria a página do vídeo.
+  // Na janela, antes de tudo: se o ponteiro andou mais que o limite de ativação do arrasto (6 px) entre apertar e
+  // soltar dentro do quadro, o clique que vem em seguida tem a ação padrão cancelada.
+  const quadro = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let inicio: { x: number; y: number } | null = null;
+    let arrastou = false;
+    const apertar = (e: PointerEvent) => { inicio = quadro.current?.contains(e.target as Node) ? { x: e.clientX, y: e.clientY } : null; arrastou = false; };
+    const soltarPonteiro = (e: PointerEvent) => { arrastou = !!inicio && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 6; };
+    const clicar = (e: MouseEvent) => {
+      if (arrastou) { e.preventDefault(); e.stopPropagation(); }
+      arrastou = false;
+    };
+    window.addEventListener("pointerdown", apertar, true);
+    window.addEventListener("pointerup", soltarPonteiro, true);
+    window.addEventListener("click", clicar, true);
+    return () => {
+      window.removeEventListener("pointerdown", apertar, true);
+      window.removeEventListener("pointerup", soltarPonteiro, true);
+      window.removeEventListener("click", clicar, true);
+    };
+  }, []);
   const mover = useMutation({
     mutationFn: ({ video, coluna }: { video: string; coluna: Coluna }) => enviar(`/api/c/${canal}/v/${video}/coluna`, { coluna }),
     onSettled: () => qc.invalidateQueries(),
@@ -138,7 +161,7 @@ export function QuadroTela() {
       <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.quadro")}</b></>} titulo={t("app.quadro.titulo")} />
       <p className="sub intro">{t("app.quadro.explica")}</p>
       <DndContext sensors={sensores} onDragEnd={soltar}>
-        <div className="quadro">
+        <div className="quadro" ref={quadro}>
           {dc.colunas.map((c) => (
             <ColunaQuadro key={c.id} id={c.id} n={c.id === "ideia" ? (di?.ideias.length ?? 0) : dc.videos.filter((v) => v.coluna === c.id).length}>
               {c.id === "ideia" ? (
