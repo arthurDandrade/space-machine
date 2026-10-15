@@ -481,3 +481,22 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .acoes-final { display: flex; gap: 8px; flex-wrap: wrap; }
 .aviso-texto { color: var(--wait) !important; font-weight: 600; }
 .marcar { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); cursor: pointer; margin-top: 6px; }
+
+/* thumbnail */
+.capa-video { position: relative; align-self: start; border-radius: 24px; }
+.capa-video .capa-grande { width: 100%; }
+.capa-video .origem-capa { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(20, 21, 26, 0.6); color: #fff; font-size: 11.5px; font-weight: 700; backdrop-filter: blur(6px); }
+.capa-video .sobre-capa { position: absolute; inset: 0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(20, 21, 26, 0.45); color: #fff; font-size: 12.5px; font-weight: 600; opacity: 0; transition: opacity 0.2s; }
+.capa-video:hover .sobre-capa, .capa-video.sobre .sobre-capa { opacity: 1; }
+.capa-video.sobre .sobre-capa { background: color-mix(in oklab, var(--accent) 55%, transparent); outline: 3px dashed #fff; outline-offset: -10px; }
+.erro-capa { margin-top: 8px !important; }
+.campo-thumb { margin-bottom: 20px; }
+.thumb-linha { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.thumb-previa { width: 320px; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--raised); flex: none; box-shadow: var(--shadow); }
+.thumb-previa img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-previa.vazia { border: 2px dashed var(--line); box-shadow: none; display: grid; place-items: center; color: var(--ink3); }
+.thumb-previa.vazia span { display: flex; flex-direction: column; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+.thumb-previa.vazia:hover { border-color: var(--accent); color: var(--accent-text); }
+.thumb-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; align-items: flex-start; }
+.thumb-info b { word-break: break-all; }
+.aviso-thumb { display: inline-flex; align-items: center; gap: 6px; color: var(--wait); font-size: 12.5px; font-weight: 600; }

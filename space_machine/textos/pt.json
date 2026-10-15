@@ -369,5 +369,19 @@
  "app.final.aviso_after": "Se um bloco estiver no After, espera a vez. O projeto que estiver aberto no After é fechado sem salvar, como na montagem dos blocos: salve antes o que for seu.",
  "app.final.render": "Também renderizar o MP4 final (demora mais ou menos o tempo do vídeo)",
  "app.final.confirmar": "Juntar no After",
- "app.final.confirmar_render": "Juntar e renderizar"
+ "app.final.confirmar_render": "Juntar e renderizar",
+ "app.thumb.titulo": "Thumbnail",
+ "app.thumb.enviar": "Enviar thumbnail",
+ "app.thumb.trocar": "Trocar thumbnail",
+ "app.thumb.remover": "Remover",
+ "app.thumb.abrir": "Ver inteira",
+ "app.thumb.dica": "ou arraste a imagem aqui · ⌘V cola",
+ "app.thumb.e_thumb": "thumbnail",
+ "app.thumb.e_quadro": "quadro do vídeo",
+ "app.thumb.enviada": "enviada em {quando}",
+ "app.thumb.vazia": "Sem thumbnail: a capa do vídeo no painel é um quadro tirado dos blocos. Envie a thumbnail do YouTube para ela aparecer nos cards, no quadro e no calendário. Arraste a imagem, clique ou cole com ⌘V.",
+ "app.thumb.ok_youtube": "pronta para o YouTube",
+ "app.thumb.aviso_tamanho": "{mb} MB: o YouTube aceita até 2 MB",
+ "app.thumb.aviso_proporcao": "{l}×{a} não é 16:9: o YouTube corta",
+ "app.thumb.aviso_pequena": "{l} px de largura: o YouTube recomenda 1280 ou mais"
 }

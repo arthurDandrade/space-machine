@@ -24,7 +24,7 @@ export interface ResumoCanal {
   n_videos: number;
   rodando: number;
   esperando: number;
-  atual: { slug: string; titulo: string; n_blocos: number; entregues: number; rodando: number; tem_capa: boolean } | null;
+  atual: { slug: string; titulo: string; n_blocos: number; entregues: number; rodando: number; tem_capa: boolean; capa_v: number } | null;
   rodando_agora: string[];
 }
 
@@ -63,6 +63,7 @@ export interface Video {
   fila: Fila | null;
   consumo: number;
   tem_capa: boolean;
+  capa_v: number;
 }
 
 export interface Esperando {
@@ -144,8 +145,20 @@ export interface Final {
   entregues: number;
 }
 
+export interface Thumbnail {
+  nome: string;
+  largura?: number;
+  altura?: number;
+  enviada?: string;
+  tamanho: number;
+  versao: number;
+  grande_demais: boolean;
+  url: string;
+}
+
 export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
   final: Final;
+  thumbnail: Thumbnail | null;
   blocos: BlocoDoVideo[];
   fila: (Fila & { inicio?: string; fim?: string; lancados?: string[] }) | null;
   publicacao: Publicacao;
@@ -219,8 +232,11 @@ export const enviar = <T = { ok: boolean },>(url: string, corpo?: unknown) =>
 
 // endereços das imagens (a API gera e guarda em cache)
 export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${canal}/marca/${qual}`;
-export const urlCapa = (canal: string, video: string, nn?: string) =>
-  `/api/c/${canal}/v/${video}/capa${nn ? `?nn=${nn}` : ""}`;
+// v: versão da capa do vídeo (muda quando a thumbnail muda), para o navegador não mostrar a antiga do cache
+export const urlCapa = (canal: string, video: string, nn?: string, v?: number) => {
+  const q = [nn ? `nn=${nn}` : "", v ? `v=${v}` : ""].filter(Boolean).join("&");
+  return `/api/c/${canal}/v/${video}/capa${q ? `?${q}` : ""}`;
+};
 
 // rotas do painel novo
 export const rota = {

@@ -46,6 +46,7 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.
 5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`.
 6. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com todos em sequência (e, se marcar, renderiza o MP4 final).
+7. A **thumbnail** do vídeo vai na página dele (arraste, clique ou cole com ⌘V): ela vira a capa do vídeo no painel, e o painel avisa se passar dos 2 MB do YouTube ou não for 16:9.
 
 Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira.
 

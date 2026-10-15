@@ -17,7 +17,7 @@ Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico
 - **Dados** (fora do repo). Vêm de `SM_DADOS`; senão de `~/.config/spacemachine/dados`; senão de `~/SpaceMachine-dados`. No Mac do Arthur: `/Users/arthur/Canais/SpaceMachine-dados`.
   - `space_machine.json`, `.env` (token do Claude), `space_machine.sqlite`, `cache/`, `logs/claude/`.
   - `referencias/explained/`: vídeos de referência e detecções (direito autoral: nunca no repo).
-  - `canais/<slug>/`: `canal.json` (identidade + **regras do tema**), `.env` (chaves do canal), `identidade/`, `conhecimento/` (Índice, **Log de Aprendizados** do canal, Produções), `producoes/<vídeo>/blocos/NN/` (e `final/` do vídeo final), `producoes/_lixeira/` (vídeos excluídos no painel; nada é apagado).
+  - `canais/<slug>/`: `canal.json` (identidade + **regras do tema**), `.env` (chaves do canal), `identidade/`, `conhecimento/` (Índice, **Log de Aprendizados** do canal, Produções), `producoes/<vídeo>/blocos/NN/` (e `final/` do vídeo final, `thumbnail.*` enviada no painel, com as trocadas em `thumbnails_anteriores/`), `producoes/_lixeira/` (vídeos excluídos no painel; nada é apagado).
 
 ## Formato × tema
 - O que vale para qualquer canal do formato vai em `formatos/explained/` e nos prompts.

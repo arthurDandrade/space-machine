@@ -1,12 +1,15 @@
-"""Capas do painel: um quadro tirado dos vídeos para mostrar um vídeo (ou um bloco) num card.
+"""Capas do painel: a thumbnail do vídeo ou um quadro tirado dos vídeos, para mostrar um vídeo (ou um bloco) num card.
 
-Fonte, em ordem: os blocos entregues (<vídeo>/edicao/bloco N.mp4), a prévia mais nova de um bloco, e por fim a
-primeira imagem dos assets do bloco. De alguns instantes, fica o quadro com mais detalhe (o JPEG maior): os quadros
+Fonte, em ordem: a thumbnail que você enviou (<vídeo>/thumbnail.*), os blocos entregues (<vídeo>/edicao/bloco N.mp4),
+a prévia mais nova de um bloco, e por fim a primeira imagem dos assets do bloco. De alguns instantes, fica o quadro com mais detalhe (o JPEG maior): os quadros
 só com texto sobre o papel ficam pequenos e perdem para os que têm foto.
 Guardadas em <dados>/cache/capas/<canal>/; refeitas quando a fonte muda.
 """
+import hashlib
+import json
 import re
 import shutil
+import time
 import subprocess
 import tempfile
 import threading
@@ -40,9 +43,67 @@ def _imagem_dos_assets(b):
     return imgs[0] if imgs else None
 
 
-def fontes(video_dir, nn=None):
-    """Vídeos (ou uma imagem) de onde sai a capa. Sem nn: o vídeo inteiro; com nn: só aquele bloco."""
+# ---------------- thumbnail do vídeo ----------------
+THUMB_EXT = (".jpg", ".jpeg", ".png", ".webp")
+LIMITE_YOUTUBE = 2 * 1024 * 1024          # o YouTube recusa thumbnail com mais de 2 MB
+
+
+def thumbnail(video_dir):
+    return next((f for ext in THUMB_EXT if (f := Path(video_dir) / f"thumbnail{ext}").exists()), None)
+
+
+def _guardar_thumbnail(vd):
+    """A thumbnail atual vai para <vídeo>/thumbnails_anteriores/ (trocar ou remover nunca apaga)."""
+    t = thumbnail(vd)
+    if t:
+        guarda = vd / "thumbnails_anteriores"
+        guarda.mkdir(exist_ok=True)
+        t.rename(guarda / f"thumbnail_{time.strftime('%Y%m%d-%H%M%S', time.localtime(t.stat().st_mtime))}{t.suffix}")
+    (vd / "thumbnail.json").unlink(missing_ok=True)
+
+
+def salvar_thumbnail(video_dir, dados, nome):
+    """Grava a imagem enviada como <vídeo>/thumbnail.<ext>. ValueError se não for uma imagem que abre."""
+    from io import BytesIO
+    from PIL import Image
     vd = Path(video_dir)
+    ext = Path(nome or "").suffix.lower()
+    if ext not in THUMB_EXT:
+        raise ValueError("Envie uma imagem PNG, JPG ou WEBP.")
+    try:
+        with Image.open(BytesIO(dados)) as im:
+            im.verify()
+        with Image.open(BytesIO(dados)) as im:
+            largura, altura = im.size
+    except Exception:  # noqa: BLE001 — qualquer falha de leitura = não é imagem
+        raise ValueError("Esse arquivo não é uma imagem que dê para abrir.")
+    _guardar_thumbnail(vd)
+    (vd / f"thumbnail{'.jpg' if ext == '.jpeg' else ext}").write_bytes(dados)
+    (vd / "thumbnail.json").write_text(json.dumps({"nome": Path(nome).name, "largura": largura, "altura": altura,
+                                                   "enviada": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False))
+
+
+def remover_thumbnail(video_dir):
+    _guardar_thumbnail(Path(video_dir))
+
+
+def info_thumbnail(video_dir):
+    t = thumbnail(video_dir)
+    if not t:
+        return None
+    try:
+        info = json.loads((Path(video_dir) / "thumbnail.json").read_text())
+    except (OSError, ValueError):
+        info = {"nome": t.name}
+    return {**info, "arquivo": str(t), "tamanho": t.stat().st_size, "versao": int(t.stat().st_mtime),
+            "grande_demais": t.stat().st_size > LIMITE_YOUTUBE}
+
+
+def fontes(video_dir, nn=None):
+    """Thumbnail, vídeos ou uma imagem de onde sai a capa. Sem nn: o vídeo inteiro; com nn: só aquele bloco."""
+    vd = Path(video_dir)
+    if not nn and thumbnail(vd):
+        return [thumbnail(vd)]
     if nn:
         b = vd / "blocos" / nn
         entregue = vd / "edicao" / f"bloco {int(nn)}.mp4"
@@ -100,7 +161,9 @@ def capa(canal_slug, video_dir, nn=None):
     fs = fontes(vd, nn)
     if not fs:
         return None
-    destino = CACHE / canal_slug / (f"{vd.name}_{nn}.jpg" if nn else f"{vd.name}.jpg")
+    # o nome leva a fonte: trocar ou remover a thumbnail muda a capa mesmo com a fonte nova mais velha que o cache
+    marca = hashlib.md5("|".join(map(str, fs)).encode()).hexdigest()[:8]
+    destino = CACHE / canal_slug / (f"{vd.name}_{nn}_{marca}.jpg" if nn else f"{vd.name}_{marca}.jpg")
     mais_nova = max(f.stat().st_mtime for f in fs)
     with _trava_geral:
         trava = _travas.setdefault(str(destino), threading.Lock())

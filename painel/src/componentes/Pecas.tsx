@@ -25,7 +25,7 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
   return (
     <Link className="video" to={rota.video(canal, v.slug)} style={{ animationDelay: `${atraso}ms` }}>
       <div className="cv">
-        <Capa src={urlCapa(canal, v.slug)} existe={v.tem_capa} />
+        <Capa src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} />
         <span className={`st ${v.coluna === "producao" ? "p" : ""}`}>{t(`app.coluna.${v.coluna}`)}</span>
         {v.rodando > 0 && <span className="vivo"><span className="pulso" />{v.rodando}</span>}
         <span className="play"><Play size={16} /></span>

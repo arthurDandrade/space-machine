@@ -47,7 +47,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
   const base = `/api/c/${canal}/v/${v.slug}/fila`;
   return (
     <div className="heroi">
-      <div className="arte"><Capa src={urlCapa(canal, v.slug)} icone={false} existe={v.tem_capa} /></div>
+      <div className="arte"><Capa src={urlCapa(canal, v.slug, undefined, v.capa_v)} icone={false} existe={v.tem_capa} /></div>
       {ultimoEntregue && <div className="arte b"><Capa src={urlCapa(canal, v.slug, ultimoEntregue.nn)} icone={false} /></div>}
       <div className="txt">
         <span className="tag">{v.rodando > 0 && <span className="pulso branco" />}{t("app.coluna.producao")}</span>

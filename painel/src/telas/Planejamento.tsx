@@ -93,7 +93,7 @@ function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
   return (
     <div ref={setNodeRef} style={estilo} className={`card-quadro ${isDragging ? "arrastando" : ""}`} {...attributes} {...listeners}>
       <Link to={rota.video(canal, v.slug)} draggable={false} onClick={(e) => isDragging && e.preventDefault()}>
-        <Capa className="cv" src={urlCapa(canal, v.slug)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
+        <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
         <b>{v.titulo_pub || v.titulo}</b>
         <span className="sub">{t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
         <div className="progresso"><i style={{ width: `${v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0}%` }} /></div>
@@ -164,8 +164,8 @@ export function QuadroTela() {
 // ---------------- calendário ----------------
 type Cal = {
   mes: string; ano: number; mes_n: number; ant: string; prox: string;
-  semanas: { data: string; dia: number; no_mes: boolean; hoje: boolean; videos: { slug: string; titulo: string; coluna: Coluna; tem_capa: boolean }[] }[][];
-  sem_data: { slug: string; titulo: string; coluna: Coluna; tem_capa: boolean }[];
+  semanas: { data: string; dia: number; no_mes: boolean; hoje: boolean; videos: { slug: string; titulo: string; coluna: Coluna; tem_capa: boolean; capa_v: number }[] }[][];
+  sem_data: { slug: string; titulo: string; coluna: Coluna; tem_capa: boolean; capa_v: number }[];
 };
 
 export function CalendarioTela() {
@@ -192,7 +192,7 @@ export function CalendarioTela() {
             <span className="num">{d.dia}</span>
             {d.videos.map((v) => (
               <Link key={v.slug} className={`pub-cal ${v.coluna}`} to={`${rota.video(canal, v.slug)}?aba=publicacao`}>
-                <Capa className="mini" src={urlCapa(canal, v.slug)} existe={v.tem_capa} icone={false} />
+                <Capa className="mini" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} icone={false} />
                 <span>{v.titulo}</span>
               </Link>
             ))}

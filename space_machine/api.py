@@ -92,8 +92,14 @@ def _video(slug, v):
         "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
         "mudou": v["mudou"], "data_pub": (g.get("data_pub") or "")[:10], "link": g.get("link") or "",
         "fila": _resumo_fila(f), "consumo": (v.get("consumo") or {}).get("equivalente") or 0,
-        "tem_capa": bool(capas.fontes(v["pasta"])),
+        "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"]),
     }
+
+
+def _versao_capa(vd):
+    """Muda quando a thumbnail muda: vai no endereço da capa para o navegador não mostrar a antiga do cache."""
+    t = capas.thumbnail(vd)
+    return int(t.stat().st_mtime) if t else 0
 
 
 def _consumo_7d(slug=None):
@@ -148,7 +154,7 @@ def _resumo_canal(slug, c):
         "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
         "colunas": colunas, "n_videos": len(vids),
         "rodando": sum(v["rodando"] for v in vids), "esperando": sum(v["esperando"] for v in vids),
-        "atual": {k: atual[k] for k in ("slug", "titulo", "n_blocos", "entregues", "rodando", "tem_capa")} if atual else None,
+        "atual": {k: atual[k] for k in ("slug", "titulo", "n_blocos", "entregues", "rodando", "tem_capa", "capa_v")} if atual else None,
         "rodando_agora": [b["nn"] for b in (atual or {}).get("blocos", []) if b["estado"] == "run"],
     }, vids, brutos
 
@@ -223,7 +229,10 @@ def detalhe_video(slug: str, video: str):
         mp4 = max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=mp4)
     fim.update(tem_aep=aep.exists(), mp4_url=_arquivo(mp4) if mp4.is_file() else None,
                mp4_tamanho=mp4.stat().st_size if mp4.is_file() else 0, entregues=len(final.entregues(vd)))
-    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "final": fim,
+    thumb = capas.info_thumbnail(vd)
+    if thumb:
+        thumb["url"] = _arquivo(thumb.pop("arquivo")) + f"&v={thumb['versao']}"
+    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
             "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
             "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
@@ -287,7 +296,7 @@ def calendario(slug: str, mes: str = ""):
         ano, m = hoje.year, hoje.month
     semanas, sem_data = gestao.calendario(slug, ano, m)
     card = lambda v, g, col: {"slug": v["slug"], "titulo": g.get("titulo_pub") or v["titulo"], "coluna": col,
-                              "tem_capa": bool(capas.fontes(v["pasta"]))}
+                              "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"])}
     return {
         "mes": f"{ano}-{m:02d}", "ano": ano, "mes_n": m,
         "ant": (dt.date(ano, m, 1) - dt.timedelta(days=1)).strftime("%Y-%m"),
@@ -457,6 +466,26 @@ def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Bo
         return {"ok": True, "video": gestao.criar_video(_canal(slug), titulo, roteiro)}
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@api.post("/c/{slug}/v/{video}/thumbnail")
+async def enviar_thumbnail(slug: str, video: str, arquivo: UploadFile = File(...)):
+    """A thumbnail do vídeo (a que vai para o YouTube): vira a capa do vídeo no painel. A anterior é guardada."""
+    vd = _video_dir(slug, video)
+    dados = await arquivo.read()
+    if len(dados) > 30 * 1024 * 1024:
+        raise HTTPException(400, "Imagem grande demais (máx. 30 MB).")
+    try:
+        capas.salvar_thumbnail(vd, dados, arquivo.filename or "thumbnail.png")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "thumbnail": capas.info_thumbnail(vd) and {k: v for k, v in capas.info_thumbnail(vd).items() if k != "arquivo"}}
+
+
+@api.post("/c/{slug}/v/{video}/thumbnail/remover")
+def remover_thumbnail(slug: str, video: str):
+    capas.remover_thumbnail(_video_dir(slug, video))
+    return {"ok": True}
 
 
 @api.post("/c/{slug}/v/{video}/final")

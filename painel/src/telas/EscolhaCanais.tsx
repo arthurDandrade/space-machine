@@ -38,7 +38,7 @@ function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
         </div>
         {c.atual ? (
           <div className="atual">
-            <Capa className="th" src={urlCapa(c.slug, c.atual.slug)} existe={c.atual.tem_capa} />
+            <Capa className="th" src={urlCapa(c.slug, c.atual.slug, undefined, c.atual.capa_v)} existe={c.atual.tem_capa} />
             <div className="t">{c.atual.titulo}
               <span>{t("app.video.blocos_entregues", { e: c.atual.entregues, n: c.atual.n_blocos })}</span>
             </div>
