@@ -10,6 +10,29 @@
         "painel"
       ],
       "port": 8765
+    },
+    {
+      "name": "space-machine-8766",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "space_machine",
+        "painel",
+        "--porta",
+        "8766"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "painel-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "painel",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

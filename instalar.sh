@@ -14,6 +14,10 @@ echo "-- Python (.venv)"
 [[ -x .venv/bin/python ]] || uv venv -q -p 3.12 .venv
 uv pip install -q -p .venv/bin/python -r requirements.txt
 
+echo "-- painel (React, em painel/)"
+command -v npm >/dev/null || brew install node
+( cd painel && npm ci --no-audit --no-fund --loglevel=error && npm run build --silent >/dev/null ) && echo "ok: painel montado"
+
 echo "-- modelo de transcrição (inglês)"
 mkdir -p ~/.cache/whisper
 baixar_modelo() { [[ -f ~/.cache/whisper/$1 ]] || curl -L --fail -o ~/.cache/whisper/$1 "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$1"; }
@@ -34,7 +38,7 @@ if command -v claude >/dev/null; then
   echo "ok: $(claude --version)"
 else
   echo "Falta o Claude Code (precisa de uma assinatura do Claude):"
-  echo "   brew install node && npm install -g @anthropic-ai/claude-code"
+  echo "   npm install -g @anthropic-ai/claude-code"
 fi
 
 chmod +x spacemachine motor/edicao_ae/editar_bloco.sh

@@ -7,9 +7,7 @@ Os botões só disparam os mesmos comandos da linha de comando (python -m space_
 """
 import hashlib
 import json
-import os
 import re
-import signal
 import subprocess
 import sys
 import unicodedata
@@ -29,6 +27,7 @@ from .canal import gravar_json, ler_json
 from .motor_claude import _banco, canais
 from .sistema import DADOS, config, salvar_config
 from .rodar import ETAPAS as ETAPAS_RODAR
+from .api import api
 
 app = FastAPI(title="Space Machine")
 tpl = Jinja2Templates(directory=str(Path(__file__).with_name("templates")))
@@ -66,7 +65,13 @@ def _cauda(arq, linhas=60):
 
 
 # ---------------- páginas ----------------
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", include_in_schema=False)
+def raiz():
+    """O painel abre no React (escolha de canais); as páginas antigas seguem nos endereços delas até migrarem."""
+    return RedirectResponse("/app/", status_code=307)
+
+
+@app.get("/antigo", response_class=HTMLResponse)
 def inicio(request: Request):
     lista = []
     for c in estado.resumo_canais():
@@ -184,21 +189,7 @@ def conferir_ok(canal: str, video: str, nn: str):
 @app.post("/b/{canal}/{video}/{nn}/parar")
 def parar(canal: str, video: str, nn: str):
     _, _, b = _bloco_dir(canal, video, nn)
-    pid = b / "_estudio" / "pid"
-    if pid.exists():
-        # a rodada é filha de um `sh` líder de sessão (fila.lancar_rodada): o grupo é o do sh, não o pid dela.
-        # killpg(pid) dava ProcessLookupError calado, a rodada seguia e o painel liberava outra (2026-10-13)
-        try:
-            os.killpg(os.getpgid(int(pid.read_text().strip())), signal.SIGTERM)
-        except (ProcessLookupError, ValueError, PermissionError):
-            pass
-        pid.unlink(missing_ok=True)
-        est = ler_json(b / "_estudio" / "estado.json", {"etapas": {}})
-        atual = est.get("atual")
-        if atual:
-            est["etapas"].setdefault(atual, {})["status"] = "parado"
-            est["parado"] = {"etapa": atual, "motivo": "parado no painel"}
-            gravar_json(b / "_estudio" / "estado.json", est)
+    fila.parar_rodada(b)
     return RedirectResponse(f"/b/{canal}/{video}/{nn}", status_code=303)
 
 
@@ -562,6 +553,26 @@ async def salvar_modelos(request: Request):
         mud["after_app"] = after
     salvar_config(mud)
     return RedirectResponse("/config/modelos?msg=" + quote("Salvo. Vale a partir da próxima chamada."), status_code=303)
+
+
+# ---------------- painel novo (React, em painel/) ----------------
+APP = Path(__file__).with_name("static") / "app"
+app.include_router(api)
+
+
+@app.get("/app", include_in_schema=False)
+@app.get("/app/{caminho:path}", include_in_schema=False)
+def painel_novo(caminho: str = ""):
+    """Arquivos do build (painel/ → static/app/); qualquer outra rota é do React (index.html)."""
+    alvo = (APP / caminho).resolve()
+    if caminho and alvo.is_file() and alvo.is_relative_to(APP.resolve()):
+        return FileResponse(alvo, headers={"Cache-Control": "public, max-age=31536000, immutable"}
+                            if caminho.startswith("assets/") else {})
+    if not (APP / "index.html").exists():
+        return HTMLResponse("<p style='font:16px sans-serif;margin:40px'>O painel novo ainda não foi construído. "
+                            "Rode <code>./instalar.sh</code> (ou <code>cd painel && npm install && npm run build</code>)."
+                            "</p>", status_code=503)
+    return FileResponse(APP / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 def main(argv=None):

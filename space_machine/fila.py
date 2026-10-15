@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -60,6 +61,33 @@ def lancar_rodada(b, de="", ate="", obs=""):
     pid = sh.stdout.strip()
     (b / "_estudio" / "pid").write_text(pid)
     return pid
+
+
+def parar_rodada(b):
+    """Para a rodada de um bloco (botão Parar) e marca a etapa em que ela estava como parada."""
+    b = Path(b)
+    pid = b / "_estudio" / "pid"
+    if not pid.exists():
+        return
+    # a rodada é filha de um `sh` líder de sessão (lancar_rodada): o grupo é o do sh, não o pid dela.
+    # killpg(pid) dava ProcessLookupError calado, a rodada seguia e o painel liberava outra (2026-10-13)
+    try:
+        os.killpg(os.getpgid(int(pid.read_text().strip())), signal.SIGTERM)
+    except (ProcessLookupError, ValueError, PermissionError):
+        pass
+    pid.unlink(missing_ok=True)
+    arq = b / "_estudio" / "estado.json"
+    try:
+        est = json.loads(arq.read_text())
+    except (OSError, json.JSONDecodeError):
+        return
+    atual = est.get("atual")
+    if atual:
+        est.setdefault("etapas", {}).setdefault(atual, {})["status"] = "parado"
+        est["parado"] = {"etapa": atual, "motivo": "parado no painel"}
+        tmp = arq.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(est, ensure_ascii=False, indent=1))
+        tmp.replace(arq)
 
 
 def arquivo_fila(video_dir):

@@ -6,6 +6,9 @@ __pycache__/
 *.pyc
 *.aep
 Auto-Save/
+# painel React: dependências e build (o instalar.sh e o ./spacemachine montam)
+painel/node_modules/
+space_machine/static/app/
 formatos/explained/referencias/*.mp4
 formatos/explained/referencias/estudo_cenas/videos2/
 formatos/explained/referencias/estudo_cenas/tiras/

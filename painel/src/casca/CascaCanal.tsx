@@ -1,0 +1,98 @@
+// Moldura de tudo o que é de um canal: barra lateral (troca de canal no topo, navegação, novo vídeo) + a tela.
+// A cor de destaque do canal vira --accent em toda a moldura.
+import { useEffect } from "react";
+import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  CalendarDays, ChevronsUpDown, Clapperboard, Hand, KeyRound, LayoutDashboard, Lightbulb, Palette, Plus, Settings,
+} from "lucide-react";
+import { antiga, PainelCanal, pegar } from "../api";
+import { LogoCanal } from "../componentes/Imagens";
+import { useT } from "../textos";
+
+export const useCanal = (slug: string) =>
+  useQuery({ queryKey: ["canal", slug], queryFn: () => pegar<PainelCanal>(`/api/c/${slug}`) });
+
+type Item = { rot: string; icone: typeof Hand; para?: string; antiga?: string; fim?: boolean; contador?: number };
+
+export function CascaCanal() {
+  const { canal = "" } = useParams();
+  const { data, error } = useCanal(canal);
+  const t = useT();
+  const navegar = useNavigate();
+  const local = useLocation();
+  // useOutlet (e não <Outlet/>): na transição a tela que sai continua sendo a antiga
+  const tela = useOutlet();
+
+  // Esc volta para a escolha de canais (fora de campos de texto)
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      const alvo = e.target as HTMLElement;
+      if (e.key === "Escape" && !alvo.closest("input, textarea, select, [role=dialog]")) navegar("/");
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, [navegar]);
+
+  if (error) throw error;
+  const c = data?.canal;
+  const itens: (Item | string)[] = [
+    { rot: "app.nav.producao", icone: LayoutDashboard, para: `/c/${canal}`, fim: true },
+    { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos` },
+    { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
+    { rot: "app.nav.ideias", icone: Lightbulb, antiga: antiga.ideias(canal) },
+    { rot: "app.nav.calendario", icone: CalendarDays, antiga: antiga.calendario(canal) },
+    "app.nav.secao_canal",
+    { rot: "app.nav.identidade", icone: Palette, antiga: antiga.identidade(canal) },
+    { rot: "app.nav.chaves", icone: KeyRound, antiga: antiga.chaves(canal) },
+  ];
+
+  return (
+    <div className="app" style={c?.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
+      <aside className="lado">
+        <button className="troca" onClick={() => navegar("/")} title={t("app.nav.trocar_dica")}>
+          {c ? <LogoCanal canal={canal} nome={c.nome} cores={c.cores} tem={c.logo} /> : <div className="logo-canal" />}
+          <div>
+            <b>{c?.nome ?? "…"}</b>
+            <span>{t("app.nav.trocar")}</span>
+          </div>
+          <ChevronsUpDown size={16} />
+        </button>
+        <nav className="nav">
+          {itens.map((it) =>
+            typeof it === "string" ? (
+              <div className="rot" key={it}>{t(it)}</div>
+            ) : it.para ? (
+              <NavLink key={it.rot} to={it.para} end={it.fim}>
+                <it.icone size={18} />
+                {t(it.rot)}
+                {!!it.contador && <span className="qt">{it.contador}</span>}
+              </NavLink>
+            ) : (
+              <a key={it.rot} href={it.antiga}>
+                <it.icone size={18} />
+                {t(it.rot)}
+              </a>
+            ),
+          )}
+        </nav>
+        <div className="pe">
+          <a className="bt escuro" href={antiga.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</a>
+          <a className="conta" href={antiga.modelos}>
+            <span className="av"><Settings size={16} /></span>
+            {t("app.nav.space_machine")}
+          </a>
+        </div>
+      </aside>
+      <main className="principal">
+        <AnimatePresence mode="wait">
+          <motion.div key={local.pathname} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}>
+            {data ? tela : <div className="carregando">{t("app.carregando")}</div>}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
+  );
+}

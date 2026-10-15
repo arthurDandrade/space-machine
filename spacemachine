@@ -4,8 +4,19 @@
 #   ./spacemachine <comando> ...   qualquer comando de `python -m space_machine` (rodar, fila, checar, consumo...)
 cd ${0:A:h}
 [[ -x .venv/bin/python ]] || { echo "Rode ./instalar.sh primeiro."; exit 1; }
+# monta o painel React (painel/ → space_machine/static/app/) quando o código dele mudou, ex.: depois de um git pull
+montar_painel() {
+  local saida=space_machine/static/app/index.html
+  [[ -f $saida && -z $(find painel/src painel/index.html painel/package.json -newer $saida -print -quit 2>/dev/null) ]] && return
+  command -v npm >/dev/null || { echo "Falta o Node para montar o painel: brew install node"; return; }
+  echo "Montando o painel..."
+  ( cd painel
+    [[ -d node_modules && ! package-lock.json -nt node_modules/.package-lock.json ]] || npm ci --no-audit --no-fund --loglevel=error
+    npm run build --silent >/dev/null ) || echo "Não consegui montar o painel (rode: cd painel && npm run build)."
+}
 if [[ $# -eq 0 || $1 == painel ]]; then
   [[ $1 == painel ]] && shift
+  montar_painel
   ( sleep 2; open http://localhost:8765 ) &
   exec .venv/bin/python -m space_machine painel "$@"
 fi

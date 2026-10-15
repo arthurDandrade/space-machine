@@ -6,7 +6,8 @@ Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico
 
 ## Duas coisas separadas: código × dados
 - **Código** (este repo, igual para todo mundo). Nada de caminho absoluto, nome de pessoa ou regra de um tema específico aqui.
-  - `space_machine/`: orquestrador (`rodar`, `fila`, `escolher`), painel FastAPI (`servidor` + `templates/`), `motor_claude.py` (`claude -p` enxuto, pela assinatura), `prompts/` das etapas, `textos/pt.json` (textos do painel; use `t("chave")` nos templates).
+  - `space_machine/`: orquestrador (`rodar`, `fila`, `escolher`), servidor FastAPI (`servidor.py`: páginas antigas em `templates/` + o painel novo em `/app`), `api.py` (API JSON do painel novo e `/api/eventos`, que avisa o navegador quando uma pasta de produção muda), `capas.py` (capas dos cards, em `cache/capas/` dos dados), `motor_claude.py` (`claude -p` enxuto, pela assinatura), `prompts/` das etapas, `textos/pt.json` (textos dos dois painéis; `t("chave")` nos templates e no React).
+  - `painel/`: painel novo em React (Vite + TypeScript). Abre na escolha de canais (`/app/`) e entra na produção de um canal (`/app/c/<canal>`). As telas que ainda não migraram apontam para as páginas antigas (`api.ts` › `antiga`). O build vai para `space_machine/static/app/` (fora do git): `instalar.sh` monta, e `./spacemachine` remonta quando `painel/` muda.
   - `space_machine/sistema.py`: pasta de dados, `config()` (`config_padrao.json` + `space_machine.json`), `canais()` e `ambiente_motor()`. `primeiros_passos.py`: checagem do que falta instalar ou configurar.
   - `motor/caminhos.py`: como os scripts do motor acham o canal (`SM_CANAL`), os dados (`SM_DADOS`), as chaves, o cache e as regras do tema. Rodando à mão, deduz o canal pelo caminho do bloco.
   - `motor/busca/scripts/`: buscar, finalizar, compilar_cenas, storyboard.py, transcrever, gerar_narracao, gerar_mapa/tabela.
@@ -47,4 +48,5 @@ narração (Fish Audio) → transcrição (whisper-cli) → storyboard (Claude, 
 - Texto sobre imagem é exceção (~30% das cenas de imagem; só nome/número/data/termo). Cada asset ≥ 1,8 s na tela.
 - **Registrar o que for aprendido.** O que é do formato vai na nota certa de `formatos/explained/conhecimento/`. O que é de um canal vai no Log de Aprendizados dele (entrada datada; as 4 do topo vão para o storyboard). Regra nova de escolha também atualiza o prompt correspondente em `space_machine/prompts/`.
 - O After às vezes trava num diálogo. Se um script não responder, peça para alguém olhar a tela.
-- Painel para testar: `.venv/bin/python -m space_machine painel` (config `space-machine` no `.claude/launch.json`). "address already in use" quer dizer que já há um painel ligado.
+- Painel para testar: `.venv/bin/python -m space_machine painel` (config `space-machine` no `.claude/launch.json`). "address already in use" quer dizer que já há um painel ligado: use a config `space-machine-8766` para testar sem derrubar o dele. O servidor não recarrega sozinho: mudou Python, reinicie.
+- Mexeu em `painel/`: `cd painel && npm run checar && npm run build`. Para ver as mudanças na hora, `npm run dev` (config `painel-dev`, porta 5173; repassa a API para a 8765). Versões fixas no `package.json` (o `overrides` segura o `motion-dom` que combina com o `framer-motion`).
