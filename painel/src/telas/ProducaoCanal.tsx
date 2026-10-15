@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarClock, CalendarPlus, CircleCheck, Clapperboard, Cog, FileText, Lightbulb, ListOrdered, Play, Scissors, Sparkles,
 } from "lucide-react";
-import { antiga, Coluna, enviar, PainelCanal, rota, urlCapa, Video } from "../api";
+import { Coluna, enviar, PainelCanal, rota, urlCapa, Video } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { Capa } from "../componentes/Imagens";
@@ -218,7 +218,7 @@ export function ProducaoCanal() {
           <Semana dados={data} />
         </div>
         <div className="cartao">
-          <div className="titulo-secao"><h3>{t("app.producao.claude_7d")}</h3><a href={antiga.consumo}>{t("app.produtor.consumo")}</a></div>
+          <div className="titulo-secao"><h3>{t("app.producao.claude_7d")}</h3><Link to="/config/consumo">{t("app.produtor.consumo")}</Link></div>
           <AnelConsumo total={data.consumo_7d.total} etapas={data.consumo_7d.etapas} />
         </div>
       </div>

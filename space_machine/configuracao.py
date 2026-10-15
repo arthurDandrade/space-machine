@@ -203,3 +203,135 @@ def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None,
         "- Identidade (cores, fonte, fundo) e regras do tema: `canal.json` na pasta do canal (editável no painel).\n"
         "- Aprendizados: [[Log de Aprendizados]] · Produções: `06 - Produções/`.\n")
     return slug, d
+
+
+# ---------------- identidade e regras do canal ----------------
+FONTES_DIRS = ["/System/Library/Fonts/Supplemental", "/Library/Fonts", str(Path.home() / "Library/Fonts")]
+COR = re.compile(r"#[0-9A-Fa-f]{6}")
+
+
+def fontes():
+    """Fontes instaladas no Mac que o After consegue usar nos títulos."""
+    out = []
+    for d in FONTES_DIRS:
+        for f in sorted(Path(d).glob("*.tt[fc]")) + sorted(Path(d).glob("*.otf")):
+            out.append(str(f))
+    return out
+
+
+def salvar_identidade(slug, cores, fonte):
+    """cores: {cor_fundo, cor_texto, cor_destaque, cor_caixa, cor_sombra} em #RRGGBB; fonte: caminho de fontes()."""
+    arq = CANAIS / slug / "canal.json"
+    cj = ler_json(arq, {}) or {}
+    ident = cj.setdefault("identidade", {})
+    for k in ("cor_fundo", "cor_texto", "cor_destaque", "cor_caixa", "cor_sombra"):
+        if COR.fullmatch(cores.get(k) or ""):
+            ident[k] = cores[k].upper()
+    if fonte in fontes():
+        ident["fonte_marca_arquivo"], ident["fonte_marca"] = fonte, Path(fonte).stem
+    gravar_json(arq, cj)
+
+
+def _linhas(txt):
+    return [l.strip() for l in (txt or "").splitlines() if l.strip()]
+
+
+def salvar_regras(slug, escolha="", storyboard="", genericas="", genericas_hist="", proibidos="", permitido_se="",
+                  trocas=""):
+    """Regras do TEMA do canal (canal.json › regras). ValueError se as trocas (JSON) ou a expressão não valem."""
+    try:
+        trocas_l = json.loads(trocas) if trocas.strip() else []
+        assert isinstance(trocas_l, list) and all({"padrao", "por"} <= set(x) for x in trocas_l)
+        for x in trocas_l + ([{"padrao": permitido_se}] if permitido_se.strip() else []):
+            re.compile(x["padrao"])
+    except (ValueError, AssertionError, TypeError, re.error) as e:
+        raise ValueError(f"Regras não salvas: trocas/expressão inválidas ({e})")
+    genericas_d = {"outros": _linhas(genericas)}
+    if _linhas(genericas_hist):
+        genericas_d["historica"] = _linhas(genericas_hist)
+    salvar_canal(slug, regras={
+        "escolha": _linhas(escolha), "storyboard": _linhas(storyboard),
+        "busca": {"trocar_termos": trocas_l, "genericas": genericas_d},
+        "qa": {"termos_proibidos": [x.strip().lower() for x in proibidos.split(",") if x.strip()],
+               "permitido_se": permitido_se.strip()}})
+
+
+def regras_em_texto(regras):
+    """As regras do canal.json no formato dos campos do painel (uma por linha, vírgulas, JSON)."""
+    busca, qa = regras.get("busca", {}) or {}, regras.get("qa", {}) or {}
+    gen = busca.get("genericas", {}) or {}
+    return {"escolha": "\n".join(regras.get("escolha", [])), "storyboard": "\n".join(regras.get("storyboard", [])),
+            "genericas": "\n".join(gen.get("outros", [])), "genericas_hist": "\n".join(gen.get("historica", [])),
+            "proibidos": ", ".join(qa.get("termos_proibidos", [])), "permitido_se": qa.get("permitido_se", ""),
+            "trocas": json.dumps(busca.get("trocar_termos"), ensure_ascii=False) if busca.get("trocar_termos") else ""}
+
+
+def sugerir_regras(c, slug):
+    """O Claude propõe as regras do tema a partir do nome, tema e idioma (nada é salvo). ErroClaude se falhar."""
+    from .motor_claude import chamar
+    from .sistema import PACOTE, config
+    schema = {"type": "object", "additionalProperties": False,
+              "required": ["escolha", "storyboard", "genericas", "genericas_hist", "proibidos", "permitido_se", "trocas"],
+              "properties": {"escolha": {"type": "array", "items": {"type": "string"}},
+                             "storyboard": {"type": "array", "items": {"type": "string"}},
+                             "genericas": {"type": "array", "items": {"type": "string"}},
+                             "genericas_hist": {"type": "array", "items": {"type": "string"}},
+                             "proibidos": {"type": "array", "items": {"type": "string"}},
+                             "permitido_se": {"type": "string"},
+                             "trocas": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                                        "required": ["padrao", "por", "exceto"],
+                                        "properties": {"padrao": {"type": "string"}, "por": {"type": "string"},
+                                                       "exceto": {"type": "string"}}}}}}
+    r = chamar("regras", (PACOTE / "prompts" / "regras_tema.md").read_text(),
+               f"Canal: {c['nome']}\nTema: {c['tema']}\nIdioma da narração: {c['idioma']}", schema=schema,
+               modelo=config()["modelos"].get("storyboard"), ctx={"canal": slug})
+    r.pop("_uso", None)
+    if r.get("permitido_se", "").strip() in ('""', "''"):       # o modelo às vezes devolve as aspas do exemplo
+        r["permitido_se"] = ""
+    return {"escolha": "\n".join(r["escolha"]), "storyboard": "\n".join(r["storyboard"]),
+            "genericas": "\n".join(r["genericas"]), "genericas_hist": "\n".join(r["genericas_hist"]),
+            "proibidos": ", ".join(r["proibidos"]), "permitido_se": r["permitido_se"],
+            "trocas": json.dumps(r["trocas"], ensure_ascii=False) if r["trocas"] else ""}
+
+
+# ---------------- modelos do Claude por etapa ----------------
+MODELOS = [("claude-opus-5-5", "Opus 5.5"), ("claude-sonnet-5-5", "Sonnet 5.5"), ("claude-haiku-5-5", "Haiku 5.5"),
+           ("claude-fable-5-1", "Fable 5.1")]
+ESFORCOS = ["low", "medium", "high", "xhigh", "max"]
+ETAPAS_CLAUDE = [
+    ("storyboard", "Storyboard", "Planeja as cenas do bloco e corrige até passar nas regras (a etapa mais cara)."),
+    ("escolher_imagem", "Escolher imagem", "Escolhe 1 foto/recorte/logo por asset olhando a folha de contato."),
+    ("escolher_video", "Escolher vídeo", "Escolhe o vídeo e o início do trecho pelas folhas de quadros."),
+    ("confirmar_trecho", "Confirmar trecho", "2ª olhada num vídeo com quadros a cada 0,5 s para acertar o início."),
+    ("conferir", "Conferir download", "Olha 1–2 quadros de cada vídeo/recorte baixado (texto por cima, tarja, cena errada)."),
+    ("qa", "Corrigir QA", "Quando o QA reprova, corrige o cenas.json uma vez antes de parar."),
+]
+
+
+def estado_modelos():
+    """Modelo e esforço de cada etapa, com a média de tokens por chamada e o último modelo usado."""
+    from .motor_claude import _banco, config as cfg_motor
+    cfg = cfg_motor()
+    con = _banco()
+    medias = {e: (n, eq) for e, n, eq in con.execute(
+        "select etapa, count(*), avg(equivalente) from chamadas where ok=1 group by etapa")}
+    ultimos = {e: m for e, m in con.execute(
+        "select etapa, modelo from chamadas where ok=1 and id in (select max(id) from chamadas group by etapa)")}
+    con.close()
+    linhas = [{"id": i, "nome": n, "ajuda": a, "modelo": cfg["modelos"].get(i, ""), "esforco": cfg["esforco"].get(i, "low"),
+               "chamadas": medias.get(i, (0, 0))[0], "media": round(medias.get(i, (0, 0))[1] or 0),
+               "ultimo": ultimos.get(i, "")} for i, n, a in ETAPAS_CLAUDE]
+    return {"linhas": linhas, "modelos": [{"id": m, "nome": n} for m, n in MODELOS], "esforcos": ESFORCOS,
+            "after_app": cfg.get("after_app", "")}
+
+
+def salvar_modelos(modelos, esforco, after_app=""):
+    """modelos/esforco: {etapa: valor}; valores fora da lista são ignorados."""
+    from .sistema import salvar_config
+    validos = {m for m, _ in MODELOS}
+    etapas = {e for e, _, _ in ETAPAS_CLAUDE}
+    mud = {"modelos": {e: m for e, m in (modelos or {}).items() if e in etapas and m in validos},
+           "esforco": {e: x for e, x in (esforco or {}).items() if e in etapas and x in ESFORCOS}}
+    if after_app.strip() and re.fullmatch(r"[\w .-]+", after_app.strip()):
+        mud["after_app"] = after_app.strip()
+    salvar_config(mud)

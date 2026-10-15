@@ -5,17 +5,18 @@ import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-r
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, Palette, Plus, Settings,
+  BookOpen, CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, ListChecks,
+  Palette, Plus, Settings,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { antiga, PainelCanal, pegar, rota } from "../api";
+import { PainelCanal, pegar, rota } from "../api";
 import { LogoCanal } from "../componentes/Imagens";
 import { useT } from "../textos";
 
 export const useCanal = (slug: string) =>
   useQuery({ queryKey: ["canal", slug], queryFn: () => pegar<PainelCanal>(`/api/c/${slug}`) });
 
-type Item = { rot: string; icone: typeof Hand; para?: string; antiga?: string; fim?: boolean; contador?: number };
+type Item = { rot: string; icone: typeof Hand; para: string; fim?: boolean; contador?: number };
 
 export function CascaCanal() {
   const { canal = "" } = useParams();
@@ -43,11 +44,13 @@ export function CascaCanal() {
     { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos` },
     { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
     { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
-    { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal), contador: undefined },
+    { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal) },
     { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
     "app.nav.secao_canal",
-    { rot: "app.nav.identidade", icone: Palette, antiga: antiga.identidade(canal) },
-    { rot: "app.nav.chaves", icone: KeyRound, antiga: antiga.chaves(canal) },
+    { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
+    { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },
+    { rot: "app.nav.aprendizados", icone: BookOpen, para: `/c/${canal}/aprendizados` },
+    { rot: "app.nav.chaves", icone: KeyRound, para: `/c/${canal}/chaves` },
   ];
 
   return (
@@ -65,26 +68,21 @@ export function CascaCanal() {
           {itens.map((it) =>
             typeof it === "string" ? (
               <div className="rot" key={it}>{t(it)}</div>
-            ) : it.para ? (
+            ) : (
               <NavLink key={it.rot} to={it.para} end={it.fim}>
                 <it.icone size={18} />
                 {t(it.rot)}
                 {!!it.contador && <span className="qt">{it.contador}</span>}
               </NavLink>
-            ) : (
-              <a key={it.rot} href={it.antiga}>
-                <it.icone size={18} />
-                {t(it.rot)}
-              </a>
             ),
           )}
         </nav>
         <div className="pe">
           <Link className="bt escuro" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
-          <a className="conta" href={antiga.modelos}>
+          <Link className="conta" to="/config">
             <span className="av"><Settings size={16} /></span>
             {t("app.nav.space_machine")}
-          </a>
+          </Link>
         </div>
       </aside>
       <main className="principal">

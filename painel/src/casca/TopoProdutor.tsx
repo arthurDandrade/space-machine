@@ -1,0 +1,62 @@
+// Topo do nível do produtor (escolha de canais e configurações do Space Machine): marca, situação da instalação,
+// consumo, configurações e tema.
+import { Link, NavLink, Outlet } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ChartPie, Settings } from "lucide-react";
+import { Canais, pegar } from "../api";
+import { useT } from "../textos";
+import { BotaoTema } from "./Cabecalho";
+
+export function Marca() {
+  return (
+    <Link to="/" className="marca-sm">
+      <i>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M3 12c0-2 4-4.5 9-4.5s9 2.5 9 4.5-4 4.5-9 4.5S3 14 3 12z" />
+        </svg>
+      </i>
+      Space Machine
+    </Link>
+  );
+}
+
+export function TopoProdutor() {
+  const t = useT();
+  const { data } = useQuery({ queryKey: ["canais"], queryFn: () => pegar<Canais>("/api/canais") });
+  return (
+    <div className="topo-produtor">
+      <Marca />
+      <div className="esp" />
+      <Link className={`chip ${data?.falta_algo ? "alerta" : ""}`} to="/config/passos">
+        <span className="ponto" /><span className="txt">{t(data?.falta_algo ? "app.produtor.falta" : "app.produtor.tudo_ok")}</span>
+      </Link>
+      <Link className="chip" to="/config/consumo"><ChartPie size={16} /><span className="txt">{t("app.produtor.consumo")}</span></Link>
+      <Link className="chip" to="/config/canais" title={t("app.produtor.config")}><Settings size={16} /></Link>
+      <BotaoTema />
+    </div>
+  );
+}
+
+const ABAS = [
+  ["canais", "app.config.aba_canais"],
+  ["modelos", "app.config.aba_modelos"],
+  ["consumo", "app.config.aba_consumo"],
+  ["passos", "app.config.aba_passos"],
+] as const;
+
+export function CascaProdutor() {
+  const t = useT();
+  return (
+    <div className="nivel-produtor">
+      <TopoProdutor />
+      <div className="config-produtor">
+        <h1>{t("app.config.titulo")}</h1>
+        <nav className="abas">
+          {ABAS.map(([id, rot]) => <NavLink key={id} to={`/config/${id}`} className={({ isActive }) => (isActive ? "on" : "")}>{t(rot)}</NavLink>)}
+        </nav>
+        <Outlet />
+      </div>
+    </div>
+  );
+}

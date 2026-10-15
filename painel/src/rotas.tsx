@@ -1,7 +1,10 @@
 // Dois níveis: /  = seus canais (do produtor) · /c/<canal>/... = a produção daquele canal.
-import { createBrowserRouter, Outlet, useRouteError } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, useRouteError } from "react-router-dom";
 import { useAoVivo } from "./aoVivo";
 import { CascaCanal } from "./casca/CascaCanal";
+import { CascaProdutor } from "./casca/TopoProdutor";
+import { AprendizadosTela, ChavesTela, IdentidadeTela, RegrasTela } from "./telas/ConfigCanal";
+import { CanaisConfigTela, ConsumoTela, ModelosTela, PassosTela } from "./telas/Produtor";
 import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
@@ -39,6 +42,17 @@ export const rotas = createBrowserRouter(
       children: [
         { path: "/", element: <EscolhaCanais /> },
         {
+          path: "/config",
+          element: <CascaProdutor />,
+          children: [
+            { index: true, element: <Navigate to="canais" replace /> },
+            { path: "canais", element: <CanaisConfigTela /> },
+            { path: "modelos", element: <ModelosTela /> },
+            { path: "consumo", element: <ConsumoTela /> },
+            { path: "passos", element: <PassosTela /> },
+          ],
+        },
+        {
           path: "/c/:canal",
           element: <CascaCanal />,
           children: [
@@ -49,6 +63,10 @@ export const rotas = createBrowserRouter(
             { path: "ideias", element: <IdeiasTela /> },
             { path: "calendario", element: <CalendarioTela /> },
             { path: "novo", element: <NovoVideoTela /> },
+            { path: "identidade", element: <IdentidadeTela /> },
+            { path: "regras", element: <RegrasTela /> },
+            { path: "aprendizados", element: <AprendizadosTela /> },
+            { path: "chaves", element: <ChavesTela /> },
             { path: "v/:video", element: <VideoTela /> },
             { path: "v/:video/b/:nn", element: <BlocoTela /> },
           ],

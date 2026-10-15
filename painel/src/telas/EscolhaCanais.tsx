@@ -3,25 +3,11 @@
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ChartPie, Hand, Loader, Plus, Settings, Sparkles } from "lucide-react";
-import { antiga, Canais, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
-import { BotaoTema } from "../casca/Cabecalho";
+import { ArrowRight, Hand, Loader, Plus, Sparkles } from "lucide-react";
+import { Canais, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
+import { TopoProdutor } from "../casca/TopoProdutor";
 import { Capa, fundoDoCanal, iniciais, LogoCanal } from "../componentes/Imagens";
 import { compacto, saudacao, useT } from "../textos";
-
-function Marca() {
-  return (
-    <div className="marca-sm">
-      <i>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <circle cx="12" cy="12" r="4" />
-          <path d="M3 12c0-2 4-4.5 9-4.5s9 2.5 9 4.5-4 4.5-9 4.5S3 14 3 12z" />
-        </svg>
-      </i>
-      Space Machine
-    </div>
-  );
-}
 
 function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
   const t = useT();
@@ -91,16 +77,7 @@ export function EscolhaCanais() {
 
   return (
     <div className="nivel-produtor">
-      <div className="topo-produtor">
-        <Marca />
-        <div className="esp" />
-        <a className={`chip ${data?.falta_algo ? "alerta" : ""}`} href={antiga.primeirosPassos}>
-          <span className="ponto" /><span className="txt">{t(data?.falta_algo ? "app.produtor.falta" : "app.produtor.tudo_ok")}</span>
-        </a>
-        <a className="chip" href={antiga.consumo}><ChartPie size={16} /><span className="txt">{t("app.produtor.consumo")}</span></a>
-        <a className="chip" href={antiga.modelos} title={t("app.produtor.config")}><Settings size={16} /></a>
-        <BotaoTema />
-      </div>
+      <TopoProdutor />
 
       <section className="ola">
         <h1>{saudacao(t)}.</h1>
@@ -112,11 +89,11 @@ export function EscolhaCanais() {
 
       <div className="canais">
         {canais.map((c, i) => <CartaoCanal key={c.slug} c={c} i={i} />)}
-        <a className="canal novo" href={antiga.novoCanal} style={{ animationDelay: `${canais.length * 60}ms` }}>
+        <Link className="canal novo" to="/config/canais?novo=1" style={{ animationDelay: `${canais.length * 60}ms` }}>
           <span className="mais"><Plus size={22} /></span>
           <b>{t("app.canais.novo")}</b>
           <span className="sub">{t("app.canais.novo_sub")}</span>
-        </a>
+        </Link>
       </div>
 
       {canais.length > 0 && (

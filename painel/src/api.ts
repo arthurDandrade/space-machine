@@ -214,13 +214,3 @@ export const rota = {
   ideias: (c: string) => `/c/${c}/ideias`,
   calendario: (c: string) => `/c/${c}/calendario`,
 };
-
-// páginas do painel antigo que ainda não passaram para o React
-export const antiga = {
-  identidade: (c: string) => `/config/canais#regras-${c}`,
-  chaves: (c: string) => `/config/apis?canal=${c}`,
-  novoCanal: "/config/canais#novo",
-  consumo: "/consumo",
-  modelos: "/config/modelos",
-  primeirosPassos: "/primeiros-passos",
-};

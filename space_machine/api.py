@@ -8,15 +8,17 @@ import asyncio
 import datetime as dt
 import hashlib
 import re
+import shutil
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, estado, fila, gestao, primeiros_passos, textos
+from . import capas, configuracao, estado, fila, gestao, primeiros_passos, textos
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -407,6 +409,214 @@ def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True)):
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
     subprocess.run(["open", str(pasta)], check=False)
     return {"ok": True}
+
+
+# ---------------- configurações do canal ----------------
+@api.get("/c/{slug}/config")
+def config_canal(slug: str):
+    c = _canal(slug)
+    cj = ler_json(Path(c["raiz"]) / "canal.json", {}) or {}
+    ident = cj.get("identidade", {}) or {}
+    return {"slug": slug, "nome": c["nome"], "ativo": bool(c.get("ativo")), "tema": c.get("tema", ""),
+            "idioma": c.get("idioma", "en"), "cores": _identidade(c), "fonte": ident.get("fonte_marca_arquivo", ""),
+            "fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()],
+            "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
+            "regras": configuracao.regras_em_texto(cj.get("regras", {}) or {})}
+
+
+@api.post("/c/{slug}/config")
+def salvar_config_canal(slug: str, nome: str = Body(..., embed=True), ativo: bool = Body(True, embed=True)):
+    c = _canal(slug)
+    configuracao.salvar_canal(slug, nome=nome.strip() or c["nome"], ativo=bool(ativo))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/identidade")
+def salvar_identidade(slug: str, cores: dict = Body(..., embed=True), fonte: str = Body("", embed=True)):
+    _canal(slug)
+    configuracao.salvar_identidade(slug, cores, fonte)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/marca/{qual}")
+async def enviar_marca(slug: str, qual: str, arquivo: UploadFile = File(...)):
+    """Troca o logo ou o banner do canal. O anterior vai para identidade/anteriores/ (nada se perde)."""
+    c = _canal(slug)
+    ext = Path(arquivo.filename or "").suffix.lower()
+    if qual not in ("banner", "logo") or ext not in IMAGENS:
+        raise HTTPException(400, "Envie uma imagem PNG, JPG ou WEBP.")
+    dados = await arquivo.read()
+    if len(dados) > 20 * 1024 * 1024:
+        raise HTTPException(400, "Imagem grande demais (máx. 20 MB).")
+    from io import BytesIO
+    from PIL import Image
+    try:
+        Image.open(BytesIO(dados)).verify()
+    except Exception:  # noqa: BLE001 — qualquer falha de leitura = não é imagem
+        raise HTTPException(400, "Esse arquivo não é uma imagem que dê para abrir.")
+    pasta = Path(c["raiz"]) / "identidade"
+    pasta.mkdir(exist_ok=True)
+    antigos = [f for f in pasta.glob(f"{qual}.*") if f.suffix.lower() in IMAGENS]
+    if antigos:
+        guarda = pasta / "anteriores"
+        guarda.mkdir(exist_ok=True)
+        for f in antigos:
+            f.rename(guarda / f"{qual}_{time.strftime('%Y%m%d-%H%M%S')}{f.suffix}")
+    (pasta / f"{qual}{ext}").write_bytes(dados)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/regras")
+def salvar_regras(slug: str, regras: dict = Body(..., embed=True)):
+    _canal(slug)
+    campos = {k: str(regras.get(k) or "") for k in
+              ("escolha", "storyboard", "genericas", "genericas_hist", "proibidos", "permitido_se", "trocas")}
+    try:
+        configuracao.salvar_regras(slug, **campos)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/regras/sugerir")
+def sugerir_regras(slug: str):
+    from .motor_claude import ErroClaude
+    try:
+        return {"regras": configuracao.sugerir_regras(_canal(slug), slug)}
+    except ErroClaude as e:
+        raise HTTPException(502, f"O Claude não respondeu: {str(e)[:300]}")
+
+
+@api.get("/c/{slug}/aprendizados")
+def aprendizados(slug: str):
+    pasta = Path(_canal(slug)["conhecimento"])
+    log = next(iter(sorted(pasta.glob("**/Log de Aprendizados.md"))), None) if pasta.is_dir() else None
+    return {"texto": log.read_text() if log else "", "mudou": log.stat().st_mtime if log else None}
+
+
+def _apis_publicas(c):
+    """Estado das chaves sem nenhum segredo: de campo secreto vai só a máscara (os 4 últimos caracteres)."""
+    out = []
+    for a in configuracao.estado_apis(c):
+        campos = [{"chave": f["chave"], "rotulo": f["rotulo"], "secreta": f["secreta"], "dica": f["dica"],
+                   "tem_valor": bool(f["valor"]), "mostrar": f["mostrar"], "valor": "" if f["secreta"] else f["valor"]}
+                  for f in a["campos"]]
+        out.append({k: a[k] for k in ("id", "nome", "escopo", "ajuda", "configurada")} | {"campos": campos})
+    return out
+
+
+@api.get("/c/{slug}/chaves")
+def chaves(slug: str):
+    return {"apis": _apis_publicas(_canal(slug))}
+
+
+@api.post("/c/{slug}/chaves/{api_id}")
+def salvar_chave(slug: str, api_id: str, valores: dict = Body({}, embed=True), apagar: list = Body([], embed=True)):
+    c = _canal(slug)
+    if api_id not in {a["id"] for a in configuracao.APIS}:
+        raise HTTPException(404)
+    form = {k: str(v) for k, v in valores.items()} | {f"apagar_{k}": "1" for k in apagar}
+    mudou = configuracao.salvar_api(c, api_id, form)
+    _cache_falta["quando"] = 0
+    return {"ok": True, "mudou": mudou, "apis": _apis_publicas(c)}
+
+
+@api.post("/c/{slug}/chaves/{api_id}/testar")
+def testar_chave(slug: str, api_id: str):
+    if api_id not in {a["id"] for a in configuracao.APIS}:
+        raise HTTPException(404)
+    ok, msg = configuracao.testar_api(_canal(slug), api_id)
+    return {"ok": ok, "mensagem": msg}
+
+
+# ---------------- configurações do produtor ----------------
+@api.get("/config/modelos")
+def modelos():
+    return configuracao.estado_modelos()
+
+
+@api.post("/config/modelos")
+def salvar_modelos(modelos: dict = Body({}, embed=True), esforco: dict = Body({}, embed=True),
+                   after_app: str = Body("", embed=True)):
+    configuracao.salvar_modelos(modelos, esforco, after_app)
+    return {"ok": True}
+
+
+@api.get("/consumo")
+def consumo():
+    con = _banco()
+    por_etapa = con.execute("""select etapa, count(*), sum(equivalente),
+                               sum(equivalente)*1.0/count(distinct coalesce(asset, bloco || etapa))
+                               from chamadas where ok=1 and canal != 'teste' group by etapa order by 3 desc""").fetchall()
+    por_video = con.execute("""select canal, video, count(*), sum(equivalente), max(quando) from chamadas
+                               where canal != 'teste' group by 1, 2 order by 5 desc""").fetchall()
+    linhas = con.execute("""select canal, video, bloco, etapa, modelo, count(*), sum(equivalente),
+                            sum(case when ok=0 then 1 else 0 end), max(quando)
+                            from chamadas where canal != 'teste' group by 1,2,3,4,5 order by max(quando) desc
+                            limit 300""").fetchall()
+    con.close()
+    nomes = {s: c["nome"] for s, c in canais().items()}
+    return {"total_7d": _consumo_7d()["total"],
+            "por_etapa": [{"etapa": e, "chamadas": n, "tokens": t or 0, "media": round(m or 0)} for e, n, t, m in por_etapa],
+            "por_video": [{"canal": nomes.get(c, c), "video": v or "", "chamadas": n, "tokens": t or 0, "ultima": q}
+                          for c, v, n, t, q in por_video],
+            "linhas": [{"canal": nomes.get(c, c), "video": v or "", "bloco": b or "", "etapa": e, "modelo": m,
+                        "chamadas": n, "tokens": t or 0, "falhas": f or 0, "ultima": q}
+                       for c, v, b, e, m, n, t, f, q in linhas]}
+
+
+@api.get("/primeiros-passos")
+def primeiros_passos_lista():
+    itens = primeiros_passos.checar()
+    _cache_falta.update(quando=time.time(), falta=any(not i["ok"] for i in itens))
+    return {"itens": itens}
+
+
+@api.post("/primeiros-passos/testar-claude")
+def testar_claude():
+    from .motor_claude import CHECAGEM, ErroClaude, MODELOS_DA_ETAPA, checar_claude
+    CHECAGEM.unlink(missing_ok=True)
+    try:
+        checar_claude(list(MODELOS_DA_ETAPA))
+    except ErroClaude as e:
+        return {"ok": False, "mensagem": str(e)[:500]}
+    return {"ok": True, "mensagem": textos.t("pp.claude_ok", config().get("idioma_painel", "pt"))}
+
+
+@api.get("/fontes")
+def lista_fontes():
+    return {"fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()]}
+
+
+@api.post("/canais/novo")
+async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str = Form("en"),
+                     cor_fundo: str = Form(...), cor_texto: str = Form(...), cor_destaque: str = Form(...),
+                     cor_caixa: str = Form(...), cor_sombra: str = Form(...), fonte: str = Form(...),
+                     logo: UploadFile = File(None), fundo: UploadFile = File(None), banner: UploadFile = File(None)):
+    cores = {"fundo": cor_fundo, "texto": cor_texto, "destaque": cor_destaque, "caixa": cor_caixa, "sombra": cor_sombra}
+    if not nome.strip() or not tema.strip():
+        raise HTTPException(400, "Dê um nome e um tema ao canal.")
+    if not all(configuracao.COR.fullmatch(v) for v in cores.values()) or fonte not in configuracao.fontes():
+        raise HTTPException(400, "Escolha as cores (#RRGGBB) e a fonte dos títulos.")
+    DADOS.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=DADOS) as tmp:
+        arqs = {}
+        for campo, up in (("logo", logo), ("fundo", fundo), ("banner", banner)):
+            if up is not None and up.filename:
+                ext = Path(up.filename).suffix.lower()
+                if ext not in IMAGENS:
+                    raise HTTPException(400, f"{campo}: envie PNG, JPG ou WEBP.")
+                arqs[campo] = Path(tmp) / f"{campo}{ext}"
+                arqs[campo].write_bytes(await up.read())
+        try:
+            slug, pasta = configuracao.criar_canal(nome.strip(), tema.strip(), idioma.strip() or "en", cores, fonte,
+                                                   logo=arqs.get("logo"), fundo=arqs.get("fundo"))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        if arqs.get("banner"):
+            shutil.copy2(arqs["banner"], Path(pasta) / "identidade" / arqs["banner"].name)
+    _cache_falta["quando"] = 0
+    return {"ok": True, "slug": slug}
 
 
 # ---------------- ao vivo ----------------
