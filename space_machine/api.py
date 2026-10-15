@@ -219,6 +219,8 @@ def detalhe_video(slug: str, video: str):
               for b, info in zip(v["blocos"], resumo["blocos"])]
     fim = final.ler_estado(vd)
     aep, mp4 = vd / "final" / "final.aep", Path(fim.get("mp4") or vd / "final" / "-")
+    if not mp4.is_file():      # MP4 renderizado antes (ou à mão): o mais novo da pasta final/
+        mp4 = max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=mp4)
     fim.update(tem_aep=aep.exists(), mp4_url=_arquivo(mp4) if mp4.is_file() else None,
                mp4_tamanho=mp4.stat().st_size if mp4.is_file() else 0, entregues=len(final.entregues(vd)))
     return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "final": fim,
