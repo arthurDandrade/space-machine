@@ -1,11 +1,12 @@
 // Página de um vídeo: capa e andamento, a fila (produzir todos / parar), os blocos em grade e a publicação.
 import { useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clapperboard, FolderOpen, Play, Save } from "lucide-react";
+import { Check, Clapperboard, Film, FolderOpen, Layers, Loader, Play, Save, Trash2 } from "lucide-react";
 import { BlocoDoVideo, DetalheVideo, enviar, pegar, Publicacao, rota, urlCapa } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
+import { Dialogo } from "../componentes/Dialogo";
 import { Capa } from "../componentes/Imagens";
 import { compacto, haQuanto, useT } from "../textos";
 
@@ -129,6 +130,83 @@ function FormPublicacao({ canal, v }: { canal: string; v: DetalheVideo }) {
   );
 }
 
+function VideoFinal({ canal, v }: { canal: string; v: DetalheVideo }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const [aberto, setAberto] = useState(false);
+  const [render, setRender] = useState(false);
+  const f = v.final;
+  const juntar = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${v.slug}/final`, { render }),
+    onSuccess: () => { setAberto(false); qc.invalidateQueries(); },
+  });
+  if (!f.entregues) return null;
+  const faltam = v.n_blocos - f.entregues;
+  const gb = (n: number) => (n / 1e9).toFixed(1).replace(".", ",");
+  return (
+    <div className="final-card">
+      <div className="linha-fila">
+        <div className="t-final"><Layers size={16} /><b>{t("app.final.titulo")}</b>
+          {f.rodando ? <span className="selo run"><Loader size={12} className="gira" />{t("app.final.rodando")}</span>
+            : f.status === "ok" ? <span className="selo ok"><Check size={12} />{t("app.final.pronto")}</span>
+            : f.status === "erro" ? <span className="selo bad">{t("app.final.erro")}</span> : null}
+        </div>
+        <button className={`bt pequeno ${faltam ? "" : "primario"}`} disabled={f.rodando} onClick={() => setAberto(true)}>
+          <Layers size={14} />{t(f.tem_aep ? "app.final.juntar_de_novo" : "app.final.juntar")}
+        </button>
+      </div>
+      {f.rodando && <p className="sub">{f.etapa}</p>}
+      {f.status === "erro" && !f.rodando && <p className="erro">{f.etapa}{f.erro ? `: ${f.erro}` : ""}</p>}
+      {!f.rodando && (f.tem_aep || f.mp4_url) && (
+        <div className="acoes-final">
+          {f.tem_aep && <button className="bt pequeno" onClick={() => enviar(`/api/c/${canal}/v/${v.slug}/final/abrir`)}><Film size={14} />{t("app.final.abrir_after")}</button>}
+          {f.mp4_url && <a className="bt pequeno" href={f.mp4_url} target="_blank" rel="noreferrer"><Play size={14} />{t("app.final.assistir", { gb: gb(f.mp4_tamanho) })}</a>}
+          <button className="bt pequeno" onClick={() => enviar(`/api/c/${canal}/v/${v.slug}/abrir`, { sub: "final" })}><FolderOpen size={14} />{t("app.final.pasta")}</button>
+        </div>
+      )}
+      {aberto && (
+        <Dialogo titulo={t("app.final.dialogo_titulo")} fechar={() => setAberto(false)}
+          acoes={<>
+            <button className="bt" onClick={() => setAberto(false)}>{t("app.cancelar")}</button>
+            <button className="bt primario" disabled={juntar.isPending} onClick={() => juntar.mutate()}><Layers size={16} />{t(render ? "app.final.confirmar_render" : "app.final.confirmar")}</button>
+          </>}>
+          <p>{t("app.final.explica", { n: f.entregues })}</p>
+          {faltam > 0 && <p className="aviso-texto">{t("app.final.faltam", { n: faltam })}</p>}
+          <p>{t("app.final.aviso_after")}</p>
+          <label className="marcar"><input type="checkbox" checked={render} onChange={(e) => setRender(e.target.checked)} /> {t("app.final.render")}</label>
+          {juntar.isError && <p className="erro">{juntar.error.message}</p>}
+        </Dialogo>
+      )}
+    </div>
+  );
+}
+
+function ExcluirVideo({ canal, v }: { canal: string; v: DetalheVideo }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const navegar = useNavigate();
+  const [aberto, setAberto] = useState(false);
+  const excluir = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${v.slug}/excluir`),
+    onSuccess: () => { qc.invalidateQueries(); navegar(`/c/${canal}/videos`); },
+  });
+  return (
+    <>
+      <button className="bt redondo perigo" onClick={() => setAberto(true)} title={t("app.excluir.botao")}><Trash2 size={16} /></button>
+      {aberto && (
+        <Dialogo titulo={t("app.excluir.titulo", { titulo: v.titulo_pub || v.titulo })} fechar={() => setAberto(false)}
+          acoes={<>
+            <button className="bt" onClick={() => setAberto(false)}>{t("app.cancelar")}</button>
+            <button className="bt perigo-cheio" disabled={excluir.isPending} onClick={() => excluir.mutate()}><Trash2 size={16} />{t("app.excluir.confirmar")}</button>
+          </>}>
+          <p>{t("app.excluir.explica", { n: v.n_blocos })}</p>
+          {excluir.isError && <p className="erro">{excluir.error.message}</p>}
+        </Dialogo>
+      )}
+    </>
+  );
+}
+
 export function VideoTela() {
   const { canal = "", video = "" } = useParams();
   const { data: dc } = useCanal(canal);
@@ -154,6 +232,7 @@ export function VideoTela() {
         onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={`/c/${canal}/videos`}>{t("app.nav.videos")}</Link> › <b>{t(`app.coluna.${v.coluna}`)}</b></>}
         titulo={v.titulo_pub || v.titulo}>
         <button className="bt" onClick={abrir} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} />{t("app.abrir_pasta")}</button>
+        <ExcluirVideo canal={canal} v={v} />
       </Cabecalho>
 
       <div className="video-topo">
@@ -171,6 +250,7 @@ export function VideoTela() {
             {" · "}{t("app.video.mexido", { quando: haQuanto(t, v.mudou) })}
           </p>
           <ControleFila canal={canal} v={v} />
+          <VideoFinal canal={canal} v={v} />
         </div>
       </div>
 

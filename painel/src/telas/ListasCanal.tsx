@@ -1,12 +1,41 @@
 // Telas de lista do canal: todos os vídeos (com busca por título) e tudo o que espera você.
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CircleCheck, Plus, Search } from "lucide-react";
-import { Coluna, rota } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CircleCheck, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Coluna, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { CartaoVideo, ItemEsperando } from "../componentes/Pecas";
 import { useT } from "../textos";
+
+type Excluido = { nome: string; video: string; titulo: string; n_blocos: number; excluido: string };
+
+function Lixeira({ canal }: { canal: string }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["lixeira", canal], queryFn: () => pegar<{ itens: Excluido[] }>(`/api/c/${canal}/lixeira`) });
+  const restaurar = useMutation({
+    mutationFn: (nome: string) => enviar(`/api/c/${canal}/lixeira/${encodeURIComponent(nome)}/restaurar`),
+    onSettled: () => qc.invalidateQueries(),
+  });
+  if (!data?.itens.length) return null;
+  return (
+    <details className="cartao recolhe lixeira">
+      <summary><h3><Trash2 size={15} /> {t("app.lixeira.titulo")}</h3><span className="sub">{t("app.lixeira.n", { n: data.itens.length })}</span></summary>
+      <p className="sub">{t("app.lixeira.explica")}</p>
+      <div className="lista-lixeira">
+        {data.itens.map((x) => (
+          <div key={x.nome} className="item-lixeira">
+            <div className="t"><b>{x.titulo}</b><span className="sub">{t("app.lixeira.detalhe", { n: x.n_blocos, quando: x.excluido })}</span></div>
+            <button className="bt pequeno" disabled={restaurar.isPending} onClick={() => restaurar.mutate(x.nome)}><RotateCcw size={14} />{t("app.lixeira.restaurar")}</button>
+          </div>
+        ))}
+      </div>
+      {restaurar.isError && <p className="erro">{restaurar.error.message}</p>}
+    </details>
+  );
+}
 
 export function VideosCanal() {
   const { canal = "" } = useParams();
@@ -42,6 +71,7 @@ export function VideosCanal() {
       ) : (
         <div className="vazio">{t("app.videos.nenhum")}</div>
       )}
+      <Lixeira canal={canal} />
     </>
   );
 }

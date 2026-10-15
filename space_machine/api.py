@@ -18,7 +18,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, configuracao, estado, fila, gestao, primeiros_passos, textos
+from . import capas, configuracao, estado, fila, final, gestao, primeiros_passos, textos
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -217,7 +217,12 @@ def detalhe_video(slug: str, video: str):
                "aprovado": b["aprovado"], "previas": len(b["previas"]), "mudou": b["mudou"],
                "tem_capa": bool(capas.fontes(vd, b["nn"]))}
               for b, info in zip(v["blocos"], resumo["blocos"])]
-    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "publicacao": gestao.dados_video(slug, video),
+    fim = final.ler_estado(vd)
+    aep, mp4 = vd / "final" / "final.aep", Path(fim.get("mp4") or vd / "final" / "-")
+    fim.update(tem_aep=aep.exists(), mp4_url=_arquivo(mp4) if mp4.is_file() else None,
+               mp4_tamanho=mp4.stat().st_size if mp4.is_file() else 0, entregues=len(final.entregues(vd)))
+    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "final": fim,
+            "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
             "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
 
@@ -452,10 +457,55 @@ def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Bo
         raise HTTPException(400, str(e))
 
 
+@api.post("/c/{slug}/v/{video}/final")
+def juntar_no_after(slug: str, video: str, render: bool = Body(False, embed=True)):
+    """Junta os blocos entregues num projeto do After (final/final.aep) e, se pedir, renderiza o MP4."""
+    vd = _video_dir(slug, video)
+    if final.ler_estado(vd)["rodando"]:
+        raise HTTPException(409, "o vídeo final já está sendo montado")
+    if not final.entregues(vd):
+        raise HTTPException(409, "nenhum bloco entregue ainda")
+    final.lancar(vd, render)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/final/abrir")
+def abrir_final(slug: str, video: str):
+    """Abre o final.aep no After (o painel roda no próprio Mac)."""
+    aep = _video_dir(slug, video) / "final" / "final.aep"
+    if not aep.exists():
+        raise HTTPException(404, "o projeto final ainda não foi montado")
+    subprocess.run(["open", "-a", config().get("after_app", "Adobe After Effects 2026"), str(aep)], check=False)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/excluir")
+def excluir_video(slug: str, video: str):
+    try:
+        return {"ok": True, "lixeira": gestao.excluir_video(_canal(slug), video)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@api.get("/c/{slug}/lixeira")
+def lixeira(slug: str):
+    return {"itens": gestao.lixeira(_canal(slug))}
+
+
+@api.post("/c/{slug}/lixeira/{nome}/restaurar")
+def restaurar_video(slug: str, nome: str):
+    try:
+        return {"ok": True, "video": gestao.restaurar_video(_canal(slug), nome)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
 @api.post("/c/{slug}/v/{video}/abrir")
-def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True)):
-    """Mostra a pasta do vídeo (ou do bloco) no Finder: o painel roda no próprio Mac."""
+def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True), sub: str = Body("", embed=True)):
+    """Mostra a pasta do vídeo (do bloco, ou a final/) no Finder: o painel roda no próprio Mac."""
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
+    if sub == "final" and (pasta / "final").is_dir():
+        pasta = pasta / "final"
     subprocess.run(["open", str(pasta)], check=False)
     return {"ok": True}
 
@@ -690,8 +740,11 @@ def assinatura():
         for vd in prod.iterdir():
             if not vd.is_dir() or vd.name.startswith((".", "_")):
                 continue
-            for p in (vd, vd / "edicao", vd / "_estudio" / "fila.json", vd / "estudio_video.json", vd / "blocos"):
+            for p in (vd, vd / "edicao", vd / "_estudio" / "fila.json", vd / "estudio_video.json", vd / "blocos",
+                      vd / "final" / "estado.json"):
                 marcar(p)
+            if (vd / "final" / "pid").exists():
+                h.update(f"vivo:{estado._vivo((vd / 'final' / 'pid').read_text().strip())};".encode())
             if not (vd / "blocos").is_dir():
                 continue
             for b in (vd / "blocos").iterdir():

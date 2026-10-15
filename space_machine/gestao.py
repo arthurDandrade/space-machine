@@ -159,3 +159,66 @@ def criar_video(c, titulo, roteiro):
         (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
     gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
     return vd.name
+
+
+# ---------------- excluir (lixeira) ----------------
+LIXEIRA = "_lixeira"      # <producoes>/_lixeira/<vídeo>__<quando>: o estado.videos ignora pastas com "_"
+
+
+def _ocupado(vd):
+    """Motivo para não mexer na pasta do vídeo agora (bloco rodando, fila ou vídeo final em andamento), ou ""."""
+    from .fila import ler_fila
+    if ler_fila(vd).get("ativa"):
+        return "a fila deste vídeo está rodando: pare a fila antes"
+    for pid in list(vd.glob("blocos/*/_estudio/pid")) + [vd / "final" / "pid"]:
+        if pid.exists() and estado._vivo(pid.read_text().strip()):
+            return "tem coisa rodando neste vídeo: pare antes"
+    return ""
+
+
+def excluir_video(c, slug):
+    """Move o vídeo inteiro para a lixeira do canal (nada é apagado; dá para restaurar)."""
+    prod = Path(c["producoes"])
+    vd = prod / slug
+    if not slug or slug.startswith((".", "_")) or "/" in slug or not vd.is_dir():
+        raise ValueError("vídeo não encontrado")
+    motivo = _ocupado(vd)
+    if motivo:
+        raise ValueError(motivo)
+    destino = prod / LIXEIRA / f"{slug}__{dt.datetime.now():%Y%m%d-%H%M%S}"
+    destino.parent.mkdir(exist_ok=True)
+    vd.rename(destino)
+    return destino.name
+
+
+def lixeira(c):
+    pasta = Path(c["producoes"]) / LIXEIRA
+    out = []
+    for p in sorted(pasta.iterdir() if pasta.is_dir() else [], key=lambda p: p.stat().st_mtime, reverse=True):
+        if not p.is_dir():
+            continue
+        slug, _, quando = p.name.rpartition("__")
+        n = len([b for b in (p / "blocos").glob("*") if b.is_dir()]) if (p / "blocos").is_dir() else 0
+        try:
+            excluido = dt.datetime.strptime(quando, "%Y%m%d-%H%M%S").strftime("%d/%m/%Y %H:%M")
+        except ValueError:
+            excluido = ""
+        out.append({"nome": p.name, "video": slug or p.name, "titulo": estado.titulo_video(p), "n_blocos": n,
+                    "excluido": excluido})
+    return out
+
+
+def restaurar_video(c, nome):
+    """Devolve da lixeira; se já existe um vídeo com a mesma pasta, volta como <vídeo>-restaurado."""
+    prod = Path(c["producoes"])
+    src = prod / LIXEIRA / nome
+    if "/" in nome or nome.startswith(".") or not src.is_dir():
+        raise ValueError("não está na lixeira")
+    slug = nome.rpartition("__")[0] or nome
+    destino = prod / slug
+    if destino.exists():
+        destino = prod / f"{slug}-restaurado"
+        if destino.exists():
+            raise ValueError(f"já existe {destino.name}: renomeie a pasta antes")
+    src.rename(destino)
+    return destino.name

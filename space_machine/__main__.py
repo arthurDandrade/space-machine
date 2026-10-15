@@ -3,6 +3,7 @@
   python -m space_machine painel [--porta 8765]   painel no navegador (http://localhost:8765)
   python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]   roteiro → prévia aprovada
   python -m space_machine fila <pasta do vídeo> [--max 3]   todos os blocos não entregues, até 3 ao mesmo tempo
+  python -m space_machine final <pasta do vídeo> [--render]   junta os blocos entregues num projeto do After
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
   python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
@@ -20,6 +21,9 @@ def main():
         m(args)
     elif cmd == "fila":
         from .fila import main as m
+        m(args)
+    elif cmd == "final":
+        from .final import main as m
         m(args)
     elif cmd in ("painel", "servidor"):
         from .servidor import main as m

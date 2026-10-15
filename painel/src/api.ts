@@ -127,7 +127,25 @@ export interface Publicacao {
   atualizado: string;
 }
 
+export interface Final {
+  status?: "rodando" | "ok" | "erro";
+  etapa?: string;
+  erro?: string;
+  inicio?: string;
+  fim?: string;
+  render?: boolean;
+  blocos?: number;
+  total?: number;
+  faltam?: string[];
+  rodando: boolean;
+  tem_aep: boolean;
+  mp4_url: string | null;
+  mp4_tamanho: number;
+  entregues: number;
+}
+
 export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
+  final: Final;
   blocos: BlocoDoVideo[];
   fila: (Fila & { inicio?: string; fim?: string; lancados?: string[] }) | null;
   publicacao: Publicacao;

@@ -6,7 +6,7 @@ Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico
 
 ## Duas coisas separadas: código × dados
 - **Código** (este repo, igual para todo mundo). Nada de caminho absoluto, nome de pessoa ou regra de um tema específico aqui.
-  - `space_machine/`: orquestrador (`rodar`, `fila`, `escolher`), servidor FastAPI (`servidor.py`: serve o painel na raiz, `/arquivo` e os redirecionamentos dos endereços antigos), `api.py` (API JSON do painel e `/api/eventos`, que avisa o navegador quando uma pasta de produção muda), `capas.py` (capas dos cards, em `cache/capas/` dos dados), `gestao.py` (quadro, ideias, calendário, novo vídeo), `configuracao.py` (chaves, identidade, regras do tema, modelos, novo canal), `motor_claude.py` (`claude -p` enxuto, pela assinatura), `prompts/` das etapas, `textos/pt.json` (textos do painel; `t("chave")` no React).
+  - `space_machine/`: orquestrador (`rodar`, `fila`, `escolher`), servidor FastAPI (`servidor.py`: serve o painel na raiz, `/arquivo` e os redirecionamentos dos endereços antigos), `api.py` (API JSON do painel e `/api/eventos`, que avisa o navegador quando uma pasta de produção muda), `capas.py` (capas dos cards, em `cache/capas/` dos dados), `gestao.py` (quadro, ideias, calendário, novo vídeo, excluir para a lixeira), `final.py` (vídeo final: junta os blocos entregues num `final/final.aep` com a camada de ruído e, se pedir, renderiza), `configuracao.py` (chaves, identidade, regras do tema, modelos, novo canal), `motor_claude.py` (`claude -p` enxuto, pela assinatura), `prompts/` das etapas, `textos/pt.json` (textos do painel; `t("chave")` no React).
   - `painel/`: o painel em React (Vite + TypeScript). Abre na escolha de canais (`/`) e entra na produção de um canal (`/c/<canal>`); configurações do produtor em `/config`. Telas em `src/telas/`, moldura em `src/casca/`, peças em `src/componentes/`, estilos e tokens em `src/estilo/`. O build vai para `space_machine/static/app/` (fora do git): `instalar.sh` monta, e `./spacemachine` remonta quando `painel/` muda.
   - `space_machine/sistema.py`: pasta de dados, `config()` (`config_padrao.json` + `space_machine.json`), `canais()` e `ambiente_motor()`. `primeiros_passos.py`: checagem do que falta instalar ou configurar.
   - `motor/caminhos.py`: como os scripts do motor acham o canal (`SM_CANAL`), os dados (`SM_DADOS`), as chaves, o cache e as regras do tema. Rodando à mão, deduz o canal pelo caminho do bloco.
@@ -17,7 +17,7 @@ Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico
 - **Dados** (fora do repo). Vêm de `SM_DADOS`; senão de `~/.config/spacemachine/dados`; senão de `~/SpaceMachine-dados`. No Mac do Arthur: `/Users/arthur/Canais/SpaceMachine-dados`.
   - `space_machine.json`, `.env` (token do Claude), `space_machine.sqlite`, `cache/`, `logs/claude/`.
   - `referencias/explained/`: vídeos de referência e detecções (direito autoral: nunca no repo).
-  - `canais/<slug>/`: `canal.json` (identidade + **regras do tema**), `.env` (chaves do canal), `identidade/`, `conhecimento/` (Índice, **Log de Aprendizados** do canal, Produções), `producoes/<vídeo>/blocos/NN/`.
+  - `canais/<slug>/`: `canal.json` (identidade + **regras do tema**), `.env` (chaves do canal), `identidade/`, `conhecimento/` (Índice, **Log de Aprendizados** do canal, Produções), `producoes/<vídeo>/blocos/NN/` (e `final/` do vídeo final), `producoes/_lixeira/` (vídeos excluídos no painel; nada é apagado).
 
 ## Formato × tema
 - O que vale para qualquer canal do formato vai em `formatos/explained/` e nos prompts.
@@ -29,7 +29,7 @@ Desde 2026-10-13 (antes eram as pastas `ProFootball/` e `Estudio/`; o histórico
 - O painel edita e sugere essas regras (no canal › Regras do tema). Exemplo completo: o canal `pro-football` (soccer × futebol americano).
 
 ## Pipeline de um bloco (`python -m space_machine rodar <bloco>`)
-narração (Fish Audio) → transcrição (whisper-cli) → storyboard (Claude, com voltas de correção medidas por `compilar_cenas.py` + `storyboard.py`) → busca → escolha (Claude por asset, com folhas de contato) → editar (`editar_bloco.sh`: After + QA; uma correção automática se o QA reprovar) → entregar (`<vídeo>/edicao/bloco N.mp4`).
+narração (Fish Audio) → transcrição (whisper-cli) → storyboard (Claude, com voltas de correção medidas por `compilar_cenas.py` + `storyboard.py`) → busca → escolha (Claude por asset, com folhas de contato) → editar (`editar_bloco.sh`: After + QA; uma correção automática se o QA reprovar) → entregar (`<vídeo>/edicao/bloco N.mp4`). Com os blocos entregues, o botão "Juntar no After" (ou `python -m space_machine final <vídeo> [--render]`) monta o vídeo final.
 - Cada etapa pula o que já está feito.
 - Quando precisa de gente, para com o motivo em `<bloco>/_estudio/estado.json`.
 - A fila (`fila`) roda até N blocos por vez e espera o limite da assinatura passar.

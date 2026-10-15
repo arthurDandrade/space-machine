@@ -44,6 +44,9 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 3. **Chaves** (na barra lateral do canal): o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
 4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.
 5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`.
+6. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com todos em sequência (e, se marcar, renderiza o MP4 final).
+
+Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira.
 
 Um bloco que precisa de você para com o motivo escrito no painel, em **Esperando você** e no sino. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera. ⌘K busca qualquer vídeo, bloco ou tela.
 
@@ -72,6 +75,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 ./spacemachine                          # painel
 ./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
 ./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
+./spacemachine final <pasta do vídeo>   # junta os blocos entregues num projeto do After (--render: e o MP4)
 ./spacemachine checar                   # testa o Claude (login, versão, modelos)
 ./spacemachine consumo                  # tokens gastos por vídeo/bloco/etapa
 ```

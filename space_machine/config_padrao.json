@@ -28,5 +28,9 @@
  "travar_conferir": false,
  "_after_app": "Nome do app do After Effects em /Applications (muda a cada versão anual).",
  "after_app": "Adobe After Effects 2026",
- "idioma_painel": "pt"
+ "idioma_painel": "pt",
+ "_video_final": "Vídeo final (juntar os blocos no After): ruído da camada de ajuste em % (0 = sem).",
+ "video_final": {
+  "ruido": 6
+ }
 }
