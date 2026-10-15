@@ -525,11 +525,15 @@ def mover_video(slug: str, video: str, coluna: str = Body(..., embed=True)):
 
 
 @api.post("/c/{slug}/novo")
-def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body(..., embed=True)):
+def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body(..., embed=True),
+               ideia: int = Body(0, embed=True)):
+    """ideia: o id da ideia do "Virar vídeo" (sai da lista de ideias quando o vídeo é criado)."""
     try:
-        return {"ok": True, "video": gestao.criar_video(_canal(slug), titulo, roteiro)}
+        video = gestao.criar_video(_canal(slug), titulo, roteiro)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    gestao.ideia_virou_video(slug, ideia, video)
+    return {"ok": True, "video": video}
 
 
 @api.post("/c/{slug}/v/{video}/thumbnail")

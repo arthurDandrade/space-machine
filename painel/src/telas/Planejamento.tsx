@@ -48,7 +48,7 @@ function CartaoIdeia({ canal, i }: { canal: string; i: Ideia }) {
       <span className="ic"><Lightbulb size={16} /></span>
       <div className="t"><b>{i.titulo}</b>{i.notas && <span>{i.notas}</span>}</div>
       <div className="acoes-ideia">
-        <Link className="bt pequeno" to={`/c/${canal}/novo?titulo=${encodeURIComponent(i.titulo)}`}>{t("app.ideias.virar_video")}<ArrowRight size={14} /></Link>
+        <Link className="bt pequeno" to={`/c/${canal}/novo?titulo=${encodeURIComponent(i.titulo)}&ideia=${i.id}`}>{t("app.ideias.virar_video")}<ArrowRight size={14} /></Link>
         {confirmar ? (
           <>
             <button className="bt pequeno perigo" onClick={() => apagar.mutate()}>{t("app.ideias.apagar_sim")}</button>
@@ -168,7 +168,7 @@ export function QuadroTela() {
                 <>
                   <FormIdeia canal={canal} compacto />
                   {(di?.ideias ?? []).map((i) => (
-                    <Link key={i.id} className="ideia-mini" to={`/c/${canal}/novo?titulo=${encodeURIComponent(i.titulo)}`} title={t("app.ideias.virar_video")}>
+                    <Link key={i.id} className="ideia-mini" to={`/c/${canal}/novo?titulo=${encodeURIComponent(i.titulo)}&ideia=${i.id}`} title={t("app.ideias.virar_video")}>
                       <Lightbulb size={14} /><span>{i.titulo}</span><ArrowRight size={14} />
                     </Link>
                   ))}
@@ -269,7 +269,8 @@ export function NovoVideoTela() {
   const [roteiro, setRoteiro] = useState("");
   const divisao = useMemo(() => dividir(roteiro), [roteiro]);
   const criar = useMutation({
-    mutationFn: () => enviar<{ ok: boolean; video: string }>(`/api/c/${canal}/novo`, { titulo, roteiro }),
+    // veio de "Virar vídeo": a ideia sai da lista quando o vídeo é criado
+    mutationFn: () => enviar<{ ok: boolean; video: string }>(`/api/c/${canal}/novo`, { titulo, roteiro, ideia: Number(params.get("ideia")) || 0 }),
     onSuccess: (r) => { qc.invalidateQueries(); navegar(rota.video(canal, r.video)); },
   });
   if (!dc) return null;

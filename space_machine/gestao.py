@@ -93,6 +93,21 @@ def apagar_ideia(canal, ideia_id):
     con.close()
 
 
+def ideia_virou_video(canal, ideia_id, slug):
+    """A ideia que virou vídeo sai da lista; as notas dela vão para as notas do vídeo (aba Publicação).
+    A ideia é a do "Virar vídeo" (ideia_id); sem ela, a que tem o mesmo título do vídeo criado."""
+    con = _db()
+    todas = con.execute("select id, titulo, notas from ideias where canal=?", (canal,)).fetchall()
+    con.close()
+    ideia = next((i for i in todas if i[0] == ideia_id), None) or \
+        next((i for i in todas if slug_video(i[1]) == slug), None)
+    if not ideia:
+        return
+    if (ideia[2] or "").strip() and not dados_video(canal, slug)["notas"]:
+        salvar_video(canal, slug, notas=ideia[2])
+    apagar_ideia(canal, ideia[0])
+
+
 def calendario(canal, ano, mes):
     """Semanas do mês (segunda a domingo), cada dia com os vídeos de data_pub nele."""
     por_dia = {}
