@@ -41,6 +41,7 @@ const ABAS = [
   ["canais", "app.config.aba_canais"],
   ["modelos", "app.config.aba_modelos"],
   ["consumo", "app.config.aba_consumo"],
+  ["limpeza", "app.config.aba_limpeza"],
   ["passos", "app.config.aba_passos"],
 ] as const;
 

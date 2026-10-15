@@ -52,6 +52,8 @@ Os prompts que você usa no canal (o de roteiro, o de títulos…) ficam na aba 
 
 Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira.
 
+A produção gera muita coisa que só serve até o bloco ser entregue: prévias (v1, v2, v3…), os candidatos baixados para a escolha, o Auto-Save do After. Ao entregar, a prévia aprovada vira o `edicao/bloco N.mp4` (é movida, não copiada) e o resto daquele bloco vai para o Lixo do Mac. Para o que já existia, **Configurações › Limpeza** mostra quanto cada vídeo ocupa à toa e manda para o Lixo (dá para pôr de volta até você esvaziar). Assets, narração, roteiro, projeto do After, blocos entregues e o vídeo final ficam sempre.
+
 Um bloco que precisa de você para com o motivo escrito no painel, em **Esperando você** e no sino. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera. ⌘K busca qualquer vídeo, bloco ou tela.
 
 ## Onde fica cada coisa
@@ -63,7 +65,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 - `formatos/explained/`: regras e notas do formato, iguais para todos os canais.
 
 **Dados** (a sua pasta, fora do git):
-- `space_machine.json`: modelo e esforço do Claude por etapa e o app do After.
+- `space_machine.json`: modelo e esforço do Claude por etapa, o app do After e a limpeza automática ao entregar.
 - `.env`: token do Claude.
 - `space_machine.sqlite`: consumo e gestão.
 - `cache/`.
@@ -82,6 +84,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 ./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
 ./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
 ./spacemachine final <pasta do vídeo>   # junta os blocos entregues num projeto do After (--render: e o MP4)
+./spacemachine limpar                   # o que pode ir para o Lixo (--aplicar: manda; --cache: e o cache da busca)
 ./spacemachine checar                   # testa o Claude (login, versão, modelos)
 ./spacemachine consumo                  # tokens gastos por vídeo/bloco/etapa
 ```

@@ -216,8 +216,10 @@
 .fila-card .ultima { color: var(--ink3); }
 .aviso-fila { color: var(--wait); font-size: 13px; }
 .erro { color: var(--bad); font-size: 13px; margin: 0; }
-.abas { display: flex; gap: 4px; margin: 28px 0 16px; border-bottom: 1px solid var(--line); }
-.abas button { padding: 10px 14px; font-weight: 700; color: var(--ink2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+/* a linha de baixo é sombra (não borda) para as abas poderem rolar de lado no celular sem cortar o sublinhado */
+.abas { display: flex; gap: 4px; margin: 28px 0 16px; box-shadow: inset 0 -1px 0 var(--line); overflow-x: auto; scrollbar-width: none; }
+.abas > * { flex: none; white-space: nowrap; }
+.abas button { padding: 10px 14px; font-weight: 700; color: var(--ink2); border-bottom: 2px solid transparent; }
 .abas button span { color: var(--ink3); font-weight: 600; margin-left: 4px; }
 .abas button.on { color: var(--ink); border-color: var(--accent); }
 .blocos-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
@@ -380,7 +382,7 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .config-produtor { max-width: 1240px; margin: 0 auto; padding: 40px 32px 0; }
 .config-produtor h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
 .config-produtor .abas { margin: 18px 0 22px; }
-.config-produtor .abas a { padding: 10px 14px; font-weight: 700; color: var(--ink2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.config-produtor .abas a { padding: 10px 14px; font-weight: 700; color: var(--ink2); border-bottom: 2px solid transparent; }
 .config-produtor .abas a.on { color: var(--ink); border-color: var(--accent); }
 .config-grade { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .cores-grade { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
@@ -551,3 +553,21 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
   .prompts-grade { grid-template-columns: minmax(0, 1fr); }
   .lista-prompts { position: static; max-height: none; }
 }
+
+/* limpeza */
+.limpeza-topo { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+.disco .pct { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.disco .pct b { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+.disco .pct span { color: var(--ink2); font-size: 13px; }
+.disco h3 { display: inline-flex; align-items: center; gap: 6px; }
+.progresso.grosso { height: 10px; border-radius: 5px; }
+.progresso.grosso i { border-radius: 5px; }
+.cats-limpeza { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.cat-limpeza { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: var(--raised); cursor: pointer; transition: box-shadow 0.15s; }
+.cat-limpeza.on { box-shadow: inset 0 0 0 2px var(--accent); background: var(--card); }
+.cat-limpeza.zerada { opacity: 0.55; cursor: default; }
+.cat-limpeza input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.cat-limpeza .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cat-limpeza .tam { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lista-dialogo { margin: 0 0 10px; padding-left: 18px; }
+@media (max-width: 1000px) { .limpeza-topo { grid-template-columns: minmax(0, 1fr); } }

@@ -18,7 +18,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, configuracao, estado, fila, final, gestao, meus_prompts, primeiros_passos, textos
+from . import capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, primeiros_passos, textos
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -775,6 +775,39 @@ def testar_claude():
     except ErroClaude as e:
         return {"ok": False, "mensagem": str(e)[:500]}
     return {"ok": True, "mensagem": textos.t("pp.claude_ok", config().get("idioma_painel", "pt"))}
+
+
+@api.get("/limpeza")
+def levantar_limpeza():
+    """O que sairia na limpeza (nada é movido aqui), o espaço no disco e se a limpeza automática está ligada."""
+    r = limpeza.levantar(cache=True)
+    disco = shutil.disk_usage(DADOS)
+    return {**r, "rotulos": limpeza.CATEGORIAS, "automatica": bool(config().get("limpeza_automatica", True)),
+            "disco": {"livre": disco.free, "total": disco.total}}
+
+
+@api.post("/limpeza")
+def aplicar_limpeza(categorias: list = Body(..., embed=True)):
+    cats = [c for c in categorias if c in limpeza.CATEGORIAS]
+    if not cats:
+        raise HTTPException(400, "Escolha o que limpar.")
+    total, itens, pasta = limpeza.limpar(categorias=cats, cache="cache" in cats)
+    no_lixo = str(pasta).startswith(str(Path.home() / ".Trash"))
+    return {"ok": True, "bytes": total, "itens": itens, "pasta": pasta.name, "no_lixo_do_mac": no_lixo,
+            "caminho": "" if no_lixo else str(pasta)}
+
+
+@api.post("/limpeza/automatica")
+def limpeza_automatica(ligada: bool = Body(..., embed=True)):
+    from .sistema import salvar_config
+    salvar_config({"limpeza_automatica": bool(ligada)})
+    return {"ok": True}
+
+
+@api.post("/limpeza/abrir-lixo")
+def abrir_lixo():
+    subprocess.run(["open", str(Path.home() / ".Trash")], check=False)
+    return {"ok": True}
 
 
 @api.get("/fontes")

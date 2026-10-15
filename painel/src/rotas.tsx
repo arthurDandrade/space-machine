@@ -6,7 +6,7 @@ import { Busca } from "./componentes/Busca";
 import { CascaCanal } from "./casca/CascaCanal";
 import { CascaProdutor } from "./casca/TopoProdutor";
 import { AprendizadosTela, ChavesTela, IdentidadeTela, RegrasTela } from "./telas/ConfigCanal";
-import { CanaisConfigTela, ConsumoTela, ModelosTela, PassosTela } from "./telas/Produtor";
+import { CanaisConfigTela, ConsumoTela, LimpezaTela, ModelosTela, PassosTela } from "./telas/Produtor";
 import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
@@ -59,6 +59,7 @@ export const rotas = createBrowserRouter(
             { path: "canais", element: <CanaisConfigTela /> },
             { path: "modelos", element: <ModelosTela /> },
             { path: "consumo", element: <ConsumoTela /> },
+            { path: "limpeza", element: <LimpezaTela /> },
             { path: "passos", element: <PassosTela /> },
           ],
         },

@@ -22,6 +22,7 @@ from pathlib import Path
 from . import motor_claude as motor
 from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
+from . import limpeza
 from .estado import conferir_pendentes, previas as previas_do_bloco
 from .sistema import FORMATOS, ambiente_motor
 
@@ -237,9 +238,14 @@ class Rodada:
         plano = ler_json(self.p / "plano.json")
         cand = self.p / "_work" / "candidatos"
         falta, so_yt = [], []
+        # asset já escolhido e baixado não precisa de candidatos: num bloco entregue, a limpeza tira os candidatos
+        # (limpeza.py) e a busca não baixa tudo de novo; "--de buscar" baixa o que faltar
+        man = {m["id"] for m in (ler_json(self.p / "manifesto.json", {}) or {}).get("assets", [])}
         for _, _, a in BlocoEscolha(self.p).assets():
             meta = ler_json(cand / a["id"] / "candidatos.json")
             if meta is None:
+                if a["id"] in man and self.de != "buscar":
+                    continue
                 falta.append(a["id"])
             elif meta.get("candidatos") and all(c.get("fonte") == "youtube" or "youtube.com" in str(c.get("url"))
                                                 for c in meta["candidatos"]):
@@ -356,6 +362,13 @@ class Rodada:
         entradas = [self.p / "manifesto.json", self.p / "cenas.json", self.p / "plano.json",
                     Path(self.c["editor"]) / "gerar_ae2.py"]
         mais_novo = max((f.stat().st_mtime for f in entradas if f.exists()), default=0)
+        # já entregue e nada do conteúdo mudou depois (o editor do After mudar não refaz bloco entregue): a prévia
+        # foi movida para o entregue e as outras saíram na limpeza, então não há prévia a comparar
+        entregue = self.video / "edicao" / f"bloco {int(self.nn)}.mp4"
+        conteudo = max((f.stat().st_mtime for f in entradas[:3] if f.exists()), default=0)
+        if entregue.exists() and self.de != "editar" and entregue.stat().st_mtime >= conteudo \
+                and not (previas and previas[-1].stat().st_mtime > entregue.stat().st_mtime + 60):
+            return "já entregue"
         if previas and qa_md.exists() and qa_md.stat().st_mtime >= previas[-1].stat().st_mtime - 5 \
                 and _aprovado(qa_md.read_text()) and qa_md.stat().st_mtime >= mais_novo \
                 and self.de != "editar":
@@ -373,6 +386,9 @@ class Rodada:
 
     def entregar(self):
         previas = previas_do_bloco(self.p)
+        destino = self.video / "edicao" / f"bloco {int(self.nn)}.mp4"
+        if destino.exists() and (not previas or previas[-1].stat().st_mtime <= destino.stat().st_mtime + 60):
+            return "já entregue"
         if not previas:
             raise Parada("sem prévia para entregar")
         # "conferir" e assets pulados travam a entrega até alguém aprovar no painel: antes ficavam só no
@@ -381,10 +397,18 @@ class Rodada:
         if pend:
             raise Parada(f"{len(pend)} item(ns) para conferir antes de entregar — veja a prévia e aprove no painel: "
                          + " | ".join(f"{aid}: {t[:80]}" for aid, t in pend.items()))
-        destino = self.video / "edicao" / f"bloco {int(self.nn)}.mp4"
         destino.parent.mkdir(exist_ok=True)
-        shutil.copy2(previas[-1], destino)
-        return str(destino)
+        # a prévia aprovada VIRA o entregue (copiar deixava dois arquivos iguais de ~120 MB por bloco: 52 de 67 em
+        # 2026-10-14); depois, as prévias antigas, os candidatos e o Auto-Save do bloco vão para o Lixo
+        os.replace(previas[-1], destino)
+        detalhe = str(destino)
+        try:
+            r = limpeza.depois_de_entregar(self.p)
+            if r:
+                detalhe += f" · limpeza: {limpeza.gb(r[0])} para o Lixo"
+        except OSError as e:
+            detalhe += f" · limpeza não rodou: {e}"
+        return detalhe
 
     # ---------- roteiro ----------
     def rodar(self, de=None, ate=None):

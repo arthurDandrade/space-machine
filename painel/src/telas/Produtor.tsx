@@ -1,10 +1,11 @@
 // Configurações do Space Machine (do produtor, valem para todos os canais): canais (com o novo canal),
-// modelos do Claude por etapa, consumo e primeiros passos.
+// modelos do Claude por etapa, consumo, limpeza do disco e primeiros passos.
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, CircleAlert, CircleCheck, KeyRound, Palette, Plus, Save, Sparkles } from "lucide-react";
-import { Canais, enviar, pegar } from "../api";
+import { ArrowRight, Check, CircleAlert, CircleCheck, HardDrive, KeyRound, Palette, Plus, Save, Sparkles, Trash2 } from "lucide-react";
+import { Canais, enviar, pegar, rota } from "../api";
+import { Dialogo } from "../componentes/Dialogo";
 import { LogoCanal } from "../componentes/Imagens";
 import { AnelConsumo } from "../componentes/Pecas";
 import { compacto, useT } from "../textos";
@@ -239,6 +240,130 @@ export function PassosTela() {
         <span className="sub">{t("pp.testar_claude_sub")}</span>
       </div>
       {testar.data && <div className={testar.data.ok ? "aviso-ok" : "aviso-parado"} style={{ marginTop: 12 }}>{testar.data.mensagem}</div>}
+    </>
+  );
+}
+
+// ---------------- limpeza ----------------
+// O que a produção gera e não serve mais (prévias já entregues, candidatos, Auto-Save, cache) vai para o Lixo do Mac.
+interface Limpeza {
+  categorias: Record<string, number>;
+  rotulos: Record<string, string>;
+  total: number;
+  automatica: boolean;
+  disco: { livre: number; total: number };
+  videos: { canal: string; canal_nome: string; video: string; titulo: string; categorias: Record<string, number>; total: number; itens: number }[];
+}
+interface Limpou { bytes: number; itens: number; pasta: string; no_lixo_do_mac: boolean; caminho: string }
+
+const gbs = (n: number) => (n < 1e8 ? `${Math.max(1, Math.round(n / 1e6))} MB` : `${(n / 1e9).toFixed(1).replace(".", ",")} GB`);
+const POR_VIDEO = ["previas", "candidatos", "after"];   // o cache é de todos os canais, não de um vídeo
+
+export function LimpezaTela() {
+  const t = useT();
+  const qc = useQueryClient();
+  const { data, isFetching } = useQuery({ queryKey: ["limpeza"], queryFn: () => pegar<Limpeza>("/api/limpeza"), refetchOnWindowFocus: false });
+  const [escolhidas, setEscolhidas] = useState<string[]>(["previas", "candidatos", "after"]);
+  const [confirmar, setConfirmar] = useState(false);
+  const limpar = useMutation({
+    mutationFn: () => enviar<Limpou>("/api/limpeza", { categorias: escolhidas }),
+    onSuccess: () => { setConfirmar(false); qc.invalidateQueries(); },
+  });
+  const auto = useMutation({
+    mutationFn: (ligada: boolean) => enviar("/api/limpeza/automatica", { ligada }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["limpeza"] }),
+  });
+  if (!data) return <div className="carregando">{t("app.carregando")}</div>;
+  const soma = escolhidas.reduce((s, c) => s + (data.categorias[c] || 0), 0);
+  const usado = data.disco.total ? (data.disco.total - data.disco.livre) / data.disco.total : 0;
+  const marcar = (c: string, sim: boolean) => setEscolhidas(sim ? [...escolhidas, c] : escolhidas.filter((x) => x !== c));
+  return (
+    <>
+      <p className="sub intro">{t("app.limpeza.explica")}</p>
+      {limpar.data && (
+        <div className="aviso-ok">
+          <CircleCheck size={16} />
+          <span style={{ flex: 1 }}>
+            {t(limpar.data.no_lixo_do_mac ? "app.limpeza.feito" : "app.limpeza.feito_pasta",
+               { gb: gbs(limpar.data.bytes), n: limpar.data.itens, pasta: limpar.data.pasta, caminho: limpar.data.caminho })}
+          </span>
+          {limpar.data.no_lixo_do_mac && <button className="bt pequeno" onClick={() => enviar("/api/limpeza/abrir-lixo")}>{t("app.limpeza.abrir_lixo")}</button>}
+        </div>
+      )}
+      <div className="limpeza-topo">
+        <div className="cartao disco">
+          <div className="titulo-secao"><h3><HardDrive size={16} />{t("app.limpeza.disco")}</h3></div>
+          <div className="pct"><b>{gbs(data.disco.livre)}</b><span>{t("app.limpeza.livres", { total: gbs(data.disco.total) })}</span></div>
+          <div className="progresso grosso"><i style={{ width: `${100 * usado}%`, background: usado > 0.85 ? "var(--bad)" : "var(--accent)" }} /></div>
+          <label className="interruptor" style={{ marginTop: 18 }}>
+            <input type="checkbox" checked={data.automatica} onChange={(e) => auto.mutate(e.target.checked)} />
+            <span className="trilho" /><span>{t("app.limpeza.automatica")}</span>
+          </label>
+          <p className="sub" style={{ marginTop: 6 }}>{t("app.limpeza.automatica_sub")}</p>
+        </div>
+        <div className="cartao">
+          <div className="titulo-secao"><h3>{t("app.limpeza.o_que")}</h3>{isFetching && <span className="sub">{t("app.carregando")}</span>}</div>
+          {data.total === 0 ? <p className="sub">{t("app.limpeza.nada")}</p> : (
+            <>
+              <div className="cats-limpeza">
+                {Object.keys(data.rotulos).map((c) => (
+                  <label key={c} className={`cat-limpeza ${escolhidas.includes(c) && data.categorias[c] ? "on" : ""} ${data.categorias[c] ? "" : "zerada"}`}>
+                    <input type="checkbox" checked={escolhidas.includes(c) && !!data.categorias[c]} disabled={!data.categorias[c]} onChange={(e) => marcar(c, e.target.checked)} />
+                    <div className="t"><b>{data.rotulos[c]}</b><span className="sub">{t(`app.limpeza.ex_${c}`)}</span></div>
+                    <span className="tam">{data.categorias[c] ? gbs(data.categorias[c]) : "—"}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="rodape-form">
+                <button className="bt primario" disabled={!soma || limpar.isPending} onClick={() => setConfirmar(true)}>
+                  <Trash2 size={16} />{t("app.limpeza.botao", { gb: gbs(soma) })}
+                </button>
+                <span className="sub">{t("app.limpeza.recupera")}</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      {data.videos.length > 0 && (
+        <div className="cartao" style={{ marginTop: 20 }}>
+          <div className="titulo-secao"><h3>{t("app.limpeza.por_video")}</h3></div>
+          <div className="rola-x">
+            <table className="tabela">
+              <thead>
+                <tr>
+                  <th>{t("app.consumo.video")}</th>
+                  {POR_VIDEO.map((c) => <th key={c} className="n">{data.rotulos[c].split(" ")[0]}</th>)}
+                  <th className="n">{t("app.limpeza.total")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.videos.map((v) => (
+                  <tr key={v.canal + v.video}>
+                    <td><Link to={rota.video(v.canal, v.video)}><b>{v.titulo}</b></Link><div className="sub">{v.canal_nome}</div></td>
+                    {POR_VIDEO.map((c) => <td key={c} className="n">{v.categorias[c] ? gbs(v.categorias[c]) : "—"}</td>)}
+                    <td className="n"><b>{gbs(v.total)}</b></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {confirmar && (
+        <Dialogo titulo={t("app.limpeza.confirmar_titulo", { gb: gbs(soma) })} fechar={() => setConfirmar(false)}
+          acoes={<>
+            <button className="bt" onClick={() => setConfirmar(false)}>{t("app.cancelar")}</button>
+            <button className="bt primario" disabled={limpar.isPending} onClick={() => limpar.mutate()}>
+              <Trash2 size={16} />{limpar.isPending ? t("app.limpeza.limpando") : t("app.limpeza.confirmar")}
+            </button>
+          </>}>
+          <ul className="lista-dialogo">
+            {escolhidas.filter((c) => data.categorias[c]).map((c) => <li key={c}>{data.rotulos[c]}: <b>{gbs(data.categorias[c])}</b></li>)}
+          </ul>
+          <p>{t("app.limpeza.confirmar_explica")}</p>
+          {limpar.isError && <p className="erro">{limpar.error.message}</p>}
+        </Dialogo>
+      )}
     </>
   );
 }

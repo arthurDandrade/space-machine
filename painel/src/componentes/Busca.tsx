@@ -54,7 +54,7 @@ export function Busca() {
        ["app.nav.aprendizados", `/c/${noCanal}/aprendizados`], ["app.nav.chaves", `/c/${noCanal}/chaves`]]
     : [];
   const config = [["app.config.aba_canais", "/config/canais"], ["app.config.aba_modelos", "/config/modelos"],
-    ["app.config.aba_consumo", "/config/consumo"], ["app.config.aba_passos", "/config/passos"]];
+    ["app.config.aba_consumo", "/config/consumo"], ["app.config.aba_limpeza", "/config/limpeza"], ["app.config.aba_passos", "/config/passos"]];
 
   return (
     <Command.Dialog open={aberta} onOpenChange={setAberta} label={t("app.busca.buscar")} className="busca" overlayClassName="busca-fundo">

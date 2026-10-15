@@ -32,5 +32,7 @@
  "_video_final": "Vídeo final (juntar os blocos no After): ruído da camada de ajuste em % (0 = sem).",
  "video_final": {
   "ruido": 6
- }
+ },
+ "_limpeza_automatica": "true = ao entregar um bloco, as prévias antigas, os candidatos baixados e o Auto-Save dele vão para o Lixo do Mac.",
+ "limpeza_automatica": true
 }

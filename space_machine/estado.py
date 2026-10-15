@@ -103,6 +103,10 @@ def bloco(caminho, video_dir=None):
     pv = previas(b)
     qa_md = b / "edicao" / f"qa_{nn}.md"
     entregue = (video_dir / "edicao" / f"bloco {int(nn)}.mp4") if nn.isdigit() else None
+    entregue_ok = bool(entregue and entregue.exists())
+    # a entrega move a prévia aprovada para o entregue e a limpeza tira as outras (limpeza.py): bloco entregue já
+    # passou por edição e QA, a não ser que haja prévia mais nova que o entregue (editado de novo depois)
+    editado_depois = bool(entregue_ok and pv and pv[-1].stat().st_mtime > entregue.stat().st_mtime + 60)
     feito = {
         "roteiro": (b / "roteiro.txt").exists(),
         "narracao": any(b.glob("narracao.*")),
@@ -110,9 +114,10 @@ def bloco(caminho, video_dir=None):
         "storyboard": plano is not None,
         "busca": cand.exists() and any(cand.glob("*/candidatos.json")),
         "escolha": bool(plano) and n_assets > 0 and len(man) + sum(1 for e in escolhas.values() if e.get("pular")) >= n_assets,
-        "edicao": bool(pv),
-        "aprovado": bool(pv) and _aprovado(qa_md) and qa_md.stat().st_mtime >= pv[-1].stat().st_mtime - 5,
-        "entregue": bool(entregue and entregue.exists()),
+        "edicao": bool(pv) or entregue_ok,
+        "aprovado": (bool(pv) and _aprovado(qa_md) and qa_md.stat().st_mtime >= pv[-1].stat().st_mtime - 5)
+                    or (entregue_ok and not editado_depois),
+        "entregue": entregue_ok,
     }
     atual = "roteiro"
     for k, _ in ETAPAS:
