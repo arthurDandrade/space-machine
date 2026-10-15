@@ -6,7 +6,7 @@ Monta <vídeo>/final/final.aep: os blocos entregues (edicao/bloco N.mp4) em sequ
 ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
 em 2026-10-13; 0 = sem). Com --render, renderiza <vídeo>/final/<título>.mp4.
 O After roda um script de cada vez: usa a mesma trava dos blocos (<dados>/trava_after) e, como a montagem dos blocos,
-fecha o projeto que estiver aberto sem salvar. O painel lança este comando solto (lancar) e acompanha por
+fecha o projeto que estiver aberto sem salvar. O final.aep (e o MP4) de uma montagem anterior vai para final/anteriores/. O painel lança este comando solto (lancar) e acompanha por
 <vídeo>/final/estado.json.
 """
 import argparse
@@ -102,6 +102,16 @@ def _after(script, log, espera_s):
     return ""
 
 
+def _guardar_anterior(arq):
+    """Projeto ou MP4 de uma montagem anterior (que você pode ter editado) vai para final/anteriores/, nunca é
+    sobrescrito."""
+    arq = Path(arq)
+    if arq.exists():
+        guarda = arq.parent / "anteriores"
+        guarda.mkdir(exist_ok=True)
+        arq.rename(guarda / f"{arq.stem}_{time.strftime('%Y%m%d-%H%M%S', time.localtime(arq.stat().st_mtime))}{arq.suffix}")
+
+
 def montar(vd, render=False):
     vd = Path(vd)
     fim_dir = vd / "final"
@@ -125,6 +135,7 @@ def montar(vd, render=False):
     trava = open(DADOS / "trava_after", "w")
     fcntl.flock(trava, fcntl.LOCK_EX)
     try:
+        _guardar_anterior(aep)
         _marcar(vd, etapa=f"juntando {len(blocos)} blocos no After")
         r = _after(fim_dir / "montar_final.jsx", log, 1800)
         if not r.startswith("OK"):
@@ -133,6 +144,7 @@ def montar(vd, render=False):
             return 1
         _marcar(vd, etapa=r, aep=str(aep))
         if render:
+            _guardar_anterior(mp4)
             _marcar(vd, etapa="renderizando o vídeo final (demora: tempo parecido com a duração do vídeo)")
             rlog = fim_dir / "log_render.txt"
             prefixo = json.dumps({"aep": str(aep), "comp": cfg["comp"], "saida": str(mp4), "log": str(rlog)},
