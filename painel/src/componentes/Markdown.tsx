@@ -29,6 +29,14 @@ export function Markdown({ texto, className = "" }: { texto: string; className?:
   while (i < linhas.length) {
     const l = linhas[i];
     if (!l.trim()) { i++; continue; }
+    if (l.trim().startsWith("```")) {
+      const codigo: string[] = [];
+      i++;
+      while (i < linhas.length && !linhas[i].trim().startsWith("```")) codigo.push(linhas[i++]);
+      i++;
+      blocos.push(<pre key={i} className="codigo-md"><code>{codigo.join("\n")}</code></pre>);
+      continue;
+    }
     const h = /^(#{1,4})\s+(.*)$/.exec(l);
     if (h) {
       const Tag = (`h${Math.min(h[1].length + 1, 5)}`) as "h2";
@@ -61,7 +69,7 @@ export function Markdown({ texto, className = "" }: { texto: string; className?:
     const par: string[] = [];
     // a primeira linha entra sempre (senão uma linha como "--- x" travaria o laço)
     par.push(linhas[i++]);
-    while (i < linhas.length && linhas[i].trim() && !/^(#{1,4}\s|\||\s*[-*]\s|---)/.test(linhas[i])) par.push(linhas[i++]);
+    while (i < linhas.length && linhas[i].trim() && !/^(#{1,4}\s|\||\s*[-*]\s|---|\s*```)/.test(linhas[i])) par.push(linhas[i++]);
     blocos.push(<p key={i}>{par.map((t, k) => <Fragment key={k}>{k > 0 && " "}{inline(t)}</Fragment>)}</p>);
   }
   return <div className={`md ${className}`}>{blocos}</div>;

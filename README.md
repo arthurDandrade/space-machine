@@ -48,6 +48,8 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 6. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com todos em sequência (e, se marcar, renderiza o MP4 final).
 7. A **thumbnail** do vídeo vai na página dele (arraste, clique ou cole com ⌘V): ela vira a capa do vídeo no painel, e o painel avisa se passar dos 2 MB do YouTube ou não for 16:9.
 
+Os prompts que você usa no canal (o de roteiro, o de títulos…) ficam na aba **Prompts**: cada um é um `.md` em `canais/<canal>/prompts/`, com copiar em um clique, editar/visualizar e importar os `.md` que você já tem.
+
 Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira.
 
 Um bloco que precisa de você para com o motivo escrito no painel, em **Esperando você** e no sino. Exemplos: asset que não existe, limite da assinatura, After travado num diálogo. Se o motivo for o limite da assinatura, a fila espera e continua sozinha quando ele libera. ⌘K busca qualquer vídeo, bloco ou tela.

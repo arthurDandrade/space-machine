@@ -4,23 +4,31 @@ import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useT } from "../textos";
 
+// copia para a área de transferência; se o navegador negar a API nova, usa o jeito antigo (execCommand)
+export async function copiarTexto(texto: string) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return;
+  } catch {
+    /* sem permissão: vai pelo jeito antigo */
+  }
+  const area = document.createElement("textarea");
+  area.value = texto;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand("copy");
+  area.remove();
+}
+
 export function TituloCopiavel({ texto, className = "" }: { texto: string; className?: string }) {
   const t = useT();
   const [copiado, setCopiado] = useState(false);
   const copiar = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(texto);
-    } catch {
-      // navegador sem permissão para a área de transferência: copia pelo jeito antigo
-      const area = document.createElement("textarea");
-      area.value = texto;
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand("copy");
-      area.remove();
-    }
+    await copiarTexto(texto);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 1300);
   };

@@ -5,7 +5,7 @@ import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-r
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BookOpen, CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, ListChecks,
+  BookOpen, CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, ListChecks, ScrollText,
   Palette, Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -46,6 +46,7 @@ export function CascaCanal() {
     { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
     { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal) },
     { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
+    { rot: "app.nav.prompts", icone: ScrollText, para: `/c/${canal}/prompts` },
     "app.nav.secao_canal",
     { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
     { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },

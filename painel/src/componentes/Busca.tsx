@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useMatch, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
-import { Clapperboard, Film, LayoutDashboard, Search, Settings, Tv } from "lucide-react";
+import { Clapperboard, Film, LayoutDashboard, ScrollText, Search, Settings, Tv } from "lucide-react";
 import { pegar, rota } from "../api";
 import { useT } from "../textos";
 
@@ -11,6 +11,7 @@ interface Indice {
   canais: { slug: string; nome: string; tema: string }[];
   videos: { canal: string; canal_nome: string; slug: string; titulo: string }[];
   blocos: { canal: string; video: string; video_titulo: string; nn: string; topico: string }[];
+  prompts: { canal: string; canal_nome: string; nome: string; titulo: string }[];
 }
 
 const abrirBusca = () => window.dispatchEvent(new Event("sm:buscar"));
@@ -48,6 +49,7 @@ export function Busca() {
   const telas = noCanal
     ? [["app.nav.producao", rota.canal(noCanal)], ["app.nav.videos", `/c/${noCanal}/videos`], ["app.nav.quadro", rota.quadro(noCanal)],
        ["app.nav.esperando", `/c/${noCanal}/esperando`], ["app.nav.ideias", rota.ideias(noCanal)], ["app.nav.calendario", rota.calendario(noCanal)],
+       ["app.nav.prompts", `/c/${noCanal}/prompts`],
        ["app.novo_video", rota.novoVideo(noCanal)], ["app.nav.identidade", `/c/${noCanal}/identidade`], ["regras.titulo", `/c/${noCanal}/regras`],
        ["app.nav.aprendizados", `/c/${noCanal}/aprendizados`], ["app.nav.chaves", `/c/${noCanal}/chaves`]]
     : [];
@@ -81,6 +83,15 @@ export function Busca() {
                 </Command.Item>
               ))}
             </Command.Group>
+            {data.prompts.length > 0 && (
+              <Command.Group heading={t("app.busca.prompts")}>
+                {ordem(data.prompts).map((p) => (
+                  <Command.Item key={p.canal + p.nome} value={`prompt ${p.titulo}`} onSelect={() => ir(`/c/${p.canal}/prompts?p=${encodeURIComponent(p.nome)}`)}>
+                    <ScrollText size={16} />{p.titulo}<span className="de">{p.canal_nome}</span>
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
             <Command.Group heading={t("app.busca.blocos")}>
               {ordem(data.blocos).map((b) => (
                 <Command.Item key={b.canal + b.video + b.nn} value={`bloco ${b.nn} ${b.topico} ${b.video_titulo}`} onSelect={() => ir(rota.bloco(b.canal, b.video, b.nn))}>

@@ -12,6 +12,7 @@ import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
 import { CalendarioTela, IdeiasTela, NovoVideoTela, QuadroTela } from "./telas/Planejamento";
 import { ProducaoCanal } from "./telas/ProducaoCanal";
+import { PromptsTela } from "./telas/Prompts";
 import { VideoTela } from "./telas/Video";
 import { useSistema, useT } from "./textos";
 
@@ -71,6 +72,7 @@ export const rotas = createBrowserRouter(
             { path: "quadro", element: <QuadroTela /> },
             { path: "ideias", element: <IdeiasTela /> },
             { path: "calendario", element: <CalendarioTela /> },
+            { path: "prompts", element: <PromptsTela /> },
             { path: "novo", element: <NovoVideoTela /> },
             { path: "identidade", element: <IdentidadeTela /> },
             { path: "regras", element: <RegrasTela /> },

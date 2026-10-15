@@ -18,7 +18,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, configuracao, estado, fila, final, gestao, primeiros_passos, textos
+from . import capas, configuracao, estado, fila, final, gestao, meus_prompts, primeiros_passos, textos
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -293,6 +293,60 @@ def lista_ideias(slug: str):
     return {"ideias": gestao.ideias(slug)}
 
 
+@api.get("/c/{slug}/prompts")
+def lista_prompts(slug: str):
+    _canal(slug)
+    return {"prompts": meus_prompts.listar(slug)}
+
+
+@api.get("/c/{slug}/prompts/{nome}")
+def ler_prompt(slug: str, nome: str):
+    _canal(slug)
+    try:
+        return meus_prompts.ler(slug, nome)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@api.post("/c/{slug}/prompts")
+def salvar_prompt(slug: str, titulo: str = Body(..., embed=True), texto: str = Body("", embed=True),
+                  nome_antigo: str = Body("", embed=True)):
+    _canal(slug)
+    try:
+        return {"ok": True, "nome": meus_prompts.salvar(slug, titulo, texto, nome_antigo)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@api.post("/c/{slug}/prompts-importar")
+async def importar_prompts(slug: str, arquivos: list[UploadFile] = File(...)):
+    _canal(slug)
+    feitos, erros = [], []
+    for up in arquivos:
+        try:
+            feitos.append(meus_prompts.importar(slug, up.filename, await up.read()))
+        except ValueError as e:
+            erros.append(str(e))
+    return {"ok": not erros, "importados": feitos, "erros": erros}
+
+
+@api.post("/c/{slug}/prompts/{nome}/apagar")
+def apagar_prompt(slug: str, nome: str):
+    _canal(slug)
+    try:
+        meus_prompts.apagar(slug, nome)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/prompts-pasta")
+def abrir_pasta_prompts(slug: str):
+    _canal(slug)
+    subprocess.run(["open", str(meus_prompts.pasta(slug))], check=False)
+    return {"ok": True}
+
+
 @api.get("/c/{slug}/calendario")
 def calendario(slug: str, mes: str = ""):
     _canal(slug)
@@ -320,9 +374,11 @@ def calendario(slug: str, mes: str = ""):
 @api.get("/busca")
 def busca():
     """Tudo o que a busca (⌘K) encontra: canais, vídeos e blocos dos canais ativos."""
-    out = {"canais": [], "videos": [], "blocos": []}
+    out = {"canais": [], "videos": [], "blocos": [], "prompts": []}
     for slug, c in canais().items():
         out["canais"].append({"slug": slug, "nome": c["nome"], "tema": c.get("tema", "")})
+        out["prompts"] += [{"canal": slug, "canal_nome": c["nome"], "nome": p["nome"], "titulo": p["titulo"]}
+                           for p in meus_prompts.listar(slug)]
         if not c.get("ativo"):
             continue
         for v in estado.videos(slug):
@@ -772,6 +828,7 @@ def assinatura():
     marcar(DADOS / "space_machine.sqlite")
     for c in canais().values():
         marcar(Path(c["raiz"]) / "canal.json")
+        marcar(Path(c["raiz"]) / "prompts")
         prod = Path(c["producoes"])
         if not prod.is_dir():
             continue
