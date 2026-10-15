@@ -5,9 +5,10 @@ import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-r
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  CalendarDays, ChevronsUpDown, Clapperboard, Hand, KeyRound, LayoutDashboard, Lightbulb, Palette, Plus, Settings,
+  CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, Palette, Plus, Settings,
 } from "lucide-react";
-import { antiga, PainelCanal, pegar } from "../api";
+import { Link } from "react-router-dom";
+import { antiga, PainelCanal, pegar, rota } from "../api";
 import { LogoCanal } from "../componentes/Imagens";
 import { useT } from "../textos";
 
@@ -40,9 +41,10 @@ export function CascaCanal() {
   const itens: (Item | string)[] = [
     { rot: "app.nav.producao", icone: LayoutDashboard, para: `/c/${canal}`, fim: true },
     { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos` },
+    { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
     { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
-    { rot: "app.nav.ideias", icone: Lightbulb, antiga: antiga.ideias(canal) },
-    { rot: "app.nav.calendario", icone: CalendarDays, antiga: antiga.calendario(canal) },
+    { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal), contador: undefined },
+    { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
     "app.nav.secao_canal",
     { rot: "app.nav.identidade", icone: Palette, antiga: antiga.identidade(canal) },
     { rot: "app.nav.chaves", icone: KeyRound, antiga: antiga.chaves(canal) },
@@ -78,7 +80,7 @@ export function CascaCanal() {
           )}
         </nav>
         <div className="pe">
-          <a className="bt escuro" href={antiga.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</a>
+          <Link className="bt escuro" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
           <a className="conta" href={antiga.modelos}>
             <span className="av"><Settings size={16} /></span>
             {t("app.nav.space_machine")}

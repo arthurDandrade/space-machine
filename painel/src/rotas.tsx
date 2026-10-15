@@ -5,6 +5,7 @@ import { CascaCanal } from "./casca/CascaCanal";
 import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
+import { CalendarioTela, IdeiasTela, NovoVideoTela, QuadroTela } from "./telas/Planejamento";
 import { ProducaoCanal } from "./telas/ProducaoCanal";
 import { VideoTela } from "./telas/Video";
 import { useSistema, useT } from "./textos";
@@ -44,6 +45,10 @@ export const rotas = createBrowserRouter(
             { index: true, element: <ProducaoCanal /> },
             { path: "videos", element: <VideosCanal /> },
             { path: "esperando", element: <EsperandoCanal /> },
+            { path: "quadro", element: <QuadroTela /> },
+            { path: "ideias", element: <IdeiasTela /> },
+            { path: "calendario", element: <CalendarioTela /> },
+            { path: "novo", element: <NovoVideoTela /> },
             { path: "v/:video", element: <VideoTela /> },
             { path: "v/:video/b/:nn", element: <BlocoTela /> },
           ],

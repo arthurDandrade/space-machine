@@ -6,9 +6,13 @@ Studio e marca aqui.
 """
 import calendar
 import datetime as dt
+import re
+import unicodedata
+from pathlib import Path
 
 from . import estado
 from .motor_claude import _banco
+from .sistema import gravar_json
 
 COLUNAS = [
     ("ideia", "Ideias"),
@@ -113,3 +117,56 @@ def calendario(canal, ano, mes):
                          "videos": por_dia.get(d.isoformat(), [])} for d in semana])
     sem_data = [v for v in estado.videos(canal) if not dados_video(canal, v["slug"]).get("data_pub")]
     return semanas, sem_data
+
+
+# ---------------- novo vídeo ----------------
+MARCA_COLD_OPEN = "#! cold open: bloco sem card de título"
+
+
+def dividir_roteiro(roteiro):
+    """Divide o roteiro em (cold_open, [(nome, texto)]). Tópico = linha que começa com "#" ("# Nome", "#Nome" ou
+    "#Nome." — o ponto final é tirado do nome). Texto antes do 1º tópico = cold open (vira o bloco 00)."""
+    cold, partes, atual = [], [], None
+    for linha in roteiro.strip().splitlines():
+        m = re.match(r"^\s*#+\s*(.+?)\s*$", linha)
+        if m and not linha.lstrip().startswith("#!"):
+            atual = [m.group(1).rstrip(".:").strip(), []]
+            partes.append(atual)
+        elif atual is None:
+            cold.append(linha)
+        else:
+            atual[1].append(linha)
+    return "\n".join(cold).strip(), [(n, "\n".join(t).strip()) for n, t in partes if n]
+
+
+def slug_video(t):
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:60]
+
+
+def criar_video(c, titulo, roteiro):
+    """Cria a pasta do vídeo e um bloco por tópico (00 = cold open). Devolve o slug; ValueError com o motivo
+    (para mostrar a quem produz) se não der."""
+    cold_open, partes = dividir_roteiro(roteiro)
+    if not titulo.strip():
+        raise ValueError("Dê um título ao vídeo.")
+    if not partes:
+        raise ValueError("O roteiro precisa ter cada tópico começando com uma linha \"# Nome do tópico\".")
+    vd = Path(c["producoes"]) / slug_video(titulo)
+    if not slug_video(titulo):
+        raise ValueError("O título precisa ter letras ou números.")
+    if vd.exists():
+        raise ValueError(f"Já existe um vídeo com essa pasta ({vd.name}).")
+    (vd / "edicao").mkdir(parents=True)
+    (vd / "roteiro_completo.txt").write_text(roteiro.strip() + "\n")
+    if cold_open:
+        bd = vd / "blocos" / "00"
+        bd.mkdir(parents=True)
+        (bd / "roteiro.txt").write_text(f"# Cold open\n{MARCA_COLD_OPEN}\n{cold_open}\n")
+    for i, (nome, texto) in enumerate(partes, 1):
+        bd = vd / "blocos" / f"{i:02d}"
+        bd.mkdir(parents=True)
+        # a linha "# Nome" não é narrada (gerar_narracao.py ignora #); a linha "Nome." logo abaixo é
+        (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
+    gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
+    return vd.name

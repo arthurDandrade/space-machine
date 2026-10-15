@@ -303,3 +303,75 @@
   .trilha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .blocos-grade { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }
+
+/* ---------------- planejamento: ideias, quadro, calendário, novo vídeo ---------------- */
+.ideias-grade { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.form-ideia { display: flex; flex-direction: column; gap: 10px; }
+.form-ideia input, .form-ideia textarea { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--raised); font-size: 14px; resize: vertical; }
+.form-ideia input:focus, .form-ideia textarea:focus { outline: 2px solid color-mix(in oklab, var(--accent) 45%, transparent); border-color: var(--accent); background: var(--card); }
+.form-ideia .bt { align-self: flex-start; }
+.form-ideia.compacto { padding: 10px; border-radius: 16px; gap: 8px; box-shadow: none; border: 1.5px dashed var(--line); background: transparent; }
+.form-ideia.compacto input { padding: 8px 10px; font-size: 13px; }
+.lista-ideias { display: flex; flex-direction: column; gap: 10px; }
+.ideia { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow); animation: sobe 0.35s var(--ease) both; }
+.ideia .ic { width: 34px; height: 34px; border-radius: 11px; background: var(--wait-bg); color: var(--wait); display: grid; place-items: center; flex: none; }
+.ideia .t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ideia .t span { font-size: 13px; color: var(--ink2); }
+.acoes-ideia { display: flex; gap: 6px; align-items: center; }
+
+.quadro { display: grid; grid-template-columns: repeat(6, minmax(172px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 12px; align-items: start; }
+.coluna-quadro { background: color-mix(in oklab, var(--raised) 70%, transparent); border-radius: 20px; padding: 10px; min-height: 240px; transition: background 0.2s, box-shadow 0.2s; }
+.coluna-quadro.aceita { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 25%, transparent); }
+.coluna-quadro.sobre { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+.coluna-quadro h3 { display: flex; justify-content: space-between; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink2); padding: 4px 6px 10px; }
+.coluna-quadro h3 .n { color: var(--ink3); }
+.coluna-quadro .cards { display: flex; flex-direction: column; gap: 10px; }
+.card-quadro { position: relative; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; cursor: grab; touch-action: none; }
+.card-quadro.arrastando { cursor: grabbing; box-shadow: var(--shadow-hi); opacity: 0.92; }
+.card-quadro a { display: flex; flex-direction: column; gap: 3px; padding-bottom: 10px; }
+.card-quadro .cv { aspect-ratio: 16 / 9; margin-bottom: 6px; }
+.card-quadro .sem-capa { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink3); }
+.card-quadro b { font-size: 13px; line-height: 1.3; padding: 0 10px; }
+.card-quadro .sub { font-size: 12px; padding: 0 10px; }
+.card-quadro .progresso { margin: 6px 10px 0; }
+.card-quadro .pega { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 8px; background: rgba(255, 255, 255, 0.9); color: #14151a; display: grid; place-items: center; opacity: 0; transition: opacity 0.2s; }
+.card-quadro:hover .pega { opacity: 1; }
+.ideia-mini { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--card); box-shadow: var(--shadow); font-size: 13px; font-weight: 600; color: var(--ink); }
+.ideia-mini span { flex: 1; min-width: 0; }
+.ideia-mini svg:first-child { color: var(--wait); }
+.ideia-mini svg:last-child { color: var(--ink3); }
+
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.cal .cab { text-align: center; font-size: 12px; font-weight: 700; color: var(--ink3); text-transform: uppercase; letter-spacing: 0.05em; padding-bottom: 2px; }
+.dia-cal { min-height: 112px; background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dia-cal.fora { opacity: 0.45; box-shadow: none; background: var(--raised); }
+.dia-cal.hoje { box-shadow: inset 0 0 0 2px var(--accent), var(--shadow); }
+.dia-cal .num { font-weight: 800; font-size: 13px; color: var(--ink2); }
+.dia-cal.hoje .num { color: var(--accent-text); }
+.pub-cal { display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: 10px; background: var(--raised); font-size: 11.5px; font-weight: 600; min-width: 0; }
+.pub-cal span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pub-cal .mini { width: 34px; height: 22px; border-radius: 6px; flex: none; }
+.pub-cal.publicado { background: var(--ok-bg); color: var(--ok); }
+.pub-cal.agendado { background: var(--run-bg); color: var(--run); }
+.sem-data { margin-top: 26px; }
+.pilula-link { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); font-size: 13px; font-weight: 600; }
+.pilula-link span { color: var(--ink3); font-weight: 500; }
+
+.novo-grade { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 20px; align-items: start; }
+textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px !important; line-height: 1.6; min-height: 420px; }
+.divisao { position: sticky; top: 22px; max-height: calc(100vh - 44px); overflow: auto; }
+.divisao ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.divisao li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: var(--raised); animation: sobe 0.25s var(--ease) both; }
+.divisao li.cold { background: var(--accent-soft); }
+.divisao .nn { font-weight: 800; font-size: 12px; color: var(--ink3); min-width: 22px; padding-top: 2px; }
+.divisao li div { display: flex; flex-direction: column; min-width: 0; }
+.divisao li b { font-size: 13.5px; }
+.divisao li span { font-size: 12px; color: var(--ink2); }
+
+@media (max-width: 1000px) {
+  .ideias-grade, .novo-grade { grid-template-columns: minmax(0, 1fr); }
+  .divisao { position: static; max-height: none; }
+  .cal { gap: 4px; }
+  .dia-cal { min-height: 70px; padding: 5px; border-radius: 10px; }
+  .pub-cal span { display: none; }
+}

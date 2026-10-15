@@ -209,13 +209,14 @@ export const rota = {
   canal: (c: string) => `/c/${c}`,
   video: (c: string, v: string) => `/c/${c}/v/${v}`,
   bloco: (c: string, v: string, nn: string) => `/c/${c}/v/${v}/b/${nn}`,
+  novoVideo: (c: string) => `/c/${c}/novo`,
+  quadro: (c: string) => `/c/${c}/quadro`,
+  ideias: (c: string) => `/c/${c}/ideias`,
+  calendario: (c: string) => `/c/${c}/calendario`,
 };
 
 // páginas do painel antigo que ainda não passaram para o React
 export const antiga = {
-  novoVideo: (c: string) => `/novo/${c}`,
-  ideias: (c: string) => `/canal/${c}/producao`,
-  calendario: (c: string) => `/canal/${c}/calendario`,
   identidade: (c: string) => `/config/canais#regras-${c}`,
   chaves: (c: string) => `/config/apis?canal=${c}`,
   novoCanal: "/config/canais#novo",

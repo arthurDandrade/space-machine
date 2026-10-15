@@ -5,6 +5,7 @@ As ações chamam as mesmas funções das rotas antigas (fila.lancar_rodada, fil
 /api/eventos avisa o navegador quando alguma pasta de produção muda, para a tela se atualizar sozinha.
 """
 import asyncio
+import datetime as dt
 import hashlib
 import re
 import subprocess
@@ -260,6 +261,36 @@ def detalhe_bloco(slug: str, video: str, nn: str):
     }
 
 
+@api.get("/c/{slug}/ideias")
+def lista_ideias(slug: str):
+    _canal(slug)
+    return {"ideias": gestao.ideias(slug)}
+
+
+@api.get("/c/{slug}/calendario")
+def calendario(slug: str, mes: str = ""):
+    _canal(slug)
+    hoje = dt.date.today()
+    try:
+        ano, m = (int(x) for x in mes.split("-")) if mes else (hoje.year, hoje.month)
+        dt.date(ano, m, 1)
+    except ValueError:
+        ano, m = hoje.year, hoje.month
+    semanas, sem_data = gestao.calendario(slug, ano, m)
+    card = lambda v, g, col: {"slug": v["slug"], "titulo": g.get("titulo_pub") or v["titulo"], "coluna": col,
+                              "tem_capa": bool(capas.fontes(v["pasta"]))}
+    return {
+        "mes": f"{ano}-{m:02d}", "ano": ano, "mes_n": m,
+        "ant": (dt.date(ano, m, 1) - dt.timedelta(days=1)).strftime("%Y-%m"),
+        "prox": (dt.date(ano, m, 28) + dt.timedelta(days=4)).strftime("%Y-%m"),
+        "semanas": [[{"data": d["data"].isoformat(), "dia": d["data"].day, "no_mes": d["no_mes"], "hoje": d["hoje"],
+                      "videos": [card(x["v"], x["g"], x["coluna"]) for x in d["videos"]]} for d in semana]
+                    for semana in semanas],
+        "sem_data": [card(v, gestao.dados_video(slug, v["slug"]),
+                          gestao.coluna_do_video(v, gestao.dados_video(slug, v["slug"]))) for v in sem_data],
+    }
+
+
 # ---------------- imagens ----------------
 @api.get("/c/{slug}/marca/{qual}")
 def imagem_marca(slug: str, qual: str):
@@ -333,6 +364,41 @@ def salvar_publicacao(slug: str, video: str, dados: dict = Body(...)):
         raise HTTPException(400, "status inválido")
     gestao.salvar_video(slug, video, **campos)
     return {"ok": True, "publicacao": gestao.dados_video(slug, video)}
+
+
+@api.post("/c/{slug}/ideias")
+def nova_ideia(slug: str, titulo: str = Body(..., embed=True), notas: str = Body("", embed=True)):
+    _canal(slug)
+    if not titulo.strip():
+        raise HTTPException(400, "Dê um título à ideia.")
+    gestao.nova_ideia(slug, titulo, notas)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/ideias/{ideia_id}/apagar")
+def apagar_ideia(slug: str, ideia_id: int):
+    _canal(slug)
+    gestao.apagar_ideia(slug, ideia_id)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/coluna")
+def mover_video(slug: str, video: str, coluna: str = Body(..., embed=True)):
+    """Quadro: soltar o vídeo em Edição final / Agendado / Publicado marca o status; em Roteiro ou Em produção,
+    volta ao automático (pelos blocos)."""
+    _video_dir(slug, video)
+    if coluna not in ("roteiro", "producao", *gestao.MANUAIS):
+        raise HTTPException(400, "coluna inválida")
+    gestao.salvar_video(slug, video, status=coluna if coluna in gestao.MANUAIS else "")
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/novo")
+def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body(..., embed=True)):
+    try:
+        return {"ok": True, "video": gestao.criar_video(_canal(slug), titulo, roteiro)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 @api.post("/c/{slug}/v/{video}/abrir")

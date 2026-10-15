@@ -1,8 +1,8 @@
 // Telas de lista do canal: todos os vídeos (com busca por título) e tudo o que espera você.
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { CircleCheck, Plus, Search } from "lucide-react";
-import { antiga, Coluna } from "../api";
+import { Coluna, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { CartaoVideo, ItemEsperando } from "../componentes/Pecas";
@@ -22,7 +22,7 @@ export function VideosCanal() {
   return (
     <>
       <Cabecalho onde={<>{data.canal.nome} › <b>{t("app.nav.videos")}</b></>} titulo={t("app.videos.titulo", { n: data.videos.length })}>
-        <a className="bt primario" href={antiga.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</a>
+        <Link className="bt primario" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
       </Cabecalho>
       <div className="barra-filtros">
         <label className="campo-busca"><Search size={16} />

@@ -31,7 +31,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
           <span className="tag"><Clapperboard size={14} />{t("app.producao.nada_em_producao")}</span>
           <h2>{t("app.producao.comece")}</h2>
           <p>{t("app.producao.comece_sub")}</p>
-          <div className="acoes"><a className="bt branco" href={antiga.novoVideo(canal)}>{t("app.novo_video")}</a></div>
+          <div className="acoes"><Link className="bt branco" to={rota.novoVideo(canal)}>{t("app.novo_video")}</Link></div>
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
   const lista = filtro ? dados.videos.filter((v) => v.coluna === filtro) : dados.videos;
   return (
     <section className="processo">
-      <div className="titulo-secao"><h3>{t("app.producao.processo")}</h3><a href={antiga.ideias(canal)}>{t("app.producao.abrir_quadro")}</a></div>
+      <div className="titulo-secao"><h3>{t("app.producao.processo")}</h3><Link to={rota.quadro(canal)}>{t("app.producao.abrir_quadro")}</Link></div>
       <div className="etapas">
         {dados.colunas.map((c) => {
           const Icone = ICONES[c.id];
@@ -103,7 +103,7 @@ function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
         {filtro && <button className="bt pequeno" onClick={() => setFiltro(null)}>{t("app.producao.ver_todos")}</button>}
       </div>
       {filtro === "ideia" ? (
-        <div className="vazio"><Lightbulb size={18} />{t("app.producao.ideias_no_quadro")}<a className="bt pequeno" href={antiga.ideias(canal)}>{t("app.producao.abrir_quadro")}</a></div>
+        <div className="vazio"><Lightbulb size={18} />{t("app.producao.ideias_no_quadro")}<Link className="bt pequeno" to={rota.ideias(canal)}>{t("app.nav.ideias")}</Link></div>
       ) : lista.length ? (
         <div className="videos">{lista.map((v, i) => <CartaoVideo key={v.slug} canal={canal} v={v} atraso={i * 40} />)}</div>
       ) : (
@@ -214,7 +214,7 @@ export function ProducaoCanal() {
           ))}
         </div>
         <div className="cartao">
-          <div className="titulo-secao"><h3>{t("app.producao.publicacoes")}</h3><a href={antiga.calendario(canal)}>{t("app.nav.calendario")}</a></div>
+          <div className="titulo-secao"><h3>{t("app.producao.publicacoes")}</h3><Link to={rota.calendario(canal)}>{t("app.nav.calendario")}</Link></div>
           <Semana dados={data} />
         </div>
         <div className="cartao">

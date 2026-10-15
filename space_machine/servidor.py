@@ -10,7 +10,6 @@ import json
 import re
 import subprocess
 import sys
-import unicodedata
 from pathlib import Path
 
 import datetime as dt
@@ -218,30 +217,6 @@ def pagina_consumo(request: Request):
 
 
 # ---------------- novo vídeo ----------------
-MARCA_COLD_OPEN = "#! cold open: bloco sem card de título"
-
-
-def dividir_roteiro(roteiro):
-    """Divide o roteiro em (cold_open, [(nome, texto)]). Tópico = linha que começa com "#" ("# Nome", "#Nome" ou
-    "#Nome." — o ponto final é tirado do nome). Texto antes do 1º tópico = cold open (vira o bloco 00)."""
-    cold, partes, atual = [], [], None
-    for linha in roteiro.strip().splitlines():
-        m = re.match(r"^\s*#+\s*(.+?)\s*$", linha)
-        if m and not linha.lstrip().startswith("#!"):
-            atual = [m.group(1).rstrip(".:").strip(), []]
-            partes.append(atual)
-        elif atual is None:
-            cold.append(linha)
-        else:
-            atual[1].append(linha)
-    return "\n".join(cold).strip(), [(n, "\n".join(t).strip()) for n, t in partes if n]
-
-
-def _slug(t):
-    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
-    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:60]
-
-
 @app.get("/novo/{canal}", response_class=HTMLResponse)
 def novo_form(request: Request, canal: str, titulo: str = ""):
     if canal not in canais():
@@ -255,31 +230,12 @@ def novo(request: Request, canal: str, titulo: str = Form(...), roteiro: str = F
     c = canais().get(canal)
     if not c:
         raise HTTPException(404)
-    cold_open, partes = dividir_roteiro(roteiro)
-    erro = ""
-    if not titulo.strip():
-        erro = "Dê um título ao vídeo."
-    elif not partes:
-        erro = "O roteiro precisa ter cada tópico começando com uma linha \"# Nome do tópico\"."
-    vd = Path(c["producoes"]) / _slug(titulo)
-    if not erro and vd.exists():
-        erro = f"Já existe um vídeo com essa pasta ({vd.name})."
-    if erro:
-        return tpl.TemplateResponse(request, "novo.html", {"canal": canal, "nome": c["nome"], "erro": erro,
+    try:
+        slug = gestao.criar_video(c, titulo, roteiro)
+    except ValueError as e:
+        return tpl.TemplateResponse(request, "novo.html", {"canal": canal, "nome": c["nome"], "erro": str(e),
                                                            "titulo": titulo, "roteiro": roteiro}, status_code=400)
-    (vd / "edicao").mkdir(parents=True)
-    (vd / "roteiro_completo.txt").write_text(roteiro.strip() + "\n")
-    if cold_open:
-        bd = vd / "blocos" / "00"
-        bd.mkdir(parents=True)
-        (bd / "roteiro.txt").write_text(f"# Cold open\n{MARCA_COLD_OPEN}\n{cold_open}\n")
-    for i, (nome, texto) in enumerate(partes, 1):
-        bd = vd / "blocos" / f"{i:02d}"
-        bd.mkdir(parents=True)
-        # a linha "# Nome" não é narrada (gerar_narracao.py ignora #); a linha "Nome." logo abaixo é
-        (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
-    gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
-    return RedirectResponse(f"/v/{canal}/{vd.name}", status_code=303)
+    return RedirectResponse(f"/v/{canal}/{slug}", status_code=303)
 
 
 # ---------------- gestão (Fase 4) ----------------
