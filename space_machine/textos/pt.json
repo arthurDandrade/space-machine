@@ -433,5 +433,8 @@
  "app.limpeza.confirmar_explica": "Tudo vai para uma pasta “Space Machine limpeza” no Lixo do Mac. O espaço só volta quando você esvaziar o Lixo; até lá, dá para pôr de volta.",
  "app.limpeza.feito": "{gb} ({n} itens) foram para “{pasta}” no Lixo. O espaço volta quando você esvaziar o Lixo.",
  "app.limpeza.feito_pasta": "{gb} ({n} itens) foram para {caminho} (o Lixo do Mac não aceitou). Apague essa pasta para liberar o espaço.",
- "app.limpeza.abrir_lixo": "Abrir o Lixo"
+ "app.limpeza.abrir_lixo": "Abrir o Lixo",
+ "app.bloco.produzir": "Produzir",
+ "app.bloco.continuar": "Continuar",
+ "app.bloco.comecando": "Começando…"
 }

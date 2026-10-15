@@ -21,6 +21,14 @@ type Filtro = "todos" | "run" | "fila" | "wait" | "ok" | "afazer";
 
 function CartaoBloco({ canal, video, b, rotulos, atraso }: { canal: string; video: string; b: BlocoDoVideo; rotulos: Record<string, string>; atraso: number }) {
   const t = useT();
+  const qc = useQueryClient();
+  // produzir sem entrar no bloco: o mesmo "Rodar" da página do bloco (cada etapa pula o que já está feito)
+  const produzir = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${video}/b/${b.nn}/rodar`, {}),
+    onSettled: () => qc.invalidateQueries(),
+  });
+  const podeProduzir = b.estado === "todo" || b.estado === "meio";
+  const comecando = produzir.isPending || produzir.isSuccess;
   const selo =
     b.estado === "run" ? <span className="selo run"><span className="pulso" />{t("app.estado.run")}</span>
     : b.estado === "fila" ? <span className="selo neutro">{t("app.bloco.na_fila")}</span>
@@ -32,6 +40,14 @@ function CartaoBloco({ canal, video, b, rotulos, atraso }: { canal: string; vide
       <div className="cv">
         <Capa src={urlCapa(canal, video, b.nn)} existe={b.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={26} /></span>} />
         <span className="nn">{b.nn}</span>
+        {podeProduzir && (
+          <button className="produzir-bloco" disabled={comecando}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); produzir.mutate(); }}>
+            {comecando ? <Loader size={14} className="gira" /> : <Play size={14} />}
+            {t(comecando ? "app.bloco.comecando" : b.estado === "meio" ? "app.bloco.continuar" : "app.bloco.produzir")}
+          </button>
+        )}
+        {produzir.isError && <span className="erro-barra" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>{produzir.error.message}</span>}
       </div>
       <div className="info">
         <b>{b.topico}</b>

@@ -67,7 +67,7 @@ export function Ampliar({ src, fechar }: { src: string; fechar: () => void }) {
   );
 }
 
-// os 4 botões sobre a capa. Num card que é um link, nenhum clique aqui navega.
+// os 4 botões sobre a capa. Num card que é um link, clicar num botão não navega; no resto da capa, navega.
 export function BarraThumb({ canal, video, thumb, capa }: { canal: string; video: string; thumb: { url: string; nome: string } | null; capa: string }) {
   const t = useT();
   const { enviar: mandar, remover, enviando, erro } = useThumbnail(canal, video);
@@ -77,7 +77,7 @@ export function BarraThumb({ canal, video, thumb, capa }: { canal: string; video
   const parar = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); };
   return (
     <>
-      <div className="barra-thumb" onClick={parar} onMouseLeave={() => setConfirmar(false)}>
+      <div className="barra-thumb" onMouseLeave={() => setConfirmar(false)}>
         <button title={t("app.thumb.ampliar")} onClick={(e) => { parar(e); setAmpliar(true); }}><ZoomIn size={17} /></button>
         <button title={t(thumb ? "app.thumb.trocar" : "app.thumb.enviar")} disabled={enviando} onClick={(e) => { parar(e); campo.current?.click(); }}>
           {enviando ? <Loader size={17} className="gira" /> : <Upload size={17} />}
