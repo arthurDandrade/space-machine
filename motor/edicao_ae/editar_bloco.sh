@@ -35,4 +35,4 @@ for i in {1..1200}; do [ -f $E/log_render_${N}.txt ] && break; sleep 3; done
 [ -f $E/log_render_${N}.txt ] || { echo "RENDER SEM RESPOSTA em 1 h (After travado num diálogo?)"; exit 1; }
 cat $E/log_render_${N}.txt; echo
 [[ -n $SEM_QA ]] && { echo "QA pulado (SEM_QA=1)"; exit 0; }
-$PY qa/qa_bloco.py $P --item $N --video $E/previa_bloco_${N}_v$V.mp4 2>&1 | grep -E "Prévia|FALHA|ATENÇÃO|↳"
+$PY qa/qa_bloco.py $P --item $N --video $E/previa_bloco_${N}_v$V.mp4 2>&1 | grep -E "Prévia|FALHA|↳"
