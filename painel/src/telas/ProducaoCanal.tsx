@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarClock, CalendarPlus, CircleCheck, Clapperboard, Cog, FileText, Lightbulb, ListOrdered, Play, Scissors, Sparkles,
 } from "lucide-react";
-import { antiga, Coluna, enviar, PainelCanal, urlCapa, Video } from "../api";
+import { antiga, Coluna, enviar, PainelCanal, rota, urlCapa, Video } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { Capa } from "../componentes/Imagens";
@@ -47,7 +47,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
   const base = `/api/c/${canal}/v/${v.slug}/fila`;
   return (
     <div className="heroi">
-      <div className="arte"><Capa src={urlCapa(canal, v.slug)} icone={false} /></div>
+      <div className="arte"><Capa src={urlCapa(canal, v.slug)} icone={false} existe={v.tem_capa} /></div>
       {ultimoEntregue && <div className="arte b"><Capa src={urlCapa(canal, v.slug, ultimoEntregue.nn)} icone={false} /></div>}
       <div className="txt">
         <span className="tag">{v.rodando > 0 && <span className="pulso branco" />}{t("app.coluna.producao")}</span>
@@ -69,7 +69,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
               <Play size={16} />{acao.isPending ? t("app.fila.iniciando") : t("app.fila.produzir_n", { n: faltam })}
             </button>
           ) : null}
-          <a className="bt vidro" href={antiga.video(canal, v.slug)}>{t("app.video.abrir")}</a>
+          <Link className="bt vidro" to={rota.video(canal, v.slug)}>{t("app.video.abrir")}</Link>
         </div>
         {acao.isError && <p className="erro-acao">{String(acao.error.message)}</p>}
       </div>
@@ -134,11 +134,11 @@ function Semana({ dados }: { dados: PainelCanal }) {
       {dados.publicacoes.length ? (
         <div className="pubs">
           {dados.publicacoes.slice(0, 4).map((p) => (
-            <a key={p.video} className="pub" href={antiga.video(dados.canal.slug, p.video)}>
+            <Link key={p.video} className="pub" to={rota.video(dados.canal.slug, p.video)}>
               <span className="data">{p.data.slice(8, 10)}/{p.data.slice(5, 7)}</span>
               <span className="tit">{p.titulo}</span>
               <span className={`selo ${p.coluna === "publicado" ? "ok" : p.coluna === "agendado" ? "run" : "neutro"}`}>{t(`app.coluna.${p.coluna}`)}</span>
-            </a>
+            </Link>
           ))}
         </div>
       ) : (

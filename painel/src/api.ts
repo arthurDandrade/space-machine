@@ -24,7 +24,7 @@ export interface ResumoCanal {
   n_videos: number;
   rodando: number;
   esperando: number;
-  atual: { slug: string; titulo: string; n_blocos: number; entregues: number; rodando: number } | null;
+  atual: { slug: string; titulo: string; n_blocos: number; entregues: number; rodando: number; tem_capa: boolean } | null;
   rodando_agora: string[];
 }
 
@@ -62,9 +62,11 @@ export interface Video {
   link: string;
   fila: Fila | null;
   consumo: number;
+  tem_capa: boolean;
 }
 
 export interface Esperando {
+  tem_capa: boolean;
   video: string;
   video_titulo: string;
   nn: string;
@@ -74,6 +76,7 @@ export interface Esperando {
 }
 
 export interface Rodando {
+  tem_capa: boolean;
   video: string;
   video_titulo: string;
   nn: string;
@@ -95,6 +98,71 @@ export interface PainelCanal {
   filas: (Fila & { video: string; video_titulo: string })[];
   publicacoes: { video: string; titulo: string; data: string; coluna: Coluna }[];
   consumo_7d: { total: number; etapas: { etapa: string; tokens: number }[] };
+}
+
+export interface BlocoDoVideo {
+  nn: string;
+  topico: string;
+  estado: EstadoBloco;
+  atual: string;
+  feito: Record<string, boolean>;
+  assets_total: number;
+  assets_prontos: number;
+  conferir: number;
+  parado: { etapa?: string; motivo?: string } | null;
+  aprovado: boolean;
+  previas: number;
+  mudou: number;
+  tem_capa: boolean;
+}
+
+export interface Publicacao {
+  status: string;
+  titulo_pub: string;
+  descricao: string;
+  tags: string;
+  data_pub: string;
+  notas: string;
+  link: string;
+  atualizado: string;
+}
+
+export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
+  blocos: BlocoDoVideo[];
+  fila: (Fila & { inicio?: string; fim?: string; lancados?: string[] }) | null;
+  publicacao: Publicacao;
+  consumo_detalhe: { chamadas?: number; equivalente?: number };
+  etapas: { id: string; rotulo: string }[];
+}
+
+export interface DetalheBloco {
+  nn: string;
+  topico: string;
+  video: string;
+  video_titulo: string;
+  feito: Record<string, boolean>;
+  atual: string;
+  rodando: boolean;
+  parado: { etapa?: string; motivo?: string } | null;
+  aprovado: boolean;
+  travar_conferir: boolean;
+  etapa_atual: string;
+  etapas: { id: string; status: string; detalhe: string; quando: string }[];
+  previas: { v: number; url: string }[];
+  entregue: string | null;
+  qa: string;
+  qa_folha: string | null;
+  storyboard: string;
+  roteiro: string;
+  conferir: { id: string; texto: string; tipo: string; descricao: string; arquivo: string | null }[];
+  conferidos: number;
+  revisao: string | null;
+  assets_total: number;
+  assets_prontos: number;
+  log_rodar: string;
+  log_etapa: { nome: string; texto: string } | null;
+  anterior: string | null;
+  proximo: string | null;
 }
 
 export interface Sistema {
@@ -136,10 +204,15 @@ export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${ca
 export const urlCapa = (canal: string, video: string, nn?: string) =>
   `/api/c/${canal}/v/${video}/capa${nn ? `?nn=${nn}` : ""}`;
 
+// rotas do painel novo
+export const rota = {
+  canal: (c: string) => `/c/${c}`,
+  video: (c: string, v: string) => `/c/${c}/v/${v}`,
+  bloco: (c: string, v: string, nn: string) => `/c/${c}/v/${v}/b/${nn}`,
+};
+
 // páginas do painel antigo que ainda não passaram para o React
 export const antiga = {
-  video: (c: string, v: string) => `/v/${c}/${v}`,
-  bloco: (c: string, v: string, nn: string) => `/b/${c}/${v}/${nn}`,
   novoVideo: (c: string) => `/novo/${c}`,
   ideias: (c: string) => `/canal/${c}/producao`,
   calendario: (c: string) => `/canal/${c}/calendario`,

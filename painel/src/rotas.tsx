@@ -2,9 +2,11 @@
 import { createBrowserRouter, Outlet, useRouteError } from "react-router-dom";
 import { useAoVivo } from "./aoVivo";
 import { CascaCanal } from "./casca/CascaCanal";
+import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
 import { ProducaoCanal } from "./telas/ProducaoCanal";
+import { VideoTela } from "./telas/Video";
 import { useSistema, useT } from "./textos";
 
 function Raiz() {
@@ -42,6 +44,8 @@ export const rotas = createBrowserRouter(
             { index: true, element: <ProducaoCanal /> },
             { path: "videos", element: <VideosCanal /> },
             { path: "esperando", element: <EsperandoCanal /> },
+            { path: "v/:video", element: <VideoTela /> },
+            { path: "v/:video/b/:nn", element: <BlocoTela /> },
           ],
         },
         { path: "*", element: <Erro /> },

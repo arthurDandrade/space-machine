@@ -3,15 +3,17 @@ import { useState } from "react";
 import { ImageOff } from "lucide-react";
 import { Cores, urlMarca } from "../api";
 
-export function Capa({ src, className = "", alt = "", icone = true }: { src: string; className?: string; alt?: string; icone?: boolean }) {
-  const [estado, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
+// existe={false}: a API já disse que não há capa; mostra o vazio sem pedir a imagem (sem 404 no console)
+export function Capa({ src, className = "", alt = "", icone = true, vazio, existe = true }: { src: string; className?: string; alt?: string; icone?: boolean; vazio?: React.ReactNode; existe?: boolean }) {
+  const [carregou, setEstado] = useState<"carregando" | "ok" | "erro">("carregando");
+  const estado = existe ? carregou : "erro";
   return (
     <div className={`capa-img ${className}`}>
       {estado !== "erro" && (
         <img src={src} alt={alt} loading="lazy" style={{ opacity: estado === "ok" ? 1 : 0 }}
              onLoad={() => setEstado("ok")} onError={() => setEstado("erro")} />
       )}
-      {estado === "erro" && icone && <span className="sem"><ImageOff size={20} /></span>}
+      {estado === "erro" && (vazio ?? (icone && <span className="sem"><ImageOff size={20} /></span>))}
     </div>
   );
 }

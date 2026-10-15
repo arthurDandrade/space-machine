@@ -1,6 +1,7 @@
 // Peças das telas de canal: cartão de vídeo, item "esperando você", rodada em andamento e anel de consumo.
+import { Link } from "react-router-dom";
 import { ChevronRight, Play, Square } from "lucide-react";
-import { antiga, EstadoBloco, Esperando, Rodando, urlCapa, Video } from "../api";
+import { EstadoBloco, Esperando, Rodando, rota, urlCapa, Video } from "../api";
 import { compacto, haQuanto, useT } from "../textos";
 import { Capa } from "./Imagens";
 
@@ -22,9 +23,9 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
       ? t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })
       : t("app.video.blocos_pronto", { n: v.n_blocos });
   return (
-    <a className="video" href={antiga.video(canal, v.slug)} style={{ animationDelay: `${atraso}ms` }}>
+    <Link className="video" to={rota.video(canal, v.slug)} style={{ animationDelay: `${atraso}ms` }}>
       <div className="cv">
-        <Capa src={urlCapa(canal, v.slug)} />
+        <Capa src={urlCapa(canal, v.slug)} existe={v.tem_capa} />
         <span className={`st ${v.coluna === "producao" ? "p" : ""}`}>{t(`app.coluna.${v.coluna}`)}</span>
         {v.rodando > 0 && <span className="vivo"><span className="pulso" />{v.rodando}</span>}
         <span className="play"><Play size={16} /></span>
@@ -36,22 +37,22 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
           <i style={{ width: `${pct}%`, background: v.coluna === "producao" ? "var(--accent)" : undefined }} />
         </div>
       </div>
-    </a>
+    </Link>
   );
 }
 
 export function ItemEsperando({ canal, e }: { canal: string; e: Esperando }) {
   const t = useT();
   return (
-    <a className="item" href={antiga.bloco(canal, e.video, e.nn)}>
-      <Capa className="th" src={urlCapa(canal, e.video, e.nn)} />
+    <Link className="item" to={rota.bloco(canal, e.video, e.nn)}>
+      <Capa className="th" src={urlCapa(canal, e.video, e.nn)} existe={e.tem_capa} />
       <div className="t">
         <b>{e.nn} · {e.topico}</b>
         <span><em>{t(`app.etapa.${e.etapa}`, undefined, e.etapa)}</em>{e.motivo ? ` · ${e.motivo}` : ""}</span>
         <span className="de">{e.video_titulo}</span>
       </div>
       <span className="vai"><ChevronRight size={18} /></span>
-    </a>
+    </Link>
   );
 }
 
@@ -59,9 +60,9 @@ export function LinhaRodando({ canal, r, parar }: { canal: string; r: Rodando; p
   const t = useT();
   return (
     <div className="rod">
-      <a href={antiga.bloco(canal, r.video, r.nn)}><Capa className="th" src={urlCapa(canal, r.video, r.nn)} /></a>
+      <Link to={rota.bloco(canal, r.video, r.nn)}><Capa className="th" src={urlCapa(canal, r.video, r.nn)} existe={r.tem_capa} /></Link>
       <div className="t">
-        <a href={antiga.bloco(canal, r.video, r.nn)}><b>{r.nn} · {r.topico}</b></a>
+        <Link to={rota.bloco(canal, r.video, r.nn)}><b>{r.nn} · {r.topico}</b></Link>
         <span>{r.etapa ? t(`app.etapa.${r.etapa}`, undefined, r.etapa) : t("app.rodando.comecando")}{r.detalhe ? ` · ${r.detalhe}` : ""}</span>
         <div className="passos">
           {Array.from({ length: r.total }, (_, i) => (

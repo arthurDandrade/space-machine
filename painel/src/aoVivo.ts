@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 export function useAoVivo() {
   const qc = useQueryClient();
   useEffect(() => {
+    // ?sem-ao-vivo: sem a conexão aberta, o Chrome headless consegue esperar a página e tirar o print
+    if (new URLSearchParams(window.location.search).has("sem-ao-vivo")) return;
     let ultima = "";
     const fonte = new EventSource("/api/eventos");
     fonte.onmessage = (e) => {

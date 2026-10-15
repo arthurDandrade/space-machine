@@ -6,8 +6,11 @@ As ações chamam as mesmas funções das rotas antigas (fila.lancar_rodada, fil
 """
 import asyncio
 import hashlib
+import re
+import subprocess
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -86,6 +89,7 @@ def _video(slug, v):
         "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
         "mudou": v["mudou"], "data_pub": (g.get("data_pub") or "")[:10], "link": g.get("link") or "",
         "fila": _resumo_fila(f), "consumo": (v.get("consumo") or {}).get("equivalente") or 0,
+        "tem_capa": bool(capas.fontes(v["pasta"])),
     }
 
 
@@ -109,6 +113,7 @@ def _rodando(slug, v, b):
     except OSError:
         desde = None
     return {"video": v["slug"], "video_titulo": v["titulo"], "nn": b["nn"], "topico": b["topico"], "etapa": atual,
+            "tem_capa": bool(capas.fontes(v["pasta"], b["nn"])),
             "indice": ETAPAS_RODAR.index(atual) + 1 if atual in ETAPAS_RODAR else 0, "total": len(ETAPAS_RODAR),
             "detalhe": (est.get("etapas", {}).get(atual) or {}).get("detalhe", ""), "desde": desde}
 
@@ -140,7 +145,7 @@ def _resumo_canal(slug, c):
         "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
         "colunas": colunas, "n_videos": len(vids),
         "rodando": sum(v["rodando"] for v in vids), "esperando": sum(v["esperando"] for v in vids),
-        "atual": {k: atual[k] for k in ("slug", "titulo", "n_blocos", "entregues", "rodando")} if atual else None,
+        "atual": {k: atual[k] for k in ("slug", "titulo", "n_blocos", "entregues", "rodando", "tem_capa")} if atual else None,
         "rodando_agora": [b["nn"] for b in (atual or {}).get("blocos", []) if b["estado"] == "run"],
     }, vids, brutos
 
@@ -170,6 +175,7 @@ def painel_canal(slug: str):
         for b, info in zip(bruto["blocos"], v["blocos"]):
             if info["estado"] == "wait":
                 esperando.append({"video": v["slug"], "video_titulo": v["titulo"], "nn": b["nn"], "topico": b["topico"],
+                                  "tem_capa": bool(capas.fontes(bruto["pasta"], b["nn"])),
                                   "etapa": (b["parado"] or {}).get("etapa", ""),
                                   "motivo": (b["parado"] or {}).get("motivo", ""), "mudou": b["mudou"]})
             elif info["estado"] == "run":
@@ -184,6 +190,74 @@ def painel_canal(slug: str):
                                          for col, rot in gestao.COLUNAS],
             "videos": vids, "destaque": destaque, "esperando": sorted(esperando, key=lambda e: -e["mudou"]),
             "rodando": rodando, "filas": filas, "publicacoes": publicacoes, "consumo_7d": _consumo_7d(slug)}
+
+
+def _arquivo(p):
+    """Endereço de um arquivo da produção pela rota /arquivo do servidor (só serve de dentro das produções)."""
+    return f"/arquivo?p={quote(str(p))}"
+
+
+def _cauda(arq, linhas):
+    try:
+        return "\n".join(Path(arq).read_text(errors="replace").splitlines()[-linhas:])
+    except OSError:
+        return ""
+
+
+@api.get("/c/{slug}/v/{video}")
+def detalhe_video(slug: str, video: str):
+    vd = _video_dir(slug, video)
+    v = estado.video(slug, video)
+    resumo = _video(slug, v)
+    blocos = [{**info, "atual": b["atual"], "feito": b["feito"], "assets_total": b["assets_total"],
+               "assets_prontos": b["assets_prontos"], "conferir": len(b["conferir_pendentes"]), "parado": b["parado"],
+               "aprovado": b["aprovado"], "previas": len(b["previas"]), "mudou": b["mudou"],
+               "tem_capa": bool(capas.fontes(vd, b["nn"]))}
+              for b, info in zip(v["blocos"], resumo["blocos"])]
+    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "publicacao": gestao.dados_video(slug, video),
+            "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
+            "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
+
+
+@api.get("/c/{slug}/v/{video}/b/{nn}")
+def detalhe_bloco(slug: str, video: str, nn: str):
+    b = _bloco_dir(slug, video, nn)
+    vd = b.parent.parent
+    info = estado.bloco(b, vd)
+    est = ler_json(b / "_estudio" / "estado.json", {}) or {}
+    manifesto = {a["id"]: a for a in (ler_json(b / "manifesto.json", {}) or {}).get("assets", []) if a.get("id")}
+    conferir = []
+    for aid, texto in info["conferir_pendentes"].items():
+        a = manifesto.get(aid, {})
+        conferir.append({"id": aid, "texto": texto, "tipo": a.get("tipo", ""), "descricao": a.get("descricao", ""),
+                         "arquivo": _arquivo(b / a["arquivo"]) if a.get("arquivo") and (b / a["arquivo"]).exists() else None})
+    logs = sorted((b / "_estudio").glob("log_*.txt"), key=lambda f: f.stat().st_mtime, reverse=True)
+    etapa_log = next((f for f in logs if f.name != "log_rodar.txt"), None)
+    irmaos = sorted(p.name for p in (vd / "blocos").iterdir() if p.is_dir() and p.name.isdigit())
+    i = irmaos.index(nn)
+    entregue = vd / "edicao" / f"bloco {int(nn)}.mp4"
+    qa_img = b / "edicao" / f"qa_{nn}.jpg"
+    sb = b / f"storyboard_{nn}.md"
+    return {
+        "nn": nn, "topico": info["topico"], "video": video, "video_titulo": estado.titulo_video(vd),
+        "feito": info["feito"], "atual": info["atual"], "rodando": info["rodando"], "parado": info["parado"],
+        "aprovado": info["aprovado"], "travar_conferir": info["travar_conferir"],
+        "etapa_atual": est.get("atual") or "",
+        "etapas": [{"id": e, **{k: (est.get("etapas", {}).get(e) or {}).get(k, "") for k in ("status", "detalhe", "quando")}}
+                   for e in ETAPAS_RODAR],
+        "previas": [{"v": int(re.search(r"_v(\d+)\.mp4$", p).group(1)), "url": _arquivo(p)} for p in info["previas"]],
+        "entregue": _arquivo(entregue) if entregue.exists() else None,
+        "qa": info["qa"], "qa_folha": _arquivo(qa_img) if qa_img.exists() else None,
+        "storyboard": sb.read_text() if sb.exists() else "",
+        # roteiro do bloco sem as linhas "#" (o "# Nome" e a marca de cold open não são narrados)
+        "roteiro": "\n".join(l for l in _cauda(b / "roteiro.txt", 400).splitlines() if not l.startswith("#")).strip(),
+        "conferir": conferir, "conferidos": len(info["conferir"]) + len(info["pulados"]) - len(conferir),
+        "revisao": _arquivo(info["revisao"]) if info["revisao"] else None,
+        "assets_total": info["assets_total"], "assets_prontos": info["assets_prontos"],
+        "log_rodar": _cauda(b / "_estudio" / "log_rodar.txt", 60),
+        "log_etapa": {"nome": etapa_log.name, "texto": _cauda(etapa_log, 40)} if etapa_log else None,
+        "anterior": irmaos[i - 1] if i > 0 else None, "proximo": irmaos[i + 1] if i + 1 < len(irmaos) else None,
+    }
 
 
 # ---------------- imagens ----------------
@@ -227,6 +301,45 @@ def parar_fila(slug: str, video: str):
 @api.post("/c/{slug}/v/{video}/b/{nn}/parar")
 def parar_bloco(slug: str, video: str, nn: str):
     fila.parar_rodada(_bloco_dir(slug, video, nn))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/b/{nn}/rodar")
+def rodar_bloco(slug: str, video: str, nn: str, de: str = Body("", embed=True), ate: str = Body("", embed=True),
+                obs: str = Body("", embed=True)):
+    b = _bloco_dir(slug, video, nn)
+    if estado.bloco(b)["rodando"]:
+        raise HTTPException(409, "esse bloco já está rodando")
+    fila.lancar_rodada(b, de, ate, obs)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/b/{nn}/conferir")
+def conferir_bloco(slug: str, video: str, nn: str):
+    """Quem produz viu a prévia e aprovou os itens de "conferir". Com a trava ligada, já entrega."""
+    b = _bloco_dir(slug, video, nn)
+    estado.aprovar_conferir(b)
+    info = estado.bloco(b)
+    if info["travar_conferir"] and not info["rodando"]:
+        fila.lancar_rodada(b, "entregar", "entregar", "")
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/publicacao")
+def salvar_publicacao(slug: str, video: str, dados: dict = Body(...)):
+    _video_dir(slug, video)
+    campos = {k: str(dados.get(k) or "") for k in ("status", "titulo_pub", "descricao", "tags", "data_pub", "notas", "link")}
+    if campos["status"] not in ("", *gestao.MANUAIS):
+        raise HTTPException(400, "status inválido")
+    gestao.salvar_video(slug, video, **campos)
+    return {"ok": True, "publicacao": gestao.dados_video(slug, video)}
+
+
+@api.post("/c/{slug}/v/{video}/abrir")
+def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True)):
+    """Mostra a pasta do vídeo (ou do bloco) no Finder: o painel roda no próprio Mac."""
+    pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
+    subprocess.run(["open", str(pasta)], check=False)
     return {"ok": True}
 
 
