@@ -171,7 +171,7 @@ def gerar_descricao(c, slug, video):
               "properties": {"resumo": {"type": "string"}, "intro": {"type": "string"}, "cta": {"type": "string"}}}
     r = chamar("descricao", prompt("descricao_youtube"),
                f"Título: {titulo}\nCanal: {c['nome']}\nIdioma: {c['idioma']}\n\n# Roteiros\n{roteiros}",
-               schema=schema, modelo=config()["modelos"].get("descricao", "claude-sonnet-5-5"),
+               schema=schema, modelo=config()["modelos"]["descricao"],
                ctx={"canal": slug, "video": video})
     avisos = []
     caps = capitulos(vd, r["intro"].strip() or "Intro")

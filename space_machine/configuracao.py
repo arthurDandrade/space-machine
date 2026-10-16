@@ -305,6 +305,8 @@ ETAPAS_CLAUDE = [
     ("confirmar_trecho", "Confirmar trecho", "2ª olhada num vídeo com quadros a cada 0,5 s para acertar o início."),
     ("conferir", "Conferir download", "Olha 1–2 quadros de cada vídeo/recorte baixado (texto por cima, tarja, cena errada)."),
     ("qa", "Corrigir QA", "Quando o QA reprova, corrige o cenas.json uma vez antes de parar."),
+    ("descricao", "Descrição do YouTube", "Botão Gerar da publicação: escreve o resumo e o convite para se inscrever "
+     "(os capítulos com minutagem saem das durações dos blocos, sem o Claude)."),
 ]
 
 
