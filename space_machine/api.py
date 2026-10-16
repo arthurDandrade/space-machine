@@ -497,6 +497,17 @@ def salvar_publicacao(slug: str, video: str, dados: dict = Body(...)):
     return {"ok": True, "publicacao": gestao.dados_video(slug, video)}
 
 
+@api.post("/c/{slug}/v/{video}/descricao/gerar")
+def gerar_descricao(slug: str, video: str):
+    """Resumo + capítulos do vídeo final + convite para seguir o canal (nada é salvo: vai para o campo)."""
+    from .motor_claude import ErroClaude
+    _video_dir(slug, video)
+    try:
+        return gestao.gerar_descricao(_canal(slug), slug, video)
+    except ErroClaude as e:
+        raise HTTPException(502, f"O Claude não respondeu: {str(e)[:300]}")
+
+
 @api.post("/c/{slug}/ideias")
 def nova_ideia(slug: str, titulo: str = Body(..., embed=True), notas: str = Body("", embed=True)):
     _canal(slug)

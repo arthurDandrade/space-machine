@@ -240,6 +240,8 @@
 .campo input, .campo select, .campo textarea { font-size: 14px; font-weight: 500; width: 100%; }
 .campo textarea { height: auto; padding: 10px; line-height: 1.5; resize: vertical; }
 .campo input:focus, .campo select:focus, .campo textarea:focus { outline: 2px solid color-mix(in oklab, var(--accent) 50%, transparent); border-color: var(--accent); }
+.rotulo-acoes { display: flex; align-items: center; gap: 8px; }
+.rotulo-acoes label { margin-right: auto; }
 .rodape-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 
 /* ---------------- bloco ---------------- */

@@ -2,12 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, Clapperboard, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Clapperboard, Copy, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2, Wand2 } from "lucide-react";
 import { BlocoDoVideo, DetalheVideo, enviar, pegar, Publicacao, rota, urlCapa } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { Dialogo } from "../componentes/Dialogo";
-import { TituloCopiavel } from "../componentes/Copiar";
+import { copiarTexto, TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { BarraThumb, soltarArquivo, useSoltar, useThumbnail } from "../componentes/Thumbnail";
 import { compacto, haQuanto, useT } from "../textos";
@@ -116,12 +116,37 @@ function FormPublicacao({ canal, v }: { canal: string; v: DetalheVideo }) {
     onSuccess: () => qc.invalidateQueries(),
   });
   const campo = (k: keyof Publicacao) => ({ value: form[k] ?? "", onChange: (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value }) });
+  // Gerar: resumo (Claude) + capítulos do vídeo final + convite para seguir; vai para o campo, quem salva é o Salvar
+  const gerar = useMutation({
+    mutationFn: () => enviar<{ descricao: string; avisos: string[] }>(`/api/c/${canal}/v/${v.slug}/descricao/gerar`),
+    onSuccess: (r) => setForm((f) => ({ ...f, descricao: r.descricao })),
+  });
+  const [copiado, setCopiado] = useState(false);
+  const copiar = async () => {
+    await copiarTexto(form.descricao || "");
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 1300);
+  };
   return (
     <form className="cartao form-pub" onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
       <div className="duas-col">
         <div>
           <label className="campo">{t("app.pub.titulo")}<input {...campo("titulo_pub")} placeholder={v.titulo} /></label>
-          <label className="campo">{t("app.pub.descricao")}<textarea rows={7} {...campo("descricao")} /></label>
+          <div className="campo">
+            <div className="rotulo-acoes">
+              <label htmlFor="pub-descricao">{t("app.pub.descricao")}</label>
+              <button type="button" className="bt pequeno" disabled={gerar.isPending} onClick={() => gerar.mutate()} title={t("app.pub.gerar_dica")}>
+                {gerar.isPending ? <Loader size={14} className="gira" /> : <Wand2 size={14} />}{gerar.isPending ? t("app.regras.perguntando") : t("app.pub.gerar")}
+              </button>
+              <button type="button" className="bt pequeno" disabled={!form.descricao} onClick={copiar}>
+                {copiado ? <Check size={14} /> : <Copy size={14} />}{copiado ? t("app.copiar.feito") : t("app.pub.copiar")}
+              </button>
+            </div>
+            <textarea id="pub-descricao" rows={gerar.isSuccess ? 14 : 7} {...campo("descricao")} />
+            {gerar.isError && <span className="erro">{gerar.error.message}</span>}
+            {gerar.data?.avisos.map((a) => <span key={a} className="aviso-fila">{a}</span>)}
+            {gerar.isSuccess && <span className="sub">{t("app.pub.gerada")}</span>}
+          </div>
           <label className="campo">{t("app.pub.tags")}<input {...campo("tags")} /></label>
         </div>
         <div>

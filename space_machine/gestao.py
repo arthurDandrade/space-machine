@@ -7,6 +7,7 @@ Studio e marca aqui.
 import calendar
 import datetime as dt
 import re
+import subprocess
 import unicodedata
 from pathlib import Path
 
@@ -121,6 +122,71 @@ def calendario(canal, ano, mes):
                          "videos": por_dia.get(d.isoformat(), [])} for d in semana])
     sem_data = [v for v in estado.videos(canal) if not dados_video(canal, v["slug"]).get("data_pub")]
     return semanas, sem_data
+
+
+# ---------------- descrição do YouTube ----------------
+def _duracao(mp4):
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(mp4)],
+                       capture_output=True, text=True, timeout=60)
+    return float(r.stdout.strip())
+
+
+def _minutagem(s):
+    s = int(s)
+    h, m, s = s // 3600, s // 60 % 60, s % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+def capitulos(vd, intro="Intro"):
+    """Capítulos do YouTube tirados do vídeo final: o final.py põe os blocos entregues (final.entregues) um depois
+    do outro, sem corte nem sobreposição, então cada capítulo começa na soma das durações dos anteriores
+    (conferido em 2026-10-16: a soma dos bloco N.mp4 deu os mesmos 909,45 s do final renderizado).
+    Nome = linha "# Nome" do roteiro do bloco; o cold open vira `intro`. Devolve [(segundos, nome)]."""
+    from .final import _numero, entregues
+    out, t = [], 0.0
+    for mp4 in entregues(vd):
+        rot = Path(vd) / "blocos" / f"{_numero(mp4):02d}" / "roteiro.txt"
+        linhas = rot.read_text().splitlines() if rot.exists() else []
+        m = re.match(r"^\s*#+\s*(.+?)\s*$", linhas[0]) if linhas else None
+        cold = any(l.strip() == MARCA_COLD_OPEN for l in linhas[:3])
+        out.append((t, intro if cold or not m else m.group(1).rstrip(".:").strip()))
+        t += _duracao(mp4)
+    return out
+
+
+def gerar_descricao(c, slug, video):
+    """Descrição pronta para o YouTube: resumo (Claude, no idioma do canal) + capítulos com minutagem do vídeo
+    final + convite para seguir o canal. Nada é salvo (o texto vai para o campo e a pessoa salva).
+    Devolve {"descricao", "avisos"}; ErroClaude se o Claude falhar."""
+    from .final import entregues
+    from .motor_claude import chamar, prompt
+    from .sistema import config
+    vd = Path(c["producoes"]) / video
+    titulo = dados_video(slug, video).get("titulo_pub") or estado.titulo_video(vd)
+    blocos = sorted(b for b in (vd / "blocos").glob("*") if b.is_dir() and b.name.isdigit()) \
+        if (vd / "blocos").is_dir() else []
+    roteiros = "\n\n".join(f"## Bloco {b.name}\n" + (b / "roteiro.txt").read_text().replace(MARCA_COLD_OPEN, "").strip()
+                            for b in blocos if (b / "roteiro.txt").exists())
+    schema = {"type": "object", "additionalProperties": False, "required": ["resumo", "intro", "cta"],
+              "properties": {"resumo": {"type": "string"}, "intro": {"type": "string"}, "cta": {"type": "string"}}}
+    r = chamar("descricao", prompt("descricao_youtube"),
+               f"Título: {titulo}\nCanal: {c['nome']}\nIdioma: {c['idioma']}\n\n# Roteiros\n{roteiros}",
+               schema=schema, modelo=config()["modelos"].get("descricao", "claude-sonnet-5-5"),
+               ctx={"canal": slug, "video": video})
+    avisos = []
+    caps = capitulos(vd, r["intro"].strip() or "Intro")
+    if not caps:
+        avisos.append("Nenhum bloco entregue ainda: a descrição saiu sem capítulos.")
+    elif len(entregues(vd)) < len(blocos):
+        avisos.append(f"Só {len(entregues(vd))} de {len(blocos)} blocos entregues: os capítulos valem para o "
+                      "vídeo final montado com esses blocos.")
+    if caps and len(caps) < 3:
+        avisos.append("O YouTube só mostra capítulos com pelo menos 3 deles.")
+    partes = [r["resumo"].strip()]
+    if caps:
+        partes.append("\n".join(f"{_minutagem(t)} {nome}" for t, nome in caps))
+    partes.append(r["cta"].strip())
+    return {"descricao": "\n\n".join(p for p in partes if p), "avisos": avisos}
 
 
 # ---------------- novo vídeo ----------------
