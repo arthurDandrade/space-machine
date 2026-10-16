@@ -49,11 +49,24 @@ def consultas_para(asset, fonte):
 
 def camadas_de_fontes(asset, cfg, tipo):
     """Rank de fontes (2026-10-10): lista de camadas, da melhor para a pior. Lista simples de
-    nomes (ex.: "fontes" do card) = uma camada só."""
-    fontes = asset.get("fontes") or cfg["fontes_por_tipo"].get(tipo, cfg["fontes_por_tipo"]["foto"])
-    if all(isinstance(f, str) for f in fontes):
-        return [fontes]
-    return [[f] if isinstance(f, str) else f for f in fontes]
+    nomes = uma camada só. O "fontes" do card vira a 1ª camada e o rank do tipo continua embaixo
+    (2026-10-15: ["archive", "commons"] nas cenas históricas apagava web, Smithsonian, Openverse e
+    Google, e com o Commons dando 429 a cena ficava sem nada)."""
+    def camadas(fontes):
+        if all(isinstance(f, str) for f in fontes):
+            return [list(fontes)]
+        return [[f] if isinstance(f, str) else list(f) for f in fontes]
+
+    rank = camadas(cfg["fontes_por_tipo"].get(tipo, cfg["fontes_por_tipo"]["foto"]))
+    todas = camadas(asset["fontes"]) + rank if asset.get("fontes") else rank
+    vistas, saida = set(), []
+    for camada in todas:
+        # só fontes de imagem ("archive" busca vídeo) e sem repetir uma fonte em outra camada
+        c = [f for f in camada if f in BUSCADORES and f not in vistas]
+        vistas.update(c)
+        if c:
+            saida.append(c)
+    return saida
 
 
 def buscar_imagens(asset, pasta, cfg):
