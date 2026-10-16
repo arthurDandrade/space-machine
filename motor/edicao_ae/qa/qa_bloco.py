@@ -84,7 +84,10 @@ def checar_render(video, plano, det, R, layout=None):
     # quanto de cada frame (4 fps) é diferente do fundo de papel — conferência no pixel para os casos em que
     # o detector se perde (card + globo/bandeira encostados não é retângulo: E5/M5/F9)
     ocup = fracao_ocupada(video, Path(str(det) + ".bg.npy"), fps)
-    tem_algo = lambda t: ocup.get(round(t * fps), 0) > 0.08      # >8% da tela = há algo em cena
+    # >5% da tela = há algo em cena. Palco vazio de verdade mede 1–2% (até 4% num frame de transição); era 8%,
+    # e um logo PNG sozinho no D6 (sem moldura de card, o detector não vê) mediu 7,7–8,2% e reprovou o bloco 03
+    # do draft duas vezes (2026-10-16)
+    tem_algo = lambda t: ocup.get(round(t * fps), 0) > 0.05
 
     # palco vazio longo
     vazios, run = [], []
