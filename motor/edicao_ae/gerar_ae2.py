@@ -841,12 +841,13 @@ def main():
             if e["layout"] == "B9":
                 # v7#219: as palavras se EMPILHAM a partir do alto do card (não trocam); ~100 px, 147 px entre linhas
                 topo = geo[0][1] - geo[0][3] / 2 + 0.12 * geo[0][3]
-                tam = min(110, area_w / (max(len(t) for t, _ in rs) * 0.62))
-                for k2, (txt, tt_) in enumerate(rs):
+                tam = min(110, area_w / (max(len(r[0]) for r in rs) * 0.62))
+                for k2, (txt, tt_, *_) in enumerate(rs):
                     M.texto(txt, tt_ - 0.05, saida_ini if anim else fim, pai, [area_cx - CX, topo - CY + k2 * tam * 1.45],
                             area_w, tam, COR_TEXTO, SOMBRA_PRETO, "top")
                 rs = []
-            rs = [[txt, tt_] for txt, tt_ in rs]
+            # rótulo com "2linhas" (a correção do QA pede para não encostar na borda) já sai quebrado
+            rs = [[duas_linhas(r[0], 0) if r[2:] == ["2linhas"] else r[0], r[1]] for r in rs]
             if rs and e.get("_b10_desliza_fim"):
                 # B10: o nome só aparece no espaço que o card abriu (antes, com a fala cedo, "19 years"
                 # entrava com o card ainda no centro, por cima da foto — bloco 00, 2026-10-11)

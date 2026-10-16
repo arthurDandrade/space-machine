@@ -322,10 +322,19 @@ class Rodada:
         v = self._versao()
         sh = Path(self.c["editor"]) / "editar_bloco.sh"
         with open(self.log("editar"), "a") as f:
+            ini_log = f.tell()
             r = subprocess.run([str(sh), str(self.p), self.nn, str(v)], cwd=self.c["raiz"], stdout=f,
                                stderr=subprocess.STDOUT, timeout=3 * 3600, env=ambiente_motor(self.c))
         previa = self.p / "edicao" / f"previa_bloco_{self.nn}_v{v}.mp4"
         if not previa.exists():
+            # erro no Python antes do After (gerar_ae2.py) não é After travado: mostra o erro
+            # (o "too many values to unpack" do "2linhas" em rótulo parou os blocos 05 e 06 do draft, 2026-10-16)
+            with open(self.log("editar")) as f:
+                f.seek(ini_log)
+                saida = f.read()
+            if "Traceback" in saida:
+                erro = [l for l in saida.strip().splitlines() if l.strip()][-1]
+                raise Parada(f"a montagem deu erro antes de abrir o After: {erro[:200]} (ver log_editar.txt)")
             raise Parada("o After não gerou a prévia (pode estar travado num diálogo: olhar a tela)")
         qa = (self.p / "edicao" / f"qa_{self.nn}.md").read_text() if (self.p / "edicao" / f"qa_{self.nn}.md").exists() else ""
         # o qa_NN.md é regravado a cada versão: se o QA desta não rodou, o arquivo ainda é o da versão anterior
