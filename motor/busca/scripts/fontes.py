@@ -89,6 +89,22 @@ def google_transparente(consulta, n, orientacao=None):
     return google(consulta, n, orientacao, transparente=True)
 
 
+def _get_com_espera(nome, url, **kw):
+    """GET que espera e tenta de novo quando a fonte pede calma (429/503). Antes, o 429 do Commons
+    com vários blocos buscando ao mesmo tempo virava "0 resultados" e a cena parava sem foto (2026-10-15)."""
+    for tentativa in range(4):
+        r = sessao.get(url, **kw)
+        if r.status_code not in (429, 503) or tentativa == 3:
+            return r
+        try:
+            espera = min(int(r.headers.get("Retry-After") or 0), 60)
+        except ValueError:
+            espera = 0
+        espera = espera or 10 * (tentativa + 1) + random.random() * 5
+        log(f"   {nome}: HTTP {r.status_code}, esperando {espera:.0f}s (tentativa {tentativa+1})")
+        time.sleep(espera)
+
+
 def commons(consulta, n, orientacao=None):
     params = {
         "action": "query", "format": "json", "generator": "search", "gsrsearch": consulta,
@@ -96,8 +112,8 @@ def commons(consulta, n, orientacao=None):
         "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 2400,
     }
     try:
-        r = sessao.get("https://commons.wikimedia.org/w/api.php", params=params, timeout=20,
-                       headers={"User-Agent": UA_WIKIMEDIA})
+        r = _get_com_espera("commons", "https://commons.wikimedia.org/w/api.php", params=params, timeout=20,
+                            headers={"User-Agent": UA_WIKIMEDIA})
         if r.status_code != 200:
             log(f"   commons: HTTP {r.status_code}")
             return []
@@ -299,8 +315,8 @@ def commons_video(consulta, n, duracao_max, orientacao=None):
               "gsrsearch": f"{consulta} filetype:video", "gsrnamespace": 6, "gsrlimit": min(n * 3, 50),
               "prop": "videoinfo", "viprop": "url|size|mime|derivatives|extmetadata"}
     try:
-        dados = sessao.get("https://commons.wikimedia.org/w/api.php", params=params, timeout=25,
-                           headers={"User-Agent": UA_WIKIMEDIA}).json()
+        dados = _get_com_espera("commons_video", "https://commons.wikimedia.org/w/api.php", params=params,
+                                timeout=25, headers={"User-Agent": UA_WIKIMEDIA}).json()
     except Exception as e:
         log(f"   commons_video: {e}")
         return []
@@ -339,7 +355,7 @@ def _q_archive(consulta):
 def archive_video(consulta, n, duracao_max, orientacao=None):
     """Internet Archive (filmes de época, cinejornais, governo dos EUA: muito domínio público)."""
     try:
-        dados = sessao.get("https://archive.org/advancedsearch.php", timeout=25, params={
+        dados = _get_com_espera("archive", "https://archive.org/advancedsearch.php", timeout=25, params={
             "q": _q_archive(consulta), "fl[]": ["identifier", "title", "licenseurl", "creator"],
             "rows": n * 3, "output": "json"}).json()
     except Exception as e:
