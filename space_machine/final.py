@@ -2,9 +2,12 @@
 
   python -m space_machine final <pasta do vídeo> [--render]
 
-Monta <vídeo>/final/final.aep: os blocos entregues (edicao/bloco N.mp4) em sequência numa comp só, com a camada de
-ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
+Monta <vídeo>/final/final.aep: os blocos entregues em sequência numa comp só, com a camada de ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
 em 2026-10-13; 0 = sem). Com --render, renderiza <vídeo>/final/<título>.mp4.
+Desde 2026-10-16 cada bloco entra pelo projeto dele (blocos/NN/edicao/bloco_NN_v2.aep, importado inteiro): o vídeo
+final sai de um render só, sem comprimir de novo os MP4s dos blocos, e o que você ajustar no .aep de um bloco entra
+no final. O edicao/bloco N.mp4 continua marcando o bloco como entregue (é a prévia de rascunho, em meia resolução) e
+só entra na montagem quando o bloco não tem .aep.
 O After roda um script de cada vez: usa a mesma trava dos blocos (<dados>/trava_after) e, como a montagem dos blocos,
 fecha o projeto que estiver aberto sem salvar. O final.aep (e o MP4) de uma montagem anterior vai para final/anteriores/. O painel lança este comando solto (lancar) e acompanha por
 <vídeo>/final/estado.json.
@@ -29,11 +32,26 @@ MONTAR = r"""
         app.beginSuppressDialogs();
         if (app.project) app.project.close(CloseOptions.DO_NOT_SAVE_CHANGES);
         app.newProject();
-        var p = app.project, itens = [], total = 0;
+        var p = app.project, itens = [], total = 0, nAep = 0;
+        function acharComp(pasta, nome) {
+            for (var j = 1; j <= pasta.numItems; j++) {
+                var x = pasta.item(j);
+                if (x instanceof CompItem && x.name === nome) return x;
+                if (x instanceof FolderItem) { var y = acharComp(x, nome); if (y) return y; }
+            }
+            return null;
+        }
         for (var i = 0; i < CFG.blocos.length; i++) {
-            var f = new File(CFG.blocos[i]);
+            var b = CFG.blocos[i], f = new File(b.aep || b.mp4);
             if (!f.exists) throw new Error("falta " + f.fsName);
             var it = p.importFile(new ImportOptions(f));
+            if (b.aep) {
+                it.name = b.nome;
+                var c = acharComp(it, b.comp);
+                if (!c) throw new Error("comp \"" + b.comp + "\" não está em " + f.fsName);
+                it = c;
+                nAep++;
+            }
             itens.push(it);
             total += it.duration;
         }
@@ -54,7 +72,7 @@ MONTAR = r"""
         }
         comp.openInViewer();
         p.save(new File(CFG.aep));
-        log.push("OK " + itens.length + " blocos, " + total.toFixed(2) + " s");
+        log.push("OK " + itens.length + " blocos (" + nAep + " pelo .aep), " + total.toFixed(2) + " s");
     } catch (e) { log.push("ERRO " + e.toString() + " linha " + e.line); }
     app.endSuppressDialogs(false);
     var lf = new File(CFG.log); lf.encoding = "UTF-8"; lf.open("w"); lf.write(log.join("\n")); lf.close();
@@ -70,6 +88,19 @@ def _numero(f):
 def entregues(vd):
     """Blocos entregues, na ordem (bloco 0 = cold open)."""
     return sorted(Path(vd, "edicao").glob("bloco *.mp4"), key=_numero)
+
+
+def fontes(vd):
+    """O que entra na montagem por bloco entregue: o projeto do bloco (aep + nome da comp) ou, sem ele, o MP4."""
+    out = []
+    for mp4 in entregues(vd):
+        nn = f"{_numero(mp4):02d}"
+        ed = Path(vd) / "blocos" / nn / "edicao"
+        aep, plano = ed / f"bloco_{nn}_v2.aep", ed / f"plano_edicao_{nn}.json"
+        comp = (ler_json(plano, {}) or {}).get("nome") if plano.exists() else None
+        out.append({"aep": str(aep), "comp": comp, "nome": f"bloco {int(nn)}"} if aep.exists() and comp
+                   else {"mp4": str(mp4)})
+    return out
 
 
 def ler_estado(vd):
@@ -129,7 +160,7 @@ def montar(vd, render=False):
     aep, log = fim_dir / "final.aep", fim_dir / "log_montar.txt"
     nome_mp4 = re.sub(r'[/:"\\]', "-", titulo).strip() or vd.name
     mp4 = fim_dir / f"{nome_mp4}.mp4"
-    cfg = {"blocos": [str(b) for b in blocos], "comp": f"{titulo} - final", "aep": str(aep), "log": str(log),
+    cfg = {"blocos": fontes(vd), "comp": f"{titulo} - final", "aep": str(aep), "log": str(log),
            "ruido": float((config().get("video_final") or {}).get("ruido", 6))}
     (fim_dir / "montar_final.jsx").write_text(f"var CFG = {json.dumps(cfg, ensure_ascii=False)};\n{MONTAR}")
     trava = open(DADOS / "trava_after", "w")

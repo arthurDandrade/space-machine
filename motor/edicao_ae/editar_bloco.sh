@@ -1,6 +1,8 @@
 #!/bin/zsh
 # Monta, renderiza e roda o QA de um bloco, em sequência (sem precisar olhar o After).
 # Uso: motor/edicao_ae/editar_bloco.sh <pasta do bloco> <NN> [versao]   (SEM_QA=1 antes: só monta e renderiza)
+# A prévia sai em meia resolução (960x540): serve ao QA (que mede em 480x270) e para olhar; o vídeo final é renderizado
+# dos .aep dos blocos (space_machine/final.py). PREVIA_CHEIA=1 antes: prévia em 1920x1080.
 #   ex.: motor/edicao_ae/editar_bloco.sh <dados>/canais/<canal>/producoes/<video>/blocos/03 03 1
 # Ambiente: SM_PYTHON (Python do Space Machine; padrão: .venv do repo) e SM_AFTER (nome do app; padrão abaixo).
 # Saída: <projeto>/edicao/previa_bloco_NN_vV.mp4 + qa_NN.md / qa_NN.jpg. Código 1 se o QA reprovar.
@@ -26,7 +28,7 @@ cat $E/log_${N}_v2.txt; echo
 # sem "OK comp="a montagem não salvou: o render abriria o bloco_NN_v2.aep da versão anterior
 grep -q '^OK comp=' $E/log_${N}_v2.txt 2>/dev/null || { echo "MONTAGEM FALHOU (sem 'OK comp=' no log): render cancelado"; exit 1; }
 COMP=$(python3 -c "import json;print(json.load(open('$E/plano_edicao_$N.json'))['nome'])")
-{ echo "var RENDER = {aep: \"$E/bloco_${N}_v2.aep\", comp: \"$COMP\", saida: \"$E/previa_bloco_${N}_v$V.mp4\", log: \"$E/log_render_${N}.txt\"};"; cat renderizar.jsx; } > $E/render_${N}.jsx
+{ echo "var RENDER = {aep: \"$E/bloco_${N}_v2.aep\", comp: \"$COMP\", saida: \"$E/previa_bloco_${N}_v$V.mp4\", log: \"$E/log_render_${N}.txt\", meia: ${${PREVIA_CHEIA:+false}:-true}};"; cat renderizar.jsx; } > $E/render_${N}.jsx
 rm -f $E/log_render_${N}.txt
 osascript -e 'with timeout of 3000 seconds' -e "tell application \"$AE\" to DoScriptFile \"$E/render_${N}.jsx\"" -e 'end timeout' >/dev/null
 # o osascript pode estourar o tempo e o render continua; mas sem limite, After travado num diálogo segurava

@@ -13,6 +13,8 @@ Todo bloco passa pelo verificador **antes** de chegar ao Arthur. Ele mede a pré
 cd motor/edicao_ae
 ../../.venv/bin/python qa/qa_bloco.py <projeto> --item 01      # usa a prévia mais recente
 ```
+Desde 2026-10-16 a prévia é de rascunho, em 960×540 a 15 Mbps (o vídeo final é renderizado dos .aep dos blocos). Medido no bloco 06 do nfl-draft: as 7 conferências deram igual à prévia cheia e a altura mediana dos textos ficou a mesma (84 px). A 5 Mbps não serve: a compressão engorda as letras e a altura subiu para 92 px (+10%), o que esconderia texto pequeno.
+
 Saída: `edicao/qa_01.md` (✅ OK / ❌ FALHA, com os tempos para corrigir) e `edicao/qa_01.jpg` (nosso frame × frame de referência do mesmo tipo de cena). FALHA = não entregar; corrigir e renderizar de novo.
 
 ## O que é verificado (enxuto desde 2026-10-15)

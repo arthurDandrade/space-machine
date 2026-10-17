@@ -367,7 +367,7 @@
  "app.final.assistir": "Assistir ({gb} GB)",
  "app.final.pasta": "Pasta final",
  "app.final.dialogo_titulo": "Juntar os blocos no After",
- "app.final.explica": "Monta final/final.aep com os {n} blocos entregues em sequência numa comp só, com a camada de ajuste de ruído do vídeo final. O projeto fica aberto no After para você terminar a edição.",
+ "app.final.explica": "Monta final/final.aep com os {n} blocos entregues em sequência numa comp só, cada um pelo projeto do After dele (o que você ajustar no projeto de um bloco entra no final), com a camada de ajuste de ruído do vídeo final. O projeto fica aberto no After para você terminar a edição.",
  "app.final.faltam": "Ainda faltam {n} blocos: o projeto junta só os que já foram entregues.",
  "app.final.faltam_1": "Ainda falta 1 bloco: o projeto junta só os que já foram entregues.",
  "app.final.aviso_after": "Se um bloco estiver no After, espera a vez. O projeto que estiver aberto no After é fechado sem salvar, como na montagem dos blocos: salve antes o que for seu.",

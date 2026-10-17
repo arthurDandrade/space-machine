@@ -44,8 +44,8 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 2. **Regras do tema** (na barra lateral do canal): clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
 3. **Chaves** (na barra lateral do canal): o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
 4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.
-5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4`. Para um bloco só, use o **Produzir** no card dele (ou **Continuar**, se ele parou no meio).
-6. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com todos em sequência (e, se marcar, renderiza o MP4 final).
+5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4` (uma prévia em meia resolução, para conferir; o vídeo final sai do projeto do After de cada bloco, em resolução cheia). Para um bloco só, use o **Produzir** no card dele (ou **Continuar**, se ele parou no meio).
+6. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com o projeto de cada bloco em sequência (e, se marcar, renderiza o MP4 final, num render só).
 7. A **thumbnail** do vídeo vai na página dele (arraste, clique ou cole com ⌘V): ela vira a capa do vídeo no painel, e o painel avisa se passar dos 2 MB do YouTube ou não for 16:9.
 
 Os prompts que você usa no canal (o de roteiro, o de títulos…) ficam na aba **Prompts**: cada um é um `.md` em `canais/<canal>/prompts/`, com copiar em um clique, editar/visualizar e importar os `.md` que você já tem.
