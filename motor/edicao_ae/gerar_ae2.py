@@ -22,6 +22,7 @@ CX, CY = W / 2, H / 2
 # O botão de inscrição do CTA não entra (é do YouTube; o Reels vai para o Facebook).
 VERTICAL = False
 FPS = 60
+FPS_VERTICAL = 30      # Reels: no celular 30 fps fica igual e o render cai ~pela metade (2026-10-17)
 FONTE = "AvenirNext-Heavy"
 # Curvas medidas nas referências a 60 fps (qa/comparar_animacao.py):
 # entrada = desaceleração cúbica de ~0,7 s (50% em 0,13 s, 90% em 0,38 s); saída = aceleração cúbica de ~0,6 s.
@@ -1117,7 +1118,7 @@ def main():
     ultimo = max([L["out"] for L in M.layers if isinstance(L.get("out"), (int, float))] + [0])
     dur = min(max(plano["fim"] + FIM_BLOCO, ultimo), plano["fim"] + 2)
     suf = "vertical" if VERTICAL else "v2"
-    dados = {"nome": plano["nome"] + (" (vertical)" if VERTICAL else ""), "dur": round(dur, 2), "fps": FPS, "w": W, "h": H, "audio": str(audio), "fonte": FONTE,
+    dados = {"nome": plano["nome"] + (" (vertical)" if VERTICAL else ""), "dur": round(dur, 2), "fps": FPS_VERTICAL if VERTICAL else FPS, "w": W, "h": H, "audio": str(audio), "fonte": FONTE,
              "audio_offset": plano.get("offset_audio", 0),
              "cor_fundo": COR_FUNDO, "cor_sombra": COR_SOMBRA, "fundo_imagem": FUNDO_IMAGEM,
              "layers": M.layers, "salvar": str(proj / "edicao" / f"bloco_{a.item}_{suf}.aep"),
