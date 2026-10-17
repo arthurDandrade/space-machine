@@ -271,6 +271,11 @@
 .coluna-esq, .coluna-dir { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .player video { width: 100%; border-radius: 14px; background: #000; display: block; aspect-ratio: 16 / 9; }
 .versoes { margin-top: 10px; }
+.reels-card { display: flex; flex-direction: column; gap: 10px; }
+.reels-card video { width: 100%; max-width: 270px; aspect-ratio: 9 / 16; border-radius: 14px; background: #000; display: block; }
+.reels-card .linha { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.reels-card .lado { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
+.reels-card p { margin: 0; }
 .lista-conferir { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
 .conf { display: flex; gap: 12px; align-items: flex-start; }
 .mini-asset { width: 84px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--raised); flex: none; display: grid; place-items: center; font-size: 11px; color: var(--ink3); }

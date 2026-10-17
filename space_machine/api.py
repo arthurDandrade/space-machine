@@ -18,7 +18,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, primeiros_passos, textos
+from . import capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, primeiros_passos, reels, textos
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -265,6 +265,8 @@ def detalhe_bloco(slug: str, video: str, nn: str):
     entregue = vd / "edicao" / f"bloco {int(nn)}.mp4"
     qa_img = b / "edicao" / f"qa_{nn}.jpg"
     sb = b / f"storyboard_{nn}.md"
+    rl = reels.ler_estado(b)
+    rl_mp4 = reels.mp4(b)
     return {
         "nn": nn, "topico": info["topico"], "video": video, "video_titulo": estado.titulo_video(vd),
         "feito": info["feito"], "atual": info["atual"], "rodando": info["rodando"], "parado": info["parado"],
@@ -284,6 +286,11 @@ def detalhe_bloco(slug: str, video: str, nn: str):
         "log_rodar": _cauda(b / "_estudio" / "log_rodar.txt", 60),
         "log_etapa": {"nome": etapa_log.name, "texto": _cauda(etapa_log, 40)} if etapa_log else None,
         "anterior": irmaos[i - 1] if i > 0 else None, "proximo": irmaos[i + 1] if i + 1 < len(irmaos) else None,
+        "reels": {"pode": (b / "edicao" / f"plano_edicao_{nn}.json").exists(), "rodando": rl["rodando"],
+                  "status": rl.get("status", ""), "etapa": rl.get("etapa", ""), "erro": rl.get("erro", ""),
+                  # durante o render o After já está gravando o MP4: só aparece pronto
+                  "mp4": _arquivo(rl_mp4) + f"&v={int(rl_mp4.stat().st_mtime)}"
+                  if rl_mp4.exists() and not rl["rodando"] else None},
     }
 
 
@@ -579,6 +586,18 @@ def juntar_no_after(slug: str, video: str, render: bool = Body(False, embed=True
     return {"ok": True}
 
 
+@api.post("/c/{slug}/v/{video}/b/{nn}/reels")
+def fazer_reels(slug: str, video: str, nn: str):
+    """Monta o bloco na vertical (1080x1920) e renderiza <vídeo>/reels/bloco N.mp4."""
+    b = _bloco_dir(slug, video, nn)
+    if reels.ler_estado(b)["rodando"]:
+        raise HTTPException(409, "o Reels deste bloco já está sendo feito")
+    if not (b / "edicao" / f"plano_edicao_{nn}.json").exists():
+        raise HTTPException(409, "o bloco ainda não chegou na edição")
+    reels.lancar(b)
+    return {"ok": True}
+
+
 @api.post("/c/{slug}/v/{video}/final/abrir")
 def abrir_final(slug: str, video: str):
     """Abre o final.aep no After (o painel roda no próprio Mac)."""
@@ -612,10 +631,10 @@ def restaurar_video(slug: str, nome: str):
 
 @api.post("/c/{slug}/v/{video}/abrir")
 def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True), sub: str = Body("", embed=True)):
-    """Mostra a pasta do vídeo (do bloco, ou a final/) no Finder: o painel roda no próprio Mac."""
+    """Mostra a pasta do vídeo (do bloco, ou a final/ ou reels/) no Finder: o painel roda no próprio Mac."""
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
-    if sub == "final" and (pasta / "final").is_dir():
-        pasta = pasta / "final"
+    if sub in ("final", "reels") and (pasta / sub).is_dir():
+        pasta = pasta / sub
     subprocess.run(["open", str(pasta)], check=False)
     return {"ok": True}
 
@@ -893,8 +912,11 @@ def assinatura():
                 continue
             for b in (vd / "blocos").iterdir():
                 est = b / "_estudio"
-                for p in (b, b / "edicao", est, est / "estado.json", est / "log_rodar.txt", est / "conferir_ok.json"):
+                for p in (b, b / "edicao", est, est / "estado.json", est / "log_rodar.txt", est / "conferir_ok.json",
+                          vd / "reels" / f"estado_{b.name}.json"):
                     marcar(p)
+                if (vd / "reels" / f"pid_{b.name}").exists():
+                    h.update(f"vivo:{estado._vivo((vd / 'reels' / f'pid_{b.name}').read_text().strip())};".encode())
                 pid = est / "pid"
                 if pid.exists():
                     h.update(f"vivo:{estado._vivo(pid.read_text().strip())};".encode())

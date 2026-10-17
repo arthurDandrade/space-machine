@@ -19,7 +19,7 @@ W, H = 1920, 1080
 CX, CY = W / 2, H / 2
 # --vertical (teste de reels, 2026-10-17): mesmo plano em 1080x1920, num projeto à parte (bloco_NN_vertical.aep).
 # Cards lado a lado viram coluna, rótulos laterais vão para baixo do card e texto longo quebra em linhas.
-# Por ora só os layouts B, B4/B5/B9/B10/E3, C1/C2/C4/C8/D1 e textos A foram vistos na tela.
+# O botão de inscrição do CTA não entra (é do YouTube; o Reels vai para o Facebook).
 VERTICAL = False
 FPS = 60
 FONTE = "AvenirNext-Heavy"
@@ -311,18 +311,34 @@ def clamp(a, lo, hi):
 LATERAIS = ("B4", "B5", "B9", "B10", "E3")     # card de um lado, rótulo/texto do outro
 
 
-def geometria_vertical(layout, asps, pngs, inteiros=None):
-    """1080x1920: um card só fica no centro e mais largo; vários viram coluna; card com rótulo sobe e o rótulo
-    vai para baixo dele."""
+def geometria_vertical(layout, asps, pngs, inteiros=None, acima=None):
+    """1080x1920: um card só fica no centro e mais largo; vários viram coluna (4 ou mais, grade de 2); card com
+    rótulo ou citação sobe e o rótulo/citação vai para baixo dele. acima: cards com nome em cima (espaço livre)."""
     n = len(asps)
     inteiros = inteiros or [False] * n
+    acima = acima or [False] * n
     larg = W - 140
+    if layout == "G1":
+        # card no alto, citação embaixo (ver main)
+        a = clamp(asps[0], 0.75, 1.5)
+        w = min(larg * 0.9, 640 * a)
+        return [(CX, CY - 330, w, w / a)]
+    if layout in ("E5", "M5"):
+        # bandeira/globo encostado à direita do card: o card fica mais estreito e um pouco à esquerda
+        a = clamp(asps[0], 0.8, 1.0) if layout == "E5" else clamp(asps[0], 1.0, 1.78)
+        w = larg * 0.78
+        return [(CX - 60, CY, w, w / a)]
     if layout in LATERAIS:
         # card no alto (centro 160 px acima do meio, até 820 px de altura); o rótulo entra embaixo dele
         a = asps[0] if pngs[0] else clamp(asps[0], 0.75, 1.5)
         w = min(larg * 0.9, 820 * a)
         return [(CX, CY - 160, w, w / a)]
-    if n == 1 or layout in ("B", "E5", "M5", "G1", "B11", "G2", "G3"):
+    if layout in ("G2", "G3"):
+        # tabela/gráfico: inteiro, sem cortar ("WHAT THE SAINTS GAVE UP" saía cortado em quadrado)
+        a = asps[0]
+        w = min(larg, 1300 * a)
+        return [(CX, CY, w, w / a)]
+    if n == 1 or layout in ("B", "B11"):
         # foto/vídeo em retrato 4:5 a 1:1, na largura útil: em paisagem sobrava meia tela vazia (teste de 2026-10-17)
         a = asps[0] if pngs[0] or inteiros[0] else clamp(asps[0], 0.8, 1.0)
         w = min(larg, 1150 * a)
@@ -333,31 +349,53 @@ def geometria_vertical(layout, asps, pngs, inteiros=None):
         h = w / a
         dx, dy = 0.08 * w, 0.08 * h
         return [(CX + dx / 2, CY - dy / 2, w, h), (CX - dx / 2, CY + dy / 2, w, h)]
+    if n >= 4 and layout != "LOGOS":
+        # grade de 2 colunas (esteira, baralho): em coluna cada card ficava com ~300 px de altura
+        gap, teto = 30, 1480
+        cw = (larg - gap) / 2
+        asp = [a if (p or it) else clamp(a, 0.75, 1.0) for a, p, it in zip(asps, pngs, inteiros)]
+        linhas = [list(range(k, min(k + 2, n))) for k in range(0, n, 2)]
+        alts = [max(cw / asp[j] for j in ln) for ln in linhas]
+        tot = sum(alts) + gap * (len(linhas) - 1)
+        k = min(1.0, (teto - gap * (len(linhas) - 1)) / sum(alts))
+        cw, alts, tot = cw * k, [h * k for h in alts], sum(h * k for h in alts) + gap * (len(linhas) - 1)
+        out, y = [None] * n, CY - tot / 2
+        for ln, h in zip(linhas, alts):
+            x = CX - (len(ln) * cw + gap * (len(ln) - 1)) / 2
+            for j in ln:
+                w_, h_ = min(cw, h * asp[j]), min(h, cw / asp[j])
+                out[j] = (x + cw / 2, y + h / 2, w_, h_)
+                x += cw + gap
+            y += h + gap
+        return out
     # coluna: fotos cortadas em paisagem para caberem empilhadas; mapa/logo/recorte no próprio formato
     alto = 300 if layout == "LOGOS" else None
     asp = [a if (p or it) else clamp(a, 1.2, 1.78) for a, p, it in zip(asps, pngs, inteiros)]
     ws = [min(larg * 0.92, alto * a) if alto else larg * 0.92 for a in asp]
     hs = [w / a for w, a in zip(ws, asp)]
-    gap, teto = 40, 1480
-    tot = sum(hs) + gap * (n - 1)
+    # o nome em cima de um card (C4/B8) precisa de ~150 px livres acima dele
+    gaps = [(150 if acima[j] else 0) + (40 if j else 0) for j in range(n)]
+    teto = 1480
+    tot = sum(hs) + sum(gaps)
     if tot > teto:
-        k = (teto - gap * (n - 1)) / sum(hs)
+        k = (teto - sum(gaps)) / sum(hs)
         ws, hs = [w * k for w in ws], [h * k for h in hs]
         tot = teto
     y, out = CY - tot / 2, []
-    for w, h in zip(ws, hs):
+    for w, h, gp in zip(ws, hs, gaps):
+        y += gp
         out.append((CX, y + h / 2, w, h))
-        y += h + gap
+        y += h
     return out
 
 
-def geometria(layout, asps, pngs, inteiros=None):
+def geometria(layout, asps, pngs, inteiros=None, acima=None):
     """Lista de (cx, cy, w, h) por card, em coordenadas de tela."""
     n = len(asps)
     if n == 0:
         return []
     if VERTICAL:
-        return geometria_vertical(layout, asps, pngs, inteiros)
+        return geometria_vertical(layout, asps, pngs, inteiros, acima)
     if layout == "LOGOS":
         alt, gap = 360, 140
         ws = [a * alt for a in asps]
@@ -700,7 +738,7 @@ def main():
         if lay_geo in ("C1", "C8") and any(c.get("acima") for c in cards):
             lay_geo = "C4"          # com nome acima: cards um pouco menores e mais baixos (espaço para o título)
         geo = geometria(lay_geo, asps, [bool(c.get("png")) for c in cards],
-                        [not c.get("png") and M.inteiro(c) for c in cards])
+                        [not c.get("png") and M.inteiro(c) for c in cards], [bool(c.get("acima")) for c in cards])
         # mapa/logo/bandeira não podem ser cortados para preencher o card: o card toma o formato da imagem, dentro
         # do espaço do layout ("DETROIT" cortado no mapa 4:3 em card quadrado, "G" dos Packers cortado — 2026-10-13)
         for j, c in enumerate(cards):
@@ -878,14 +916,15 @@ def main():
                 ci = c["citacao"]
                 nome_c = "citacao_" + hashlib.md5((ci["texto"] + "|" + ci.get("grifo", "") + "|" + ci.get("fonte", "")).encode()).hexdigest()[:10] + ".png"
                 ca, cw, chh = desenhar_citacao(M.cache / nome_c, ci["texto"], ci.get("grifo", ""), ci.get("fonte", ""))
-                bw, bh = cw / 2, chh / 2
+                ec = 50 if not VERTICAL else min(50, 100 * (W - 140) / cw)
+                bw, bh = cw * ec / 100, chh * ec / 100
                 tc = max(t_in + 0.3, ci["t"] - 0.05)
-                pc = [110 + bw / 2 - CX, 0]
+                pc = [110 + bw / 2 - CX, 0] if not VERTICAL else [0, rel[1] + h / 2 + 50 + bh / 2]
                 M.caixa(pai, pc[0] - bw / 2, -bh / 2, pc[0] + bw / 2, bh / 2)
                 slc = M.add(kind="null", name="citação", parent=pai, anchor=[0, 0], **{"in": tc, "out": saida_fim},
                             pos_keys=[[tc, [pc[0] - 60, 0], [0, 0, 3 * 60 / 0.35, 33.3]], [tc + 0.35, pc, [0, 66.7, 0, 66.7]]])
                 okc = [[tc, 0], [tc + 0.2, 100]] + ([[saida_ini, 100], [saida_ini + 0.3, 0]] if anim else [])
-                M.add(kind="footage", name="citação", file=str(ca), parent=slc, src=[cw, chh], scale=50, pos=[0, 0],
+                M.add(kind="footage", name="citação", file=str(ca), parent=slc, src=[cw, chh], scale=ec, pos=[0, 0],
                       start=0, **{"in": tc, "out": saida_fim}, opacity_keys=okc,
                       shadow={"op": 120, "soft": 40, "dist": 8})
             if c.get("acima"):
@@ -907,14 +946,13 @@ def main():
                     sobre_pend[p_] = A_[:2] + (B_[1] - 0.05,) + A_[3:]
         for txt, t0_, t1_, slot_, larg_, _c in sobre_pend:
             M.texto(txt, t0_, t1_, slot_, [0, 0], larg_, 120, [1, 1, 1], None, fonte=FONTE_MARCA, caixa=COR_CAIXA)
-        if e["layout"] == "CTA":
+        if e["layout"] == "CTA" and not VERTICAL:
             cta(M, e, pai, ini, fim)
         # rótulos ao lado (B4/B5) e textos do estado
         if e.get("rotulos"):
             dir_card = geo[0][0] + geo[0][2] / 2
             area_cx = (dir_card + 50 + W - 70) / 2
             area_w = W - 70 - dir_card - 50
-            pos_r, anc_r = [area_cx - CX, 0], "center"
             if VERTICAL:
                 # embaixo do card, centralizado
                 area_cx, area_w = CX, W - 140
@@ -924,6 +962,8 @@ def main():
                 # nome à esquerda, colado no card (~30 px), como "Anna Pavlova" (v8#164)
                 esq_card = geo[0][0] - geo[0][2] / 2
                 area_cx, area_w = (70 + esq_card - 30) / 2, esq_card - 30 - 70
+            if not VERTICAL:
+                pos_r, anc_r = [area_cx - CX, 0], "center"
             rs = e["rotulos"]
             if e["layout"] == "B9":
                 # v7#219: as palavras se EMPILHAM a partir do alto do card (não trocam); ~100 px, 147 px entre linhas
@@ -963,7 +1003,7 @@ def main():
             # A2 contínua ("This is" → "every NFL position" → "explained"): nada some. Cada pedaço novo entra
             # numa linha embaixo e o bloco sobe meia linha, para ficar centrado. Com A4 + troca de estado o final
             # do cold open parecia 3 cenas: a frase sumia, palco vazio, outra entrava (bloco 00, 2026-10-11)
-            LH = 175
+            LH = 175 if not VERTICAL else 300
             pedacos, base = [ts[0][0]], ts[0][0]
             for tx in ts[1:]:
                 pedacos.append(tx[0] if pilha else tx[0][len(base.strip(" ,.;:")):].strip(" ,;:"))

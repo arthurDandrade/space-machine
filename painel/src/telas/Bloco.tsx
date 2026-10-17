@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle, Check, ChevronLeft, ChevronRight, ExternalLink, FolderOpen, Loader, Play, Square, Wrench, X,
+  AlertTriangle, Check, ChevronLeft, ChevronRight, ExternalLink, FolderOpen, Loader, Play, Smartphone, Square, Wrench, X,
 } from "lucide-react";
 import { DetalheBloco, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
@@ -61,6 +61,42 @@ function PainelRodar({ canal, b, de: deInicial, fechar }: { canal: string; b: De
         <span className="sub">{t("app.bloco.rodar_explica")}</span>
       </div>
       {rodar.isError && <p className="erro">{rodar.error.message}</p>}
+    </div>
+  );
+}
+
+// Reels 9:16: o bloco montado de novo na vertical e renderizado em <vídeo>/reels/bloco N.mp4 (space_machine/reels.py)
+function Reels({ canal, b }: { canal: string; b: DetalheBloco }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const r = b.reels;
+  const fazer = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${b.video}/b/${b.nn}/reels`, {}),
+    onSettled: () => qc.invalidateQueries(),
+  });
+  return (
+    <div className="cartao reels-card">
+      <div className="titulo-secao">
+        <h3><Smartphone size={16} /> {t("app.reels.titulo")}</h3>
+        {r.rodando ? <span className="selo run"><Loader size={12} className="gira" />{t("app.reels.rodando")}</span>
+          : r.status === "ok" ? <span className="selo ok"><Check size={12} />{t("app.reels.pronto")}</span>
+          : r.status === "erro" ? <span className="selo bad">{t("app.reels.erro")}</span> : null}
+      </div>
+      <div className="linha">
+        {r.mp4 && <video key={r.mp4} controls preload="metadata" src={r.mp4} />}
+        <div className="lado">
+          {r.rodando && <p className="sub">{r.etapa}</p>}
+          {!r.rodando && r.status === "erro" && <p className="erro">{r.etapa}{r.erro && `: ${r.erro}`}</p>}
+          <p className="sub">{r.pode ? t("app.reels.explica", { n: Number(b.nn) }) : t("app.reels.sem_plano")}</p>
+          <div className="acoes-final">
+            <button className="bt pequeno" disabled={!r.pode || r.rodando || fazer.isPending} onClick={() => fazer.mutate()}>
+              <Smartphone size={14} />{t(r.mp4 ? "app.reels.refazer" : "app.reels.fazer")}
+            </button>
+            {r.mp4 && <button className="bt pequeno" onClick={() => enviar(`/api/c/${canal}/v/${b.video}/abrir`, { sub: "reels" })}><FolderOpen size={14} />{t("app.reels.pasta")}</button>}
+          </div>
+          {fazer.isError && <p className="erro">{fazer.error.message}</p>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -148,6 +184,8 @@ export function BlocoTela() {
               <div className="vazio">{t("app.bloco.sem_previa")}</div>
             )}
           </div>
+
+          <Reels canal={canal} b={b} />
 
           {b.conferir.length > 0 && (
             <div className="cartao conferir">

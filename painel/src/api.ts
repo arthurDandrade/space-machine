@@ -195,6 +195,7 @@ export interface DetalheBloco {
   log_etapa: { nome: string; texto: string } | null;
   anterior: string | null;
   proximo: string | null;
+  reels: { pode: boolean; rodando: boolean; status: string; etapa: string; erro: string; mp4: string | null };
 }
 
 export interface Sistema {
