@@ -17,6 +17,10 @@ import caminhos  # noqa: E402
 
 W, H = 1920, 1080
 CX, CY = W / 2, H / 2
+# --vertical (teste de reels, 2026-10-17): mesmo plano em 1080x1920, num projeto à parte (bloco_NN_vertical.aep).
+# Cards lado a lado viram coluna, rótulos laterais vão para baixo do card e texto longo quebra em linhas.
+# Por ora só os layouts B, B4/B5/B9/B10/E3, C1/C2/C4/C8/D1 e textos A foram vistos na tela.
+VERTICAL = False
 FPS = 60
 FONTE = "AvenirNext-Heavy"
 # Curvas medidas nas referências a 60 fps (qa/comparar_animacao.py):
@@ -119,6 +123,9 @@ class Montador:
 
     def texto(self, txt, t_in, t_out, pai, pos, max_w, max_size, cor, sombra, ancora="center", fade=True, nome=None,
               fonte=None, caixa=None):
+        if VERTICAL:
+            max_w = min(max_w, W - 140)
+            txt = quebrar(txt, max_w, max_size)
         kw = dict(kind="text", text=txt, parent=pai, pos=pos, max_w=max_w, max_size=max_size, color=cor,
                   shadow=sombra, anchor_mode=ancora, name=nome or txt.replace("\r", " "), font=fonte, box=caixa)
         kw["in"], kw["out"] = t_in, t_out
@@ -208,6 +215,23 @@ def duas_linhas(t, limite=16):
     return " ".join(pal[:idx]) + "\r" + " ".join(pal[idx:])
 
 
+def quebrar(t, max_w, tam, max_linhas=3):
+    """Vertical: frase que só caberia numa linha encolhendo abaixo de ~70% do tamanho vai para 2–3 linhas."""
+    if "\r" in t or len(t) * 0.56 * tam * 0.7 <= max_w:
+        return t
+    if len(t) * 0.56 * tam * 0.7 <= 2 * max_w:
+        return duas_linhas(t, 0)
+    pal, alvo, linhas, atual = t.split(), len(t) / max_linhas, [], ""
+    for p_ in pal:
+        if atual and len(atual) + 1 + len(p_) > alvo + 3 and len(linhas) < max_linhas - 1:
+            linhas.append(atual)
+            atual = p_
+        else:
+            atual = (atual + " " + p_).strip()
+    linhas.append(atual)
+    return "\r".join(linhas)
+
+
 def linhas_rotulo(t):
     """Rótulo lateral: até 16 letras numa linha, até 34 em duas, mais que isso em três (bloco de texto, E3)."""
     if len(t) <= 34:
@@ -284,11 +308,56 @@ def clamp(a, lo, hi):
     return max(lo, min(hi, a))
 
 
+LATERAIS = ("B4", "B5", "B9", "B10", "E3")     # card de um lado, rótulo/texto do outro
+
+
+def geometria_vertical(layout, asps, pngs, inteiros=None):
+    """1080x1920: um card só fica no centro e mais largo; vários viram coluna; card com rótulo sobe e o rótulo
+    vai para baixo dele."""
+    n = len(asps)
+    inteiros = inteiros or [False] * n
+    larg = W - 140
+    if layout in LATERAIS:
+        # card no alto (centro 160 px acima do meio, até 820 px de altura); o rótulo entra embaixo dele
+        a = asps[0] if pngs[0] else clamp(asps[0], 0.75, 1.5)
+        w = min(larg * 0.9, 820 * a)
+        return [(CX, CY - 160, w, w / a)]
+    if n == 1 or layout in ("B", "E5", "M5", "G1", "B11", "G2", "G3"):
+        # foto/vídeo em retrato 4:5 a 1:1, na largura útil: em paisagem sobrava meia tela vazia (teste de 2026-10-17)
+        a = asps[0] if pngs[0] or inteiros[0] else clamp(asps[0], 0.8, 1.0)
+        w = min(larg, 1150 * a)
+        return [(CX, CY, w, w / a)]
+    if layout == "C9":
+        a = clamp(asps[1], 0.75, 1.6)
+        w = larg * 0.9
+        h = w / a
+        dx, dy = 0.08 * w, 0.08 * h
+        return [(CX + dx / 2, CY - dy / 2, w, h), (CX - dx / 2, CY + dy / 2, w, h)]
+    # coluna: fotos cortadas em paisagem para caberem empilhadas; mapa/logo/recorte no próprio formato
+    alto = 300 if layout == "LOGOS" else None
+    asp = [a if (p or it) else clamp(a, 1.2, 1.78) for a, p, it in zip(asps, pngs, inteiros)]
+    ws = [min(larg * 0.92, alto * a) if alto else larg * 0.92 for a in asp]
+    hs = [w / a for w, a in zip(ws, asp)]
+    gap, teto = 40, 1480
+    tot = sum(hs) + gap * (n - 1)
+    if tot > teto:
+        k = (teto - gap * (n - 1)) / sum(hs)
+        ws, hs = [w * k for w in ws], [h * k for h in hs]
+        tot = teto
+    y, out = CY - tot / 2, []
+    for w, h in zip(ws, hs):
+        out.append((CX, y + h / 2, w, h))
+        y += h + gap
+    return out
+
+
 def geometria(layout, asps, pngs, inteiros=None):
     """Lista de (cx, cy, w, h) por card, em coordenadas de tela."""
     n = len(asps)
     if n == 0:
         return []
+    if VERTICAL:
+        return geometria_vertical(layout, asps, pngs, inteiros)
     if layout == "LOGOS":
         alt, gap = 360, 140
         ws = [a * alt for a in asps]
@@ -556,7 +625,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("projeto")
     ap.add_argument("--item", default="01")
+    ap.add_argument("--vertical", action="store_true", help="1080x1920 (reels), em bloco_NN_vertical.aep")
     a = ap.parse_args()
+    global VERTICAL, W, H, CX, CY, FUNDO_IMAGEM
+    if a.vertical:
+        VERTICAL, W, H = True, 1080, 1920
+        CX, CY = W / 2, H / 2
+        if FUNDO_IMAGEM:
+            # o papel cobre a altura (os adesivos dos cantos ficam fora; o papel do meio fica)
+            FUNDO_IMAGEM = dict(FUNDO_IMAGEM, escala=FUNDO_IMAGEM["escala"] * H / 1080, pos=[CX, CY])
     proj = Path(a.projeto).resolve()
     plano = json.loads((proj / "edicao" / f"plano_edicao_{a.item}.json").read_text())
     audio = next(p for p in proj.iterdir() if p.stem.startswith("narracao"))
@@ -568,16 +645,18 @@ def main():
         t0, tf = max(0, tt["t"] - 0.05), tt["fim"]
         pai = M.null_estado(0, tf, tf, "Título")
         linhas = duas_linhas(tt["texto"].upper(), 18).split("\r")
-        tam = tamanho_impact(linhas, 1500, 150)
-        y = 50
+        tam = tamanho_impact(linhas, min(1500, W - 160), 150)
+        y = 50 if not VERTICAL else 560
         for k, lin in enumerate(linhas):
             cor = COR_AZUL if (k == len(linhas) - 1 and len(linhas) > 1) else COR_TEXTO
             M.texto(lin, t0, tf, pai, [0, y - CY], 3000, tam, cor, None, "top", fonte=FONTE_MARCA)
             y += tam * 1.08
         topo_png = int(y + 30)
         src = M.arquivo({"asset": tt["asset"]})
-        arq, sw, sh, _ = M.info(src, 1000, H - topo_png - 50, png=True)
-        s = min(1000 / sw, (H - topo_png - 50) / sh)
+        lt = min(1000, W - 160)
+        fundo_t = H - 50 if not VERTICAL else topo_png + 800
+        arq, sw, sh, _ = M.info(src, lt, fundo_t - topo_png, png=True)
+        s = min(lt / sw, (fundo_t - topo_png) / sh)
         slot = M.add(kind="null", name="slot título", parent=pai, pos=[0, topo_png + sh * s / 2 - CY], anchor=[0, 0],
                      **{"in": t0, "out": tf}, scale_keys=[[t0, 0, [0, 0, 800, 18]], [t0 + POP, 100, [0, 85, 0, 0]]])
         M.caixa(pai, -sw * s / 2, topo_png - CY, sw * s / 2, topo_png + sh * s - CY)
@@ -665,6 +744,8 @@ def main():
                 sai = ("esq" if lado < 0 else "dir") if abs(lado) > 150 else "baixo"
                 if e["layout"] == "D4":
                     ent, sai = "dir", "esq"
+                if VERTICAL and len(geo) > 1 and e["layout"] != "C9":
+                    ent = sai = ("esq", "dir")[j % 2]
                 ent, sai = c.get("entra", ent), c.get("sai", sai)
 
                 def fora(d):
@@ -833,14 +914,20 @@ def main():
             dir_card = geo[0][0] + geo[0][2] / 2
             area_cx = (dir_card + 50 + W - 70) / 2
             area_w = W - 70 - dir_card - 50
-            if e["layout"] == "B10":
+            pos_r, anc_r = [area_cx - CX, 0], "center"
+            if VERTICAL:
+                # embaixo do card, centralizado
+                area_cx, area_w = CX, W - 140
+                base = geo[0][1] + geo[0][3] / 2 + 60
+                pos_r, anc_r = [0, base - CY], "top"
+            elif e["layout"] == "B10":
                 # nome à esquerda, colado no card (~30 px), como "Anna Pavlova" (v8#164)
                 esq_card = geo[0][0] - geo[0][2] / 2
                 area_cx, area_w = (70 + esq_card - 30) / 2, esq_card - 30 - 70
             rs = e["rotulos"]
             if e["layout"] == "B9":
                 # v7#219: as palavras se EMPILHAM a partir do alto do card (não trocam); ~100 px, 147 px entre linhas
-                topo = geo[0][1] - geo[0][3] / 2 + 0.12 * geo[0][3]
+                topo = geo[0][1] - geo[0][3] / 2 + 0.12 * geo[0][3] if not VERTICAL else base
                 tam = min(110, area_w / (max(len(r[0]) for r in rs) * 0.62))
                 for k2, (txt, tt_, *_) in enumerate(rs):
                     M.texto(txt, tt_ - 0.05, saida_ini if anim else fim, pai, [area_cx - CX, topo - CY + k2 * tam * 1.45],
@@ -865,8 +952,8 @@ def main():
                 prox = rs[k2 + 1][1] - 0.13 if k2 + 1 < len(rs) else (saida_ini if anim else fim)
                 # 1 linha se couber com letra ≥ 80 px (como "the aromatics"); senão quebra
                 uma_linha = "\r" in txt or len(txt) * 0.56 * 80 <= area_w
-                M.texto(txt if uma_linha else linhas_rotulo(txt), tt_ - 0.05, prox, pai, [area_cx - CX, 0], area_w, 140,
-                        COR_TEXTO, SOMBRA_PRETO)
+                M.texto(txt if uma_linha else linhas_rotulo(txt), tt_ - 0.05, prox, pai, pos_r, area_w, 140,
+                        COR_TEXTO, SOMBRA_PRETO, anc_r)
         ts = e.get("textos", [])
         # A4 em que uma frase ficaria < 1 s ("a gap opens" → "then closes" 0,69 s; "one snap" 0,37 s): as frases
         # EMPILHAM em vez de trocar, como lista (positions 01/04/20, 2026-10-13 — o QA novo reprova < 0,7 s)
@@ -913,7 +1000,9 @@ def main():
             if modo == "faixa":
                 # texto branco na faixa azul (o estilo do "sobre"), no lugar livre do layout: no E3 ao lado do
                 # recorte. "52 diamonds = Super Bowl 52" preto por cima do anel ficou ruim (rings, bloco 06, 2026-10-14)
-                if e["layout"] == "E3" and geo:
+                if e["layout"] == "E3" and geo and VERTICAL:
+                    pos_, larg_ = [0, geo[0][1] + geo[0][3] / 2 + 140 - CY], W - 140
+                elif e["layout"] == "E3" and geo:
                     dir_card = geo[0][0] + geo[0][2] / 2
                     pos_, larg_ = [(dir_card + 60 + W - 200) / 2 - CX, 0], W - 200 - dir_card - 60
                 elif e["layout"] == "CTA":
@@ -923,7 +1012,7 @@ def main():
                 M.texto(txt.upper(), t_in, prox, pai, pos_, larg_, 120, [1, 1, 1], None, fonte=FONTE_MARCA,
                         caixa=COR_CAIXA)
             elif modo == "abaixo":
-                M.texto(txt.upper(), t_in, prox, pai, [0, 830 - CY], 1400, 130, COR_TEXTO, SOMBRA_PRETO, fonte=FONTE_MARCA)
+                M.texto(txt.upper(), t_in, prox, pai, [0, (830 if not VERTICAL else 1480) - CY], 1400, 130, COR_TEXTO, SOMBRA_PRETO, fonte=FONTE_MARCA)
             elif modo == "2linhas":
                 M.texto(duas_linhas(txt, 10), t_in, prox, pai, [0, 0], 1500, 140, COR_TEXTO, SOMBRA_PRETO)
             elif e["layout"] == "A4":
@@ -934,6 +1023,9 @@ def main():
                 lid = M.texto(txt, t_in, prox, pai, [0, 0], 1660, 150, COR_TEXTO, SOMBRA_PRETO)
                 M.layers[lid]["opacity_keys"] = [[t_in, 0], [t_in + 0.1, 100]]
                 M.layers[lid]["blur_keys"] = [[t_in, 6], [t_in + 0.1, 0]]
+            elif e["layout"] == "E3" and geo and VERTICAL:
+                M.texto(txt, t_in, prox, pai, [0, geo[0][1] + geo[0][3] / 2 + 60 - CY], W - 140, 150, COR_TEXTO,
+                        SOMBRA_PRETO, "top")
             elif e["layout"] == "E3" and geo:
                 # E3 (v1#139): recorte de um lado, texto do outro. Ia para o centro e ficava por cima do
                 # capacete ("since 1994", positions bloco 01, 2026-10-12). Termina 200 px antes da borda: com 70
@@ -984,11 +1076,12 @@ def main():
     # O bloco seguinte começa 0,2 s antes da fala, então a emenda fica com ~0,8 s de pausa.
     ultimo = max([L["out"] for L in M.layers if isinstance(L.get("out"), (int, float))] + [0])
     dur = min(max(plano["fim"] + FIM_BLOCO, ultimo), plano["fim"] + 2)
-    dados = {"nome": plano["nome"], "dur": round(dur, 2), "fps": FPS, "audio": str(audio), "fonte": FONTE,
+    suf = "vertical" if VERTICAL else "v2"
+    dados = {"nome": plano["nome"] + (" (vertical)" if VERTICAL else ""), "dur": round(dur, 2), "fps": FPS, "w": W, "h": H, "audio": str(audio), "fonte": FONTE,
              "audio_offset": plano.get("offset_audio", 0),
              "cor_fundo": COR_FUNDO, "cor_sombra": COR_SOMBRA, "fundo_imagem": FUNDO_IMAGEM,
-             "layers": M.layers, "salvar": str(proj / "edicao" / f"bloco_{a.item}_v2.aep"),
-             "log": str(proj / "edicao" / f"log_{a.item}_v2.txt")}
+             "layers": M.layers, "salvar": str(proj / "edicao" / f"bloco_{a.item}_{suf}.aep"),
+             "log": str(proj / "edicao" / f"log_{a.item}_{suf}.txt")}
     modelo = (Path(__file__).parent / "montar_modelo2.jsx").read_text()
     # posições/tempos finais de textos e cards (o QA confere texto por cima de imagem e texto rápido demais)
     reg = []
@@ -1000,8 +1093,8 @@ def main():
             r2["in"], r2["out"] = L_["in"], L_["out"]
             r2["opacidade_fim"] = (L_.get("opacity_keys") or [[0, 100]])[-1][1]
         reg.append(r2)
-    (proj / "edicao" / f"layout_{a.item}.json").write_text(json.dumps(reg, ensure_ascii=False, indent=0))
-    jsx = proj / "edicao" / f"montar_{a.item}_v2.jsx"
+    (proj / "edicao" / f"layout_{a.item}{'_vertical' if VERTICAL else ''}.json").write_text(json.dumps(reg, ensure_ascii=False, indent=0))
+    jsx = proj / "edicao" / f"montar_{a.item}_{suf}.jsx"
     jsx.write_text("var DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n" + modelo)
     print(jsx, len(M.layers), "layers")
 

@@ -59,11 +59,12 @@
         app.newProject();
         app.beginUndoGroup("Montar bloco v2");
         pastaAssets = app.project.items.addFolder("assets");
-        var comp = app.project.items.addComp(DADOS.nome, 1920, 1080, 1, DADOS.dur, DADOS.fps);
+        var W = DADOS.w || 1920, H = DADOS.h || 1080;   // 1080x1920 no --vertical (reels)
+        var comp = app.project.items.addComp(DADOS.nome, W, H, 1, DADOS.dur, DADOS.fps);
         comp.motionBlur = true; comp.shutterAngle = 180; comp.bgColor = DADOS.cor_fundo;
 
         // fundo de papel
-        var fundo = comp.layers.addSolid(DADOS.cor_fundo, "Fundo", 1920, 1080, 1, DADOS.dur);
+        var fundo = comp.layers.addSolid(DADOS.cor_fundo, "Fundo", W, H, 1, DADOS.dur);
         if (DADOS.fundo_imagem && new File(DADOS.fundo_imagem.file).exists) {   // papel com adesivos nos cantos
             var fi = comp.layers.add(importar(DADOS.fundo_imagem.file));
             fi.name = "Fundo imagem"; fi.outPoint = DADOS.dur;
@@ -71,15 +72,17 @@
             fi.scale.setValue([DADOS.fundo_imagem.escala, DADOS.fundo_imagem.escala]);
             fi.position.setValue(DADOS.fundo_imagem.pos);
         }
-        var tex = comp.layers.addSolid([0.5, 0.5, 0.5], "Textura papel", 1920, 1080, 1, DADOS.dur);
+        var tex = comp.layers.addSolid([0.5, 0.5, 0.5], "Textura papel", W, H, 1, DADOS.dur);
         var fn = tex.property("ADBE Effect Parade").addProperty("ADBE Fractal Noise");
         fn.property("Contrast").setValue(260); fn.property("Brightness").setValue(-10);
         fn.property("ADBE Fractal Noise-0010").setValue(18);
         tex.blendingMode = BlendingMode.SOFT_LIGHT; tex.opacity.setValue(14);
-        var vin = comp.layers.addSolid(DADOS.cor_sombra, "Vinheta", 1920, 1080, 1, DADOS.dur);
+        var vin = comp.layers.addSolid(DADOS.cor_sombra, "Vinheta", W, H, 1, DADOS.dur);
         var m = vin.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
-        var el = new Shape(), kx = 1150 * 0.5523, ky = 760 * 0.5523;
-        el.vertices = [[960, -220], [2110, 540], [960, 1300], [-190, 540]];
+        // elipse que passa 190 px (em 1920) e 220 px (em 1080) além das bordas
+        var rx = W / 2 + 190 * W / 1920, ry = H / 2 + 220 * H / 1080;
+        var el = new Shape(), kx = rx * 0.5523, ky = ry * 0.5523;
+        el.vertices = [[W / 2, H / 2 - ry], [W / 2 + rx, H / 2], [W / 2, H / 2 + ry], [W / 2 - rx, H / 2]];
         el.inTangents = [[-kx, 0], [0, -ky], [kx, 0], [0, ky]];
         el.outTangents = [[kx, 0], [0, ky], [-kx, 0], [0, -ky]];
         el.closed = true;
