@@ -1,20 +1,70 @@
 // Moldura de tudo o que é de um canal: barra lateral (troca de canal no topo, navegação, novo vídeo) + a tela.
 // A cor de destaque do canal vira --accent em toda a moldura.
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BookOpen, CalendarDays, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, Lightbulb, ListChecks, ScrollText,
-  Palette, Plus,
+  BookOpen, CalendarDays, Check, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, LayoutGrid, Lightbulb,
+  ListChecks, ScrollText, Palette, Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { PainelCanal, pegar, rota } from "../api";
+import { Canais, PainelCanal, pegar, rota } from "../api";
 import { LogoCanal } from "../componentes/Imagens";
 import { useT } from "../textos";
 
 export const useCanal = (slug: string) =>
   useQuery({ queryKey: ["canal", slug], queryFn: () => pegar<PainelCanal>(`/api/c/${slug}`) });
+
+/** Abinha do topo da barra: lista os canais e entra em outro sem passar pela tela de escolha. */
+function TrocarCanal({ canal, nome, cores, logo, aberto, setAberto }:
+{ canal: string; nome?: string; cores?: PainelCanal["canal"]["cores"]; logo?: boolean; aberto: boolean; setAberto: (v: boolean) => void }) {
+  const t = useT();
+  const navegar = useNavigate();
+  const caixa = useRef<HTMLDivElement>(null);
+  // a lista só é buscada (e atualizada) enquanto a abinha está aberta
+  const { data } = useQuery({ queryKey: ["canais"], queryFn: () => pegar<Canais>("/api/canais"), enabled: aberto });
+  useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => { if (!caixa.current?.contains(e.target as Node)) setAberto(false); };
+    document.addEventListener("mousedown", fora);
+    return () => document.removeEventListener("mousedown", fora);
+  }, [aberto, setAberto]);
+
+  return (
+    <div className="troca-canal" ref={caixa}>
+      <button className={`troca ${aberto ? "aberta" : ""}`} onClick={() => setAberto(!aberto)} title={t("app.nav.trocar_dica")}
+              aria-expanded={aberto} aria-haspopup="menu">
+        {nome && cores ? <LogoCanal canal={canal} nome={nome} cores={cores} tem={!!logo} /> : <div className="logo-canal" />}
+        <div>
+          <b>{nome ?? "…"}</b>
+          <span>{t("app.nav.trocar")}</span>
+        </div>
+        <ChevronsUpDown size={16} />
+      </button>
+      <AnimatePresence>
+        {aberto && (
+          <motion.div className="abinha-canais" role="menu" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}>
+            {(data?.canais ?? []).map((o) => (
+              <button key={o.slug} role="menuitem" className={`linha ${o.slug === canal ? "atual" : ""} ${o.ativo ? "" : "inativo"}`}
+                      onClick={() => { setAberto(false); if (o.slug !== canal) navegar(`/c/${o.slug}`); }}>
+                <LogoCanal canal={o.slug} nome={o.nome} cores={o.cores} tem={o.logo} className="pequena" />
+                <span className="t">{o.nome}{!o.ativo && <em> · {t("app.canais.inativo")}</em>}</span>
+                {!!o.esperando && <span className="qt">{o.esperando}</span>}
+                {o.slug === canal && <Check size={15} />}
+              </button>
+            ))}
+            {!data && <div className="linha vazia">{t("app.carregando")}</div>}
+            <button role="menuitem" className="linha todos" onClick={() => { setAberto(false); navegar("/"); }}>
+              <LayoutGrid size={16} />{t("app.nav.todos_canais")}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 type Item = { rot: string; icone: typeof Hand; para: string; fim?: boolean; contador?: number };
 
@@ -26,16 +76,19 @@ export function CascaCanal() {
   const local = useLocation();
   // useOutlet (e não <Outlet/>): na transição a tela que sai continua sendo a antiga
   const tela = useOutlet();
+  const [trocando, setTrocando] = useState(false);
 
-  // Esc volta para a escolha de canais (fora de campos de texto)
+  // Esc fecha a abinha de canais; com ela fechada, volta para a escolha de canais (fora de campos de texto)
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
       const alvo = e.target as HTMLElement;
-      if (e.key === "Escape" && !alvo.closest("input, textarea, select, [role=dialog]")) navegar("/");
+      if (e.key !== "Escape" || alvo.closest("input, textarea, select, [role=dialog]")) return;
+      if (trocando) setTrocando(false);
+      else navegar("/");
     };
     window.addEventListener("keydown", tecla);
     return () => window.removeEventListener("keydown", tecla);
-  }, [navegar]);
+  }, [navegar, trocando]);
 
   if (error) throw error;
   const c = data?.canal;
@@ -57,14 +110,7 @@ export function CascaCanal() {
   return (
     <div className="app" style={c?.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
       <aside className="lado">
-        <button className="troca" onClick={() => navegar("/")} title={t("app.nav.trocar_dica")}>
-          {c ? <LogoCanal canal={canal} nome={c.nome} cores={c.cores} tem={c.logo} /> : <div className="logo-canal" />}
-          <div>
-            <b>{c?.nome ?? "…"}</b>
-            <span>{t("app.nav.trocar")}</span>
-          </div>
-          <ChevronsUpDown size={16} />
-        </button>
+        <TrocarCanal canal={canal} nome={c?.nome} cores={c?.cores} logo={c?.logo} aberto={trocando} setAberto={setTrocando} />
         <nav className="nav">
           {itens.map((it) =>
             typeof it === "string" ? (
