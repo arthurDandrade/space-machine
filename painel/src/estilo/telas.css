@@ -432,6 +432,12 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .campos-api .campo em { font-style: normal; color: var(--ink3); font-weight: 500; }
 .campos-api .apagar { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 12.5px; color: var(--ink3); }
 .campos-api .apagar input { width: auto; height: auto; }
+.importar-chaves { margin-bottom: 16px; }
+.importar-chaves .duas-col { align-items: start; }
+.escolher-apis { display: flex; flex-wrap: wrap; gap: 6px 18px; padding-top: 4px; }
+.escolher-apis .marcar { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.escolher-apis .marcar input { width: auto; height: auto; }
+.escolher-apis .marcar em { font-style: normal; color: var(--ink3); font-weight: 500; }
 .lista-canais { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
 .linha-canal { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); flex-wrap: wrap; }
 .linha-canal .t { flex: 1; min-width: 160px; display: flex; flex-direction: column; }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, KeyRound, Save, Sparkles, Upload, Wand2 } from "lucide-react";
+import { Check, Copy, KeyRound, Save, Sparkles, Upload, Wand2 } from "lucide-react";
 import { Cores, enviar, ErroApi, pegar, urlMarca } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
@@ -276,6 +276,65 @@ function CartaoApi({ canal, a }: { canal: string; a: Api }) {
   );
 }
 
+interface OutroCanal { slug: string; nome: string; apis: { id: string; nome: string; mostrar: string }[] }
+
+/** Traz para este canal a chave de API que outro canal já tem (só o campo secreto; a voz do Fish fica a daqui). */
+function ImportarChaves({ canal, jaTem }: { canal: string; jaTem: Set<string> }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["chaves-importar", canal], queryFn: () => pegar<{ canais: OutroCanal[] }>(`/api/c/${canal}/chaves-importar`), refetchInterval: false });
+  const [origem, setOrigem] = useState("");
+  const [marcados, setMarcados] = useState<string[] | null>(null);
+  const lista = data?.canais ?? [];
+  const de = lista.find((c) => c.slug === origem) ?? lista[0];
+  // sem escolha da pessoa, já vêm marcadas as chaves que faltam aqui
+  const escolhidas = marcados ?? (de?.apis ?? []).filter((a) => !jaTem.has(a.id)).map((a) => a.id);
+  const importar = useMutation({
+    mutationFn: () => enviar<{ copiados: string[] }>(`/api/c/${canal}/chaves-importar`, { origem: de.slug, apis: escolhidas }),
+    onSuccess: () => {
+      setMarcados(null);
+      qc.invalidateQueries({ queryKey: ["chaves", canal] });
+      qc.invalidateQueries({ queryKey: ["canais"] });
+    },
+  });
+  if (!de) return null;
+  return (
+    <form className="cartao api importar-chaves" onSubmit={(e) => { e.preventDefault(); importar.mutate(); }}>
+      <div className="titulo-api">
+        <span className="ic"><Copy size={16} /></span>
+        <div><h3>{t("app.chaves.importar_titulo")}</h3><span className="sub">{t("app.chaves.importar_explica")}</span></div>
+      </div>
+      <div className="duas-col">
+        <label className="campo">
+          <span>{t("app.chaves.importar_de")}</span>
+          <select value={de.slug} onChange={(e) => { setOrigem(e.target.value); setMarcados(null); }}>
+            {lista.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
+          </select>
+        </label>
+        <div className="campo">
+          <span>{t("app.chaves.importar_quais")}</span>
+          <div className="escolher-apis">
+            {de.apis.map((a) => (
+              <label key={a.id} className="marcar">
+                <input type="checkbox" checked={escolhidas.includes(a.id)}
+                       onChange={(e) => setMarcados(e.target.checked ? [...escolhidas, a.id] : escolhidas.filter((x) => x !== a.id))} />
+                <span>{a.nome} <em>{a.mostrar}</em>{jaTem.has(a.id) && <em> · {t("app.chaves.importar_ja_tem")}</em>}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="rodape-form">
+        <button className="bt primario pequeno" disabled={!escolhidas.length || importar.isPending}>
+          <Copy size={14} />{importar.isPending ? t("app.chaves.importar_copiando") : t("app.chaves.importar_bt")}
+        </button>
+        {importar.isSuccess && <span className="selo ok"><Check size={12} />{importar.data.copiados.length ? t("app.chaves.importar_feito", { n: importar.data.copiados.length }) : t("app.chaves.importar_nada")}</span>}
+        {importar.isError && <span className="erro">{(importar.error as ErroApi).message}</span>}
+      </div>
+    </form>
+  );
+}
+
 export function ChavesTela() {
   const { canal = "" } = useParams();
   const { data: dc } = useCanal(canal);
@@ -286,6 +345,7 @@ export function ChavesTela() {
     <>
       <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.chaves")}</b></>} titulo={t("app.chaves.titulo")} />
       <p className="sub intro">{t("app.chaves.explica")}</p>
+      <ImportarChaves canal={canal} jaTem={new Set(data.apis.filter((a) => a.configurada).map((a) => a.id))} />
       <div className="apis">{data.apis.map((a) => <CartaoApi key={a.id} canal={canal} a={a} />)}</div>
     </>
   );

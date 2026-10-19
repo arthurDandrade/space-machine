@@ -738,6 +738,23 @@ def chaves(slug: str):
     return {"apis": _apis_publicas(_canal(slug))}
 
 
+@api.get("/c/{slug}/chaves-importar")
+def chaves_de_outros(slug: str):
+    _canal(slug)
+    return {"canais": configuracao.chaves_de_outros(slug)}
+
+
+@api.post("/c/{slug}/chaves-importar")
+def importar_chaves(slug: str, origem: str = Body(..., embed=True), apis: list = Body([], embed=True)):
+    c = _canal(slug)
+    try:
+        copiados = configuracao.importar_chaves(c, origem, set(apis))
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    _cache_falta["quando"] = 0
+    return {"ok": True, "copiados": copiados, "apis": _apis_publicas(c)}
+
+
 @api.post("/c/{slug}/chaves/{api_id}")
 def salvar_chave(slug: str, api_id: str, valores: dict = Body({}, embed=True), apagar: list = Body([], embed=True)):
     c = _canal(slug)

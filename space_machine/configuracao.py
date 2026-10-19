@@ -111,6 +111,45 @@ def salvar_api(canal, api_id, form):
     return list(valores)
 
 
+def chaves_de_outros(slug_destino):
+    """Que chaves de API cada outro canal tem para copiar para este (só as do canal; a do Claude já vale para todos)."""
+    out = []
+    for slug, c in canais().items():
+        if slug == slug_destino:
+            continue
+        lidos = {}
+        apis = []
+        for api in APIS:
+            if api["escopo"] != "canal":
+                continue
+            arq = _arquivo(api, c)
+            env = lidos.setdefault(str(arq), ler_env(arq))
+            chave = api["campos"][0][0]
+            if env.get(chave):
+                apis.append({"id": api["id"], "nome": api["nome"], "mostrar": mascara(env[chave])})
+        if apis:
+            out.append({"slug": slug, "nome": c["nome"], "apis": apis})
+    return out
+
+
+def importar_chaves(destino, slug_origem, ids):
+    """Copia para `destino` a chave de API que o canal de origem já tem. Só os campos secretos: o que é identidade
+    do canal (voz do Fish, modelo) continua o daqui. Devolve os ids copiados."""
+    origem = canais().get(slug_origem)
+    if not origem:
+        raise ValueError("canal de origem não encontrado")
+    copiados = []
+    for api in APIS:
+        if api["id"] not in ids or api["escopo"] != "canal":
+            continue
+        env = ler_env(_arquivo(api, origem))
+        valores = {k: env[k] for k, _, secreta, _ in api["campos"] if secreta and env.get(k)}
+        if valores:
+            gravar_env(_arquivo(api, destino), valores)
+            copiados.append(api["id"])
+    return copiados
+
+
 def testar_api(canal, api_id):
     """Chamada barata para conferir se a chave funciona. Devolve (ok, mensagem)."""
     api = next(a for a in APIS if a["id"] == api_id)
