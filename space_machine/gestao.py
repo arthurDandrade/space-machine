@@ -272,6 +272,25 @@ def excluir_video(c, slug):
     return destino.name
 
 
+def excluir_bloco(c, video, nn):
+    """Tira o bloco do vídeo de vez: a pasta <vídeo>/blocos/NN e o que ele já tinha entregue (o MP4 da edição e o
+    do Reels) vão para o Lixo do Mac, como na Limpeza. Os outros blocos continuam com o número que têm — renumerar
+    quebraria os .aep já montados e o que o roteiro diz de cada tópico."""
+    from . import limpeza
+    vd = Path(c["producoes"]) / video
+    b = vd / "blocos" / nn
+    if not nn.isdigit() or not b.is_dir():
+        raise ValueError("bloco não encontrado")
+    motivo = _ocupado(vd)
+    if motivo:
+        raise ValueError(motivo)
+    itens = [(b, "bloco")]
+    itens += [(f, "bloco") for f in (vd / "edicao" / f"bloco {int(nn)}.mp4", vd / "reels" / f"bloco {int(nn)}.mp4")
+              if f.exists()]
+    tamanho, quantos, destino = limpeza.mandar_para_o_lixo(itens)
+    return {"quantos": quantos, "tamanho": tamanho, "lixo": destino.name}
+
+
 def lixeira(c):
     pasta = Path(c["producoes"]) / LIXEIRA
     out = []

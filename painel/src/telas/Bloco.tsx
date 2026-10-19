@@ -1,15 +1,16 @@
 // Página de um bloco: linha do tempo das etapas (clicar numa etapa roda a partir dela), prévia com as versões,
 // o que conferir antes de entregar, QA e storyboard legíveis e, recolhidos, os logs.
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle, Check, ChevronLeft, ChevronRight, ExternalLink, FolderOpen, Loader, Play, Smartphone, Square, Wrench, X,
+  AlertTriangle, Check, ChevronLeft, ChevronRight, ExternalLink, FolderOpen, Loader, Play, Smartphone, Square, Trash2, Wrench, X,
 } from "lucide-react";
 import { DetalheBloco, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { TituloCopiavel } from "../componentes/Copiar";
+import { Dialogo } from "../componentes/Dialogo";
 import { Markdown } from "../componentes/Markdown";
 import { useT } from "../textos";
 
@@ -101,6 +102,34 @@ function Reels({ canal, b }: { canal: string; b: DetalheBloco }) {
   );
 }
 
+// Excluir o bloco de vez: a pasta dele e o que já entregou vão para o Lixo do Mac (gestao.excluir_bloco).
+function ExcluirBloco({ canal, b }: { canal: string; b: DetalheBloco }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const navegar = useNavigate();
+  const [aberto, setAberto] = useState(false);
+  const excluir = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${b.video}/b/${b.nn}/excluir`, {}),
+    onSuccess: () => { qc.invalidateQueries(); navegar(rota.video(canal, b.video)); },
+  });
+  return (
+    <>
+      <button className="bt redondo perigo" onClick={() => setAberto(true)} title={t("app.excluir.bloco_botao")}><Trash2 size={16} /></button>
+      {aberto && (
+        <Dialogo titulo={t("app.excluir.bloco_titulo", { nn: b.nn })} fechar={() => setAberto(false)}
+          acoes={<>
+            <button className="bt" onClick={() => setAberto(false)}>{t("app.cancelar")}</button>
+            <button className="bt perigo-cheio" disabled={excluir.isPending} onClick={() => excluir.mutate()}><Trash2 size={16} />{t("app.excluir.bloco_confirmar")}</button>
+          </>}>
+          <p>{t("app.excluir.bloco_explica")}</p>
+          <p className="sub">{t("app.excluir.bloco_numeros")}</p>
+          {excluir.isError && <p className="erro">{excluir.error.message}</p>}
+        </Dialogo>
+      )}
+    </>
+  );
+}
+
 export function BlocoTela() {
   const { canal = "", video = "", nn = "" } = useParams();
   const { data: dc } = useCanal(canal);
@@ -131,6 +160,7 @@ export function BlocoTela() {
           {b.proximo ? <Link className="bt redondo" to={rota.bloco(canal, video, b.proximo)} title={t("app.bloco.proximo")}><ChevronRight size={18} /></Link> : <span className="bt redondo apagado"><ChevronRight size={18} /></span>}
         </div>
         <button className="bt redondo" onClick={() => enviar(`/api/c/${canal}/v/${video}/abrir`, { nn })} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} /></button>
+        {!b.rodando && <ExcluirBloco canal={canal} b={b} />}
         {b.rodando ? (
           <button className="bt perigo" disabled={acao.isPending} onClick={() => acao.mutate(`${base}/parar`)}><Square size={14} />{t("app.bloco.parar")}</button>
         ) : (

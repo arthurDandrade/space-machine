@@ -616,6 +616,14 @@ def excluir_video(slug: str, video: str):
         raise HTTPException(409, str(e))
 
 
+@api.post("/c/{slug}/v/{video}/b/{nn}/excluir")
+def excluir_bloco(slug: str, video: str, nn: str):
+    try:
+        return {"ok": True, **gestao.excluir_bloco(_canal(slug), video, nn)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
 @api.get("/c/{slug}/lixeira")
 def lixeira(slug: str):
     return {"itens": gestao.lixeira(_canal(slug))}
