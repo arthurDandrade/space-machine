@@ -272,11 +272,12 @@ def excluir_video(c, slug):
     return destino.name
 
 
-def excluir_bloco(c, video, nn):
-    """Tira o bloco do vídeo de vez: a pasta <vídeo>/blocos/NN e o que ele já tinha entregue (o MP4 da edição e o
-    do Reels) vão para o Lixo do Mac, como na Limpeza. Os outros blocos continuam com o número que têm — renumerar
-    quebraria os .aep já montados e o que o roteiro diz de cada tópico."""
-    from . import limpeza
+def _mp4_entregues(vd, nn):
+    """Os MP4 que o bloco já tinha entregue no vídeo: a edição e o Reels."""
+    return [f for f in (vd / "edicao" / f"bloco {int(nn)}.mp4", vd / "reels" / f"bloco {int(nn)}.mp4") if f.exists()]
+
+
+def _bloco_para_mexer(c, video, nn):
     vd = Path(c["producoes"]) / video
     b = vd / "blocos" / nn
     if not nn.isdigit() or not b.is_dir():
@@ -284,9 +285,30 @@ def excluir_bloco(c, video, nn):
     motivo = _ocupado(vd)
     if motivo:
         raise ValueError(motivo)
-    itens = [(b, "bloco")]
-    itens += [(f, "bloco") for f in (vd / "edicao" / f"bloco {int(nn)}.mp4", vd / "reels" / f"bloco {int(nn)}.mp4")
-              if f.exists()]
+    return vd, b
+
+
+def limpar_bloco(c, video, nn):
+    """Zera o bloco sem tirá-lo do vídeo: tudo o que a produção fez (narração, transcrição, storyboard, candidatos,
+    assets, prévias, QA, .aep) e os MP4 já entregues vão para o Lixo do Mac. Fica só o roteiro.txt, então o bloco
+    volta para a primeira etapa e dá para rodar de novo do zero."""
+    from . import limpeza
+    vd, b = _bloco_para_mexer(c, video, nn)
+    itens = [(p, "bloco") for p in sorted(b.iterdir()) if p.name != "roteiro.txt"]
+    itens += [(f, "bloco") for f in _mp4_entregues(vd, nn)]
+    if not itens:
+        return {"quantos": 0, "tamanho": 0, "lixo": ""}
+    tamanho, quantos, destino = limpeza.mandar_para_o_lixo(itens)
+    return {"quantos": quantos, "tamanho": tamanho, "lixo": destino.name}
+
+
+def excluir_bloco(c, video, nn):
+    """Tira o bloco do vídeo de vez: a pasta <vídeo>/blocos/NN e o que ele já tinha entregue (o MP4 da edição e o
+    do Reels) vão para o Lixo do Mac, como na Limpeza. Os outros blocos continuam com o número que têm — renumerar
+    quebraria os .aep já montados e o que o roteiro diz de cada tópico."""
+    from . import limpeza
+    vd, b = _bloco_para_mexer(c, video, nn)
+    itens = [(b, "bloco")] + [(f, "bloco") for f in _mp4_entregues(vd, nn)]
     tamanho, quantos, destino = limpeza.mandar_para_o_lixo(itens)
     return {"quantos": quantos, "tamanho": tamanho, "lixo": destino.name}
 

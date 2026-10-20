@@ -480,6 +480,7 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .corpo-dialogo { margin: 10px 0 18px; color: var(--ink2); font-size: 14px; line-height: 1.6; }
 .corpo-dialogo p { margin: 0 0 8px; }
 .acoes-dialogo { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.corpo-dialogo .feito { color: var(--ok); font-weight: 700; }
 .bt.perigo-cheio { background: var(--bad); color: #fff; box-shadow: none; }
 .lixeira { margin-top: 28px; }
 .lixeira summary h3 { display: inline-flex; align-items: center; gap: 6px; }

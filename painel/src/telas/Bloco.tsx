@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle, Check, ChevronLeft, ChevronRight, ExternalLink, FolderOpen, Loader, Play, Smartphone, Square, Trash2, Wrench, X,
+  AlertTriangle, Check, ChevronLeft, ChevronRight, Eraser, ExternalLink, FolderOpen, Loader, Play, Smartphone, Square, Trash2,
+  Wrench, X,
 } from "lucide-react";
 import { DetalheBloco, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
@@ -102,16 +103,23 @@ function Reels({ canal, b }: { canal: string; b: DetalheBloco }) {
   );
 }
 
-// Excluir o bloco de vez: a pasta dele e o que já entregou vão para o Lixo do Mac (gestao.excluir_bloco).
-function ExcluirBloco({ canal, b }: { canal: string; b: DetalheBloco }) {
+// Apagar o que tem no bloco: só o que a produção fez (o bloco continua no vídeo) ou o bloco inteiro.
+// Nos dois casos vai para o Lixo do Mac (gestao.limpar_bloco / gestao.excluir_bloco).
+function ApagarBloco({ canal, b }: { canal: string; b: DetalheBloco }) {
   const t = useT();
   const qc = useQueryClient();
   const navegar = useNavigate();
   const [aberto, setAberto] = useState(false);
+  const base = `/api/c/${canal}/v/${b.video}/b/${b.nn}`;
+  const limpar = useMutation({
+    mutationFn: () => enviar<{ quantos: number }>(`${base}/limpar`, {}),
+    onSuccess: () => { qc.invalidateQueries(); },
+  });
   const excluir = useMutation({
-    mutationFn: () => enviar(`/api/c/${canal}/v/${b.video}/b/${b.nn}/excluir`, {}),
+    mutationFn: () => enviar(`${base}/excluir`, {}),
     onSuccess: () => { qc.invalidateQueries(); navegar(rota.video(canal, b.video)); },
   });
+  const ocupado = limpar.isPending || excluir.isPending;
   return (
     <>
       <button className="bt redondo perigo" onClick={() => setAberto(true)} title={t("app.excluir.bloco_botao")}><Trash2 size={16} /></button>
@@ -119,10 +127,14 @@ function ExcluirBloco({ canal, b }: { canal: string; b: DetalheBloco }) {
         <Dialogo titulo={t("app.excluir.bloco_titulo", { nn: b.nn })} fechar={() => setAberto(false)}
           acoes={<>
             <button className="bt" onClick={() => setAberto(false)}>{t("app.cancelar")}</button>
-            <button className="bt perigo-cheio" disabled={excluir.isPending} onClick={() => excluir.mutate()}><Trash2 size={16} />{t("app.excluir.bloco_confirmar")}</button>
+            <button className="bt perigo" disabled={ocupado} onClick={() => limpar.mutate()}><Eraser size={16} />{t("app.excluir.bloco_so_producao")}</button>
+            <button className="bt perigo-cheio" disabled={ocupado} onClick={() => excluir.mutate()}><Trash2 size={16} />{t("app.excluir.bloco_inteiro")}</button>
           </>}>
-          <p>{t("app.excluir.bloco_explica")}</p>
-          <p className="sub">{t("app.excluir.bloco_numeros")}</p>
+          <p><b>{t("app.excluir.bloco_so_producao")}</b> · {t("app.excluir.bloco_so_producao_explica")}</p>
+          <p><b>{t("app.excluir.bloco_inteiro")}</b> · {t("app.excluir.bloco_inteiro_explica")}</p>
+          <p className="sub">{t("app.excluir.bloco_lixo")}</p>
+          {limpar.isSuccess && <p className="feito">{limpar.data.quantos ? t("app.excluir.bloco_limpo", { n: limpar.data.quantos }) : t("app.excluir.bloco_nada")}</p>}
+          {limpar.isError && <p className="erro">{limpar.error.message}</p>}
           {excluir.isError && <p className="erro">{excluir.error.message}</p>}
         </Dialogo>
       )}
@@ -160,7 +172,7 @@ export function BlocoTela() {
           {b.proximo ? <Link className="bt redondo" to={rota.bloco(canal, video, b.proximo)} title={t("app.bloco.proximo")}><ChevronRight size={18} /></Link> : <span className="bt redondo apagado"><ChevronRight size={18} /></span>}
         </div>
         <button className="bt redondo" onClick={() => enviar(`/api/c/${canal}/v/${video}/abrir`, { nn })} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} /></button>
-        {!b.rodando && <ExcluirBloco canal={canal} b={b} />}
+        {!b.rodando && <ApagarBloco canal={canal} b={b} />}
         {b.rodando ? (
           <button className="bt perigo" disabled={acao.isPending} onClick={() => acao.mutate(`${base}/parar`)}><Square size={14} />{t("app.bloco.parar")}</button>
         ) : (

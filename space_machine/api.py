@@ -616,6 +616,15 @@ def excluir_video(slug: str, video: str):
         raise HTTPException(409, str(e))
 
 
+@api.post("/c/{slug}/v/{video}/b/{nn}/limpar")
+def limpar_bloco(slug: str, video: str, nn: str):
+    """Zera o bloco (só o que a produção fez vai para o Lixo); o bloco continua no vídeo, com o roteiro."""
+    try:
+        return {"ok": True, **gestao.limpar_bloco(_canal(slug), video, nn)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
 @api.post("/c/{slug}/v/{video}/b/{nn}/excluir")
 def excluir_bloco(slug: str, video: str, nn: str):
     try:
