@@ -11,7 +11,8 @@ O que é lixo (medido em 2026-10-14: ~10 GB de 29 GB nas produções):
 - Auto-Save do After e pastas _backup_* antigas.
 - com --cache: imagens do cache da busca (<dados>/cache/img) com mais de 7 dias (só servem para não baixar de novo).
 Fica sempre: assets, narração, transcrição, cenas/plano/escolhas/manifesto, o .aep e o _cache da edição (o .aep usa),
-QA, storyboard, logs, o vídeo final e as lixeiras do painel.
+QA, storyboard, logs e o vídeo final. A lixeira do canal (vídeos e blocos excluídos no painel, que o painel ainda
+restaura) só sai se você marcar a categoria "lixeira": aí deixa de dar para restaurar e vai para o Lixo do Mac.
 O Lixo do Mac não deixa listar, mas deixa mover: cada limpeza vira a pasta "Space Machine limpeza <data>" no Lixo.
 Se não der (outro disco, sem permissão), vai para <dados>/lixo/.
 """
@@ -29,6 +30,7 @@ CATEGORIAS = {
     "candidatos": "Candidatos baixados de blocos entregues",
     "after": "Auto-Save do After e backups antigos",
     "cache": "Cache de imagens da busca (mais de 7 dias)",
+    "lixeira": "Lixeira dos canais (vídeos e blocos que você excluiu)",
 }
 
 
@@ -89,6 +91,18 @@ def lixo_do_video(vd):
     return itens
 
 
+def lixo_das_lixeiras(slug=None):
+    """As pastas de producoes/_lixeira: o que foi excluído no painel e ainda dá para restaurar lá."""
+    from .gestao import LIXEIRA
+    itens = []
+    for s, c in canais().items():
+        if slug and s != slug:
+            continue
+        pasta = Path(c["producoes"]) / LIXEIRA
+        itens += [(p, "lixeira") for p in sorted(pasta.iterdir())] if pasta.is_dir() else []
+    return itens
+
+
 def lixo_cache(dias=7):
     pasta = DADOS / "cache" / "img"
     limite = time.time() - dias * 86400
@@ -100,7 +114,7 @@ def _videos(slug):
     return [v for v in sorted(prod.iterdir()) if v.is_dir() and not v.name.startswith((".", "_"))] if prod.is_dir() else []
 
 
-def levantar(slug=None, cache=True):
+def levantar(slug=None, cache=True, lixeira=True):
     """O que sairia, por canal e vídeo, com os tamanhos. Não move nada."""
     from .estado import titulo_video
     out = {"videos": [], "categorias": {k: 0 for k in CATEGORIAS}, "total": 0}
@@ -119,6 +133,8 @@ def levantar(slug=None, cache=True):
                                   "categorias": por, "total": tot, "itens": len(itens)})
             for k, v in por.items():
                 out["categorias"][k] += v
+    if lixeira:
+        out["categorias"]["lixeira"] = sum(_tamanho(p) for p, _ in lixo_das_lixeiras(slug))
     if cache:
         out["categorias"]["cache"] = sum(f.stat().st_size for f, _ in lixo_cache())
     out["total"] = sum(out["categorias"].values())
@@ -177,6 +193,8 @@ def limpar(slug=None, categorias=("previas", "candidatos", "after"), cache=False
             continue
         for vd in _videos(s):
             itens += [(p, cat) for p, cat in lixo_do_video(vd) if cat in categorias]
+    if "lixeira" in categorias:
+        itens += lixo_das_lixeiras(slug)
     if cache or "cache" in categorias:
         itens += lixo_cache()
     return mandar_para_o_lixo(itens)
@@ -199,9 +217,11 @@ def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m space_machine limpar", description=__doc__.split("\n")[0])
     ap.add_argument("--canal", help="só este canal (slug)")
     ap.add_argument("--cache", action="store_true", help="também o cache de imagens da busca com mais de 7 dias")
+    ap.add_argument("--lixeira", action="store_true",
+                    help="também a lixeira dos canais (vídeos e blocos excluídos deixam de dar para restaurar)")
     ap.add_argument("--aplicar", action="store_true", help="manda de fato para o Lixo (sem isso, só mostra)")
     a = ap.parse_args(argv)
-    r = levantar(a.canal, cache=a.cache)
+    r = levantar(a.canal, cache=a.cache, lixeira=a.lixeira)
     for v in r["videos"]:
         print(f"{gb(v['total']):>9}  {v['canal_nome']} › {v['video']}  ({v['itens']} itens)")
     for k, n in r["categorias"].items():
@@ -211,7 +231,7 @@ def main(argv=None):
     if not a.aplicar:
         print("\nNada foi movido. Para mandar para o Lixo: --aplicar")
         return
-    cats = ("previas", "candidatos", "after") + (("cache",) if a.cache else ())
+    cats = ("previas", "candidatos", "after") + (("cache",) if a.cache else ()) + (("lixeira",) if a.lixeira else ())
     total, n, pasta = limpar(a.canal, cats, a.cache)
     print(f"\n{gb(total)} em {n} itens foram para: {pasta}\nO espaço volta quando você esvaziar o Lixo.")
 

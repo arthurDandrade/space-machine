@@ -7,6 +7,7 @@ Studio e marca aqui.
 import calendar
 import datetime as dt
 import re
+import shutil
 import subprocess
 import unicodedata
 from pathlib import Path
@@ -302,15 +303,33 @@ def limpar_bloco(c, video, nn):
     return {"quantos": quantos, "tamanho": tamanho, "lixo": destino.name}
 
 
+MARCA_BLOCO = "__bloco-"   # <producoes>/_lixeira/<vídeo>__bloco-NN__<quando>
+ENTREGUES = "_entregues"   # dentro da pasta na lixeira: os MP4 que o bloco tinha entregue no vídeo
+
+
 def excluir_bloco(c, video, nn):
-    """Tira o bloco do vídeo de vez: a pasta <vídeo>/blocos/NN e o que ele já tinha entregue (o MP4 da edição e o
-    do Reels) vão para o Lixo do Mac, como na Limpeza. Os outros blocos continuam com o número que têm — renumerar
-    quebraria os .aep já montados e o que o roteiro diz de cada tópico."""
-    from . import limpeza
+    """Tira o bloco do vídeo e guarda na lixeira do canal, como o vídeo excluído: dá para restaurar no painel (e para
+    jogar fora de vez pela aba Limpeza). Vai junto o que ele já tinha entregue (o MP4 da edição e o do Reels).
+    Os outros blocos continuam com o número que têm — renumerar quebraria os .aep já montados e o que o roteiro diz
+    de cada tópico."""
     vd, b = _bloco_para_mexer(c, video, nn)
-    itens = [(b, "bloco")] + [(f, "bloco") for f in _mp4_entregues(vd, nn)]
-    tamanho, quantos, destino = limpeza.mandar_para_o_lixo(itens)
-    return {"quantos": quantos, "tamanho": tamanho, "lixo": destino.name}
+    destino = Path(c["producoes"]) / LIXEIRA / f"{video}{MARCA_BLOCO}{nn}__{dt.datetime.now():%Y%m%d-%H%M%S}"
+    destino.parent.mkdir(exist_ok=True)
+    b.rename(destino)
+    guardados = 0
+    for f in _mp4_entregues(vd, nn):
+        alvo = destino / ENTREGUES / f.parent.name / f.name
+        alvo.parent.mkdir(parents=True, exist_ok=True)
+        f.rename(alvo)
+        guardados += 1
+    return {"lixeira": destino.name, "entregues": guardados}
+
+
+def _partes_da_lixeira(nome):
+    """<vídeo>__<quando> (vídeo inteiro) ou <vídeo>__bloco-NN__<quando> (um bloco)."""
+    resto, _, quando = nome.rpartition("__")
+    video, marca, nn = resto.partition(MARCA_BLOCO)
+    return (video or nome), (nn if marca else ""), quando
 
 
 def lixeira(c):
@@ -319,27 +338,51 @@ def lixeira(c):
     for p in sorted(pasta.iterdir() if pasta.is_dir() else [], key=lambda p: p.stat().st_mtime, reverse=True):
         if not p.is_dir():
             continue
-        slug, _, quando = p.name.rpartition("__")
-        n = len([b for b in (p / "blocos").glob("*") if b.is_dir()]) if (p / "blocos").is_dir() else 0
+        video, nn, quando = _partes_da_lixeira(p.name)
         try:
             excluido = dt.datetime.strptime(quando, "%Y%m%d-%H%M%S").strftime("%d/%m/%Y %H:%M")
         except ValueError:
             excluido = ""
-        out.append({"nome": p.name, "video": slug or p.name, "titulo": estado.titulo_video(p), "n_blocos": n,
-                    "excluido": excluido})
+        if nn:
+            vd = Path(c["producoes"]) / video
+            item = {"tipo": "bloco", "nn": nn, "titulo": estado.topico(p) or f"Bloco {nn}", "n_blocos": 0,
+                    "video_titulo": estado.titulo_video(vd) if vd.is_dir() else video, "pode_restaurar": vd.is_dir()}
+        else:
+            n = len([b for b in (p / "blocos").glob("*") if b.is_dir()]) if (p / "blocos").is_dir() else 0
+            item = {"tipo": "video", "nn": "", "titulo": estado.titulo_video(p), "n_blocos": n,
+                    "video_titulo": "", "pode_restaurar": True}
+        out.append({"nome": p.name, "video": video, "excluido": excluido, **item})
     return out
 
 
 def restaurar_video(c, nome):
-    """Devolve da lixeira; se já existe um vídeo com a mesma pasta, volta como <vídeo>-restaurado."""
+    """Devolve da lixeira o vídeo inteiro ou o bloco. Vídeo: se já existe pasta com o mesmo nome, volta como
+    <vídeo>-restaurado. Bloco: volta para <vídeo>/blocos/NN com os MP4 que tinha entregue."""
     prod = Path(c["producoes"])
     src = prod / LIXEIRA / nome
     if "/" in nome or nome.startswith(".") or not src.is_dir():
         raise ValueError("não está na lixeira")
-    slug = nome.rpartition("__")[0] or nome
-    destino = prod / slug
+    video, nn, _ = _partes_da_lixeira(nome)
+    if nn:
+        vd = prod / video
+        if not vd.is_dir():
+            raise ValueError(f"o vídeo {video} não está mais aqui: restaure o vídeo antes")
+        destino = vd / "blocos" / nn
+        if destino.exists():
+            raise ValueError(f"já existe o bloco {nn} neste vídeo")
+        for f in sorted((src / ENTREGUES).rglob("*")) if (src / ENTREGUES).is_dir() else []:
+            if f.is_file():
+                alvo = vd / f.parent.name / f.name
+                alvo.parent.mkdir(parents=True, exist_ok=True)
+                if not alvo.exists():
+                    f.rename(alvo)
+        shutil.rmtree(src / ENTREGUES, ignore_errors=True)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        src.rename(destino)
+        return f"{video}/blocos/{nn}"
+    destino = prod / video
     if destino.exists():
-        destino = prod / f"{slug}-restaurado"
+        destino = prod / f"{video}-restaurado"
         if destino.exists():
             raise ValueError(f"já existe {destino.name}: renomeie a pasta antes")
     src.rename(destino)

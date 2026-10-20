@@ -9,7 +9,10 @@ import { useCanal } from "../casca/CascaCanal";
 import { CartaoVideo, ItemEsperando } from "../componentes/Pecas";
 import { useT } from "../textos";
 
-type Excluido = { nome: string; video: string; titulo: string; n_blocos: number; excluido: string };
+type Excluido = {
+  nome: string; tipo: "video" | "bloco"; video: string; nn: string; titulo: string; video_titulo: string;
+  n_blocos: number; excluido: string; pode_restaurar: boolean;
+};
 
 function Lixeira({ canal }: { canal: string }) {
   const t = useT();
@@ -27,8 +30,16 @@ function Lixeira({ canal }: { canal: string }) {
       <div className="lista-lixeira">
         {data.itens.map((x) => (
           <div key={x.nome} className="item-lixeira">
-            <div className="t"><b>{x.titulo}</b><span className="sub">{t("app.lixeira.detalhe", { n: x.n_blocos, quando: x.excluido })}</span></div>
-            <button className="bt pequeno" disabled={restaurar.isPending} onClick={() => restaurar.mutate(x.nome)}><RotateCcw size={14} />{t("app.lixeira.restaurar")}</button>
+            <div className="t">
+              <b>{x.titulo}</b>
+              <span className="sub">
+                {x.tipo === "bloco"
+                  ? t("app.lixeira.detalhe_bloco", { nn: x.nn, video: x.video_titulo, quando: x.excluido })
+                  : t("app.lixeira.detalhe", { n: x.n_blocos, quando: x.excluido })}
+                {!x.pode_restaurar && ` · ${t("app.lixeira.sem_video")}`}
+              </span>
+            </div>
+            <button className="bt pequeno" disabled={restaurar.isPending || !x.pode_restaurar} onClick={() => restaurar.mutate(x.nome)}><RotateCcw size={14} />{t("app.lixeira.restaurar")}</button>
           </div>
         ))}
       </div>
