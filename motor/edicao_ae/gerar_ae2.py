@@ -675,7 +675,9 @@ def main():
             FUNDO_IMAGEM = dict(FUNDO_IMAGEM, escala=FUNDO_IMAGEM["escala"] * H / 1080, pos=[CX, CY])
     proj = Path(a.projeto).resolve()
     plano = json.loads((proj / "edicao" / f"plano_edicao_{a.item}.json").read_text())
-    audio = next(p for p in proj.iterdir() if p.stem.startswith("narracao"))
+    # só a narração em uso: "narracao_antiga_*.mp3" (de uma narração refeita) fica na pasta e o
+    # startswith pegava ela pela ordem do iterdir — o bloco saía com o áudio velho (bloco 02, 2026-10-21)
+    audio = next(p for p in sorted(proj.iterdir()) if p.stem == "narracao")
     M = Montador(proj)
 
     # ---------- título ----------
