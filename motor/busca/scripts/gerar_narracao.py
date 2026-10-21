@@ -4,7 +4,8 @@ Uso:
   gerar_narracao.py --vozes [BUSCA]              lista vozes (minhas + busca pública por nome)
   gerar_narracao.py --uso                        créditos de API restantes
   gerar_narracao.py <pasta do bloco> [--voz ID] [--speed 1.0] [--modelo s2.1-pro]
-      lê <bloco>/roteiro.txt (ignora linhas que começam com '#')
+      lê <bloco>/roteiro.txt (ignora linhas que começam com '#' e as marcações
+      de cena, linhas inteiras entre colchetes como [VISUAL: ...])
       e grava <bloco>/narracao.mp3.
 
 Chave: variável FISH_API_KEY ou .env do canal (FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL)
@@ -15,6 +16,7 @@ Docs: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -27,6 +29,7 @@ import caminhos  # noqa: E402
 
 BASE = "https://api.fish.audio"
 UA = "SpaceMachine-narracao/2.0"
+MARCACAO = re.compile(r"^\[[^\]]*\]$")  # linha inteira entre colchetes: [VISUAL: ...] e afins
 
 
 def config(nome):
@@ -54,9 +57,15 @@ def chamar(metodo, caminho, corpo=None, headers=None, timeout=60):
             sys.exit(f"HTTP {e.code} em {caminho}: {e.read().decode(errors='replace')[:500]}")
 
 
+def narrar(linha):
+    """Linha que vira voz: fora os títulos ('#') e as marcações de cena ('[VISUAL: ...]')."""
+    l = linha.strip()
+    return not l.startswith("#") and not MARCACAO.match(l)
+
+
 def texto_do_roteiro(bloco):
     linhas = (bloco / "roteiro.txt").read_text().splitlines()
-    return "\n".join(l for l in linhas if not l.lstrip().startswith("#")).strip()
+    return "\n".join(l for l in linhas if narrar(l)).strip()
 
 
 def gerar(bloco, voz, speed, modelo):
