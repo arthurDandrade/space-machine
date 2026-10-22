@@ -36,6 +36,15 @@ O instalador:
 
 O painel abre em http://localhost:8765, na escolha de canais. Em ⚙ › **Primeiros passos** você vê o que ainda falta e como resolver.
 
+## Atualizar
+Quando sai uma versão nova, o painel avisa no topo e em ⚙ › **Atualizar**: lá você vê o que mudou e clica em
+**Atualizar o Space Machine**. Ele traz o código novo do GitHub, reinstala só o que mudou, remonta o painel e reinicia
+(a página recarrega sozinha). A sua pasta de dados não é tocada: canais, produções, chaves e cache ficam todos lá.
+No Terminal é `./spacemachine atualizar` (ou `--conferir`, só para olhar).
+
+Ele não atualiza por cima de trabalho seu: se tiver bloco ou fila produzindo, se você mexeu no código ou se baixou o
+ZIP em vez de clonar, o painel diz o que fazer em vez de atualizar.
+
 No After Effects, ligue: Settings › Scripting & Expressions › **Allow Scripts to Write Files and Access Network**.
 
 ## Primeiro vídeo
@@ -85,6 +94,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 ./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
 ./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
 ./spacemachine final <pasta do vídeo>   # junta os blocos entregues num projeto do After (--render: e o MP4)
+./spacemachine atualizar                # traz a versão nova do GitHub (--conferir: só olha; --sim: sem perguntar)
 ./spacemachine limpar                   # o que pode ir para o Lixo (--aplicar: manda; --cache: e o cache da busca)
 ./spacemachine checar                   # testa o Claude (login, versão, modelos)
 ./spacemachine consumo                  # tokens gastos por vídeo/bloco/etapa

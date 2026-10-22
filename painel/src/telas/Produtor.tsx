@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, CircleAlert, CircleCheck, HardDrive, KeyRound, Palette, Plus, Save, Sparkles, Trash2 } from "lucide-react";
-import { Canais, enviar, pegar, rota } from "../api";
+import { ArrowDownToLine, ArrowRight, Check, CircleAlert, CircleCheck, HardDrive, KeyRound, Palette, Plus, RotateCw, Save, Sparkles, Trash2 } from "lucide-react";
+import { Atualizacao, Atualizou, Canais, enviar, pegar, rota } from "../api";
 import { Dialogo } from "../componentes/Dialogo";
 import { LogoCanal } from "../componentes/Imagens";
 import { AnelConsumo } from "../componentes/Pecas";
-import { compacto, useT } from "../textos";
+import { compacto, haQuanto, useT } from "../textos";
 
 function NovoCanal() {
   const t = useT();
@@ -364,6 +364,135 @@ export function LimpezaTela() {
           {limpar.isError && <p className="erro">{limpar.error.message}</p>}
         </Dialogo>
       )}
+    </>
+  );
+}
+
+// ---------------- atualizar o Space Machine ----------------
+// O código novo vem do GitHub (git pull); a pasta de dados não é tocada. Quando algo muda de verdade, o painel se
+// reinicia no código novo (api.py › /api/atualizacao) e esta tela espera ele voltar para recarregar a página.
+const dataCurta = (iso: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
+
+export function AtualizarTela() {
+  const t = useT();
+  const qc = useQueryClient();
+  const [conferindo, setConferindo] = useState(false);
+  const [reiniciando, setReiniciando] = useState(false);
+  const { data } = useQuery({ queryKey: ["atualizacao"], queryFn: () => pegar<Atualizacao>("/api/atualizacao"), refetchOnWindowFocus: false });
+  const conferir = async () => {
+    setConferindo(true);
+    try {
+      qc.setQueryData(["atualizacao"], await pegar<Atualizacao>("/api/atualizacao?conferir=1"));
+      qc.invalidateQueries({ queryKey: ["sistema"] });
+    } finally {
+      setConferindo(false);
+    }
+  };
+  const atualizar = useMutation({
+    mutationFn: () => enviar<Atualizou>("/api/atualizacao"),
+    onSuccess: async (r) => {
+      if (!r.reiniciar) return void qc.invalidateQueries();
+      setReiniciando(true);
+      await new Promise((pronto) => setTimeout(pronto, 3500));   // o painel se troca 1,5 s depois de responder
+      for (let i = 0; i < 180; i++) {
+        try {
+          if ((await fetch("/api/sistema", { cache: "no-store" })).ok) return window.location.reload();
+        } catch {
+          /* o painel ainda está voltando */
+        }
+        await new Promise((pronto) => setTimeout(pronto, 1000));
+      }
+      setReiniciando(false);
+    },
+  });
+  if (!data) return <div className="carregando">{t("app.carregando")}</div>;
+  const feito = atualizar.data;
+  const impedimento = data.impedimento && (data.atrasado > 0 || data.impedimento === "sem_git") ? data.impedimento : "";
+  const pode = data.atrasado > 0 && !impedimento && !reiniciando;
+  return (
+    <>
+      <p className="sub intro">{t("app.att.explica")}</p>
+      <div className="cartao versao-att">
+        <div className="t">
+          <span className="sub">{t("app.att.sua_versao")}</span>
+          <b>{data.local.versao || data.local.commit || "—"}{data.local.data && <span className="sub"> · {t("app.att.de", { data: dataCurta(data.local.data) })}</span>}</b>
+          <span className="sub">{data.local.titulo}{data.local.branch && data.local.branch !== "main" ? ` · ${data.local.branch}` : ""}</span>
+        </div>
+        <div className="esp" />
+        <button className="bt" disabled={conferindo} onClick={conferir}>
+          <RotateCw size={16} />{conferindo ? t("app.att.conferindo") : t("app.att.conferir")}
+        </button>
+        {data.quando > 0 && <span className="sub">{t("app.att.conferido", { quando: haQuanto(t, data.quando) })}</span>}
+      </div>
+
+      {data.erro ? (
+        <div className="aviso-parado" style={{ marginTop: 16 }}>
+          <CircleAlert size={18} />
+          <div><b>{t(`app.att.erro_${data.erro}`, undefined, t("app.att.erro_rede"))}</b>{data.erro_detalhe && <pre className="saida">{data.erro_detalhe}</pre>}</div>
+        </div>
+      ) : data.atrasado === 0 && !reiniciando && !feito ? (
+        <div className="aviso-ok" style={{ marginTop: 16 }}><CircleCheck size={16} />{t("app.att.em_dia")}</div>
+      ) : null}
+
+      {data.atrasado > 0 && (
+        <div className="cartao" style={{ marginTop: 16 }}>
+          <div className="titulo-secao"><h3>{t("app.att.tem", { n: data.atrasado })}</h3></div>
+          <div className="att-commits">
+            {data.commits.map((c) => (
+              <div key={c.commit} className="att-commit">
+                <span className="sub">{dataCurta(c.data)}</span>
+                <span>{c.titulo}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rodape-form">
+            <button className="bt primario" disabled={!pode || atualizar.isPending} onClick={() => atualizar.mutate()}>
+              <ArrowDownToLine size={16} />{atualizar.isPending || reiniciando ? t("app.att.atualizando") : t("app.att.botao")}
+            </button>
+            <span className="sub">{t("app.att.demora")}</span>
+          </div>
+        </div>
+      )}
+
+      {impedimento && (
+        <div className="aviso-parado" style={{ marginTop: 16 }}>
+          <CircleAlert size={18} />
+          <div>
+            <b>{t("app.att.nao_da")}</b>
+            <div>{t(`app.att.imp_${impedimento}`, undefined, impedimento)}</div>
+            {data.detalhe && <pre className="saida">{data.detalhe}</pre>}
+            <span className="sub">{t("app.att.pelo_terminal")}</span>
+          </div>
+        </div>
+      )}
+
+      {reiniciando && <div className="aviso-ok" style={{ marginTop: 16 }}><RotateCw size={16} className="girando" />{t("app.att.reiniciando")}</div>}
+
+      {feito && !reiniciando && (
+        <div style={{ marginTop: 16 }}>
+          <div className={feito.ok && !feito.impedimento ? "aviso-ok" : "aviso-parado"}>
+            {feito.ok && !feito.impedimento ? <CircleCheck size={16} /> : <CircleAlert size={18} />}
+            <div>
+              <b>{feito.nada ? t("app.att.em_dia") : feito.ok && !feito.impedimento
+                ? t("app.att.pronto", { commit: feito.local.commit, data: dataCurta(feito.local.data) })
+                : t("app.att.falhou")}</b>
+              {feito.impedimento && <div>{t(`app.att.imp_${feito.impedimento}`, undefined, feito.impedimento)}</div>}
+              {feito.detalhe && <pre className="saida">{feito.detalhe}</pre>}
+            </div>
+          </div>
+          {feito.passos.length > 0 && (
+            <div className="cartao passos-lista" style={{ marginTop: 12 }}>
+              {feito.passos.map((p) => (
+                <div key={p.passo} className={`passo-item ${p.ok ? "ok" : "falta"}`}>
+                  <span className="ic">{p.ok ? <Check size={15} /> : <CircleAlert size={15} />}</span>
+                  <div className="t"><b>{p.passo}</b>{!p.ok && p.saida && <pre className="saida">{p.saida}</pre>}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {atualizar.isError && <p className="erro">{atualizar.error.message}</p>}
     </>
   );
 }

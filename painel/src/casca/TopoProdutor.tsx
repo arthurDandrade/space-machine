@@ -2,9 +2,9 @@
 // consumo, configurações e tema.
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChartPie, Settings } from "lucide-react";
+import { ArrowDownToLine, ChartPie, Settings } from "lucide-react";
 import { Canais, pegar } from "../api";
-import { useT } from "../textos";
+import { useSistema, useT } from "../textos";
 import { Sino } from "../componentes/Avisos";
 import { BotaoBusca } from "../componentes/Busca";
 import { BotaoTema } from "./Cabecalho";
@@ -21,11 +21,17 @@ export function Marca() {
 export function TopoProdutor() {
   const t = useT();
   const { data } = useQuery({ queryKey: ["canais"], queryFn: () => pegar<Canais>("/api/canais") });
+  const atualizacao = useSistema().data?.atualizacao ?? 0;
   return (
     <div className="topo-produtor">
       <Marca />
       <div className="esp" />
       <BotaoBusca />
+      {atualizacao > 0 && (
+        <Link className="chip atualizar" to="/config/atualizar" title={t("app.att.tem", { n: atualizacao })}>
+          <ArrowDownToLine size={16} /><span className="txt">{t("app.produtor.atualizacao")}</span>
+        </Link>
+      )}
       <Link className={`chip ${data?.falta_algo ? "alerta" : ""}`} to="/config/passos">
         <span className="ponto" /><span className="txt">{t(data?.falta_algo ? "app.produtor.falta" : "app.produtor.tudo_ok")}</span>
       </Link>
@@ -43,6 +49,7 @@ const ABAS = [
   ["consumo", "app.config.aba_consumo"],
   ["limpeza", "app.config.aba_limpeza"],
   ["passos", "app.config.aba_passos"],
+  ["atualizar", "app.config.aba_atualizar"],
 ] as const;
 
 export function CascaProdutor() {

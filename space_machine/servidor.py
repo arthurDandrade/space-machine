@@ -19,6 +19,7 @@ from .api import api
 from .motor_claude import canais
 
 app = FastAPI(title="Space Machine")
+PORTA = 8765        # a porta desta vez: atualizar.reiniciar_painel volta na mesma
 app.include_router(api)
 APP = Path(__file__).with_name("static") / "app"
 
@@ -110,10 +111,10 @@ def painel(caminho: str = ""):
 
 def main(argv=None):
     import uvicorn
-    porta = 8765
+    global PORTA
     if argv and "--porta" in argv:
-        porta = int(argv[argv.index("--porta") + 1])
-    uvicorn.run(app, host="127.0.0.1", port=porta, log_level="warning")
+        PORTA = int(argv[argv.index("--porta") + 1])
+    uvicorn.run(app, host="127.0.0.1", port=PORTA, log_level="warning")
 
 
 if __name__ == "__main__":

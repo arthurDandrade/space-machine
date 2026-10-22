@@ -18,11 +18,11 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import (capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, modelar,
+from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, modelar,
                primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
-from .sistema import DADOS, config, ler_json
+from .sistema import DADOS, REPO, config, ler_json
 
 api = APIRouter(prefix="/api")
 IMAGENS = (".png", ".jpg", ".jpeg", ".webp")
@@ -172,8 +172,9 @@ def _resumo_canal(slug, c):
 @api.get("/sistema")
 def sistema():
     idioma = config().get("idioma_painel", "pt")
+    atualizar.conferir_atras_das_cortinas()      # a conferida vai à rede no máximo a cada 6 h, fora deste pedido
     return {"idioma": idioma, "textos": {**textos._idioma("pt"), **textos._idioma(idioma)},
-            "falta_algo": _falta_algo(), "dados": str(DADOS)}
+            "falta_algo": _falta_algo(), "dados": str(DADOS), "atualizacao": atualizar.aviso()}
 
 
 @api.get("/canais")
@@ -876,6 +877,37 @@ def limpeza_automatica(ligada: bool = Body(..., embed=True)):
 @api.post("/limpeza/abrir-lixo")
 def abrir_lixo():
     subprocess.run(["open", str(Path.home() / ".Trash")], check=False)
+    return {"ok": True}
+
+
+# ---------------- atualizar o Space Machine ----------------
+@api.get("/atualizacao")
+def ver_atualizacao(conferir: bool = False):
+    """Sua versão, o que tem de novo no GitHub e, se não der para atualizar agora, por quê.
+    Sem conferir=1 responde com a última conferida (vale 6 h), sem ir à rede."""
+    r = atualizar.conferir(forcar=conferir)
+    motivo, detalhe = atualizar.impedimento()
+    return {"local": atualizar.estado_local(), "atrasado": r.get("atrasado", 0), "commits": r.get("commits", []),
+            "quando": r.get("quando", 0), "erro": r.get("erro", ""), "erro_detalhe": r.get("detalhe", ""),
+            "impedimento": motivo, "detalhe": detalhe}
+
+
+@api.post("/atualizacao")
+def aplicar_atualizacao():
+    """git pull e o que mais ficou para trás (Python, painel). Depois o painel se reinicia no código novo."""
+    r = atualizar.aplicar()
+    if r.get("reiniciar"):
+        atualizar.reiniciar_painel(espera=1.5)   # depois desta resposta sair: o navegador espera e recarrega
+    return {**r, "local": atualizar.estado_local()}
+
+
+@api.post("/atualizacao/reiniciar")
+def reiniciar_painel(repo: str = Body("", embed=True)):
+    """Reinicia o painel no código que está em disco (quem atualizou pela linha de comando chama isto).
+    Com repo, só reinicia se for o painel daquela instalação: outra pasta na mesma porta não é reiniciada."""
+    if repo and Path(repo).resolve() != REPO.resolve():
+        raise HTTPException(409, "este painel é de outra instalação")
+    atualizar.reiniciar_painel(espera=1.0)
     return {"ok": True}
 
 

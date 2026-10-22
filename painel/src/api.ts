@@ -224,6 +224,41 @@ export interface Sistema {
   idioma: string;
   textos: Record<string, string>;
   falta_algo: boolean;
+  atualizacao: number;        // commits de atraso que a última conferida viu (0 = em dia)
+}
+
+export interface VersaoLocal {
+  git: boolean;
+  branch: string;
+  commit: string;
+  data: string;
+  titulo: string;
+  sujo: boolean;
+  upstream: string;
+  versao: string;
+}
+
+export interface Atualizacao {
+  local: VersaoLocal;
+  atrasado: number;
+  commits: { commit: string; data: string; titulo: string }[];
+  quando: number;
+  erro: string;
+  erro_detalhe: string;
+  impedimento: string;
+  detalhe: string;
+}
+
+export interface Atualizou {
+  ok: boolean;
+  nada?: boolean;
+  reiniciar?: boolean;
+  impedimento?: string;
+  detalhe?: string;
+  de?: string;
+  para?: string;
+  passos: { passo: string; ok: boolean; saida: string }[];
+  local: VersaoLocal;
 }
 
 export class ErroApi extends Error {
