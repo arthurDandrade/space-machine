@@ -1,0 +1,13 @@
+{
+ "_sobre": "Ficha do formato: o que o código precisa saber para produzir um vídeo neste formato. O que é do FORMATO fica nesta pasta (igual para todos os canais dele); o que é do ASSUNTO de um canal fica em canal.json > regras.",
+ "nome": "___ Explained",
+ "resumo": "Lista de tópicos narrada, sem apresentador, com cards de foto e vídeo sobre fundo de papel.",
+ "storyboard": {
+  "regras": "storyboard.md",
+  "exemplo_cenas": "exemplo_cenas.json",
+  "conhecimento": [
+   "02 - Cenas/Biblioteca de Cenas.md",
+   "02 - Cenas/Da Narração às Cenas.md"
+  ]
+ }
+}

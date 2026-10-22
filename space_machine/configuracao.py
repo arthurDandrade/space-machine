@@ -18,7 +18,8 @@ from pathlib import Path
 import requests
 
 from .motor_claude import ENV as ENV_SISTEMA
-from .sistema import CANAIS, ambiente_motor, canais, gravar_json, ler_json
+from .sistema import (CANAIS, FORMATO_PADRAO, ambiente_motor, canais, ficha_formato, formatos,
+                      gravar_json, ler_json)
 
 # grupo -> (arquivo relativo à raiz do canal | None = Estudio/.env, [(chave, rótulo, secreta, ajuda)])
 APIS = [
@@ -233,7 +234,7 @@ def salvar_canal(slug, **campos):
     gravar_json(arq, cj)
 
 
-def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None, formato="explained", regras=None):
+def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None, formato=None, regras=None):
     """Cria <dados>/canais/<slug>/ (canal.json, .env vazio, identidade/, conhecimento/, producoes/).
     O motor é um só: nada de código é copiado."""
     slug = slug_de(nome)
@@ -241,6 +242,9 @@ def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None,
         raise ValueError("dê um nome ao canal")
     if slug in canais():
         raise ValueError("já existe um canal com esse nome")
+    formato = formato or FORMATO_PADRAO
+    if formato not in formatos():
+        raise ValueError(f"não existe o formato \"{formato}\" (formatos/{formato}/formato.json)")
     d = CANAIS / slug
     if d.exists():
         raise ValueError(f"a pasta {d} já existe")
@@ -269,7 +273,8 @@ def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None,
         "Tudo o que descobrirmos neste canal, mais recente em cima. As 4 entradas do topo vão junto no storyboard. "
         "O que vale para todos os canais do formato fica em formatos/<formato>/conhecimento/ no Space Machine.\n\n---\n")
     (d / "conhecimento" / f"00 - {nome} (Índice).md").write_text(
-        f"# {nome} — Índice\n\nCanal no formato \"___ Explained\" sobre {tema} (idioma: {idioma}).\n\n"
+        f"# {nome} — Índice\n\nCanal no formato \"{ficha_formato(formato).get('nome', formato)}\" sobre {tema} "
+        f"(idioma: {idioma}).\n\n"
         "- Identidade (cores, fonte, fundo) e regras do tema: `canal.json` na pasta do canal (editável no painel).\n"
         "- Aprendizados: [[Log de Aprendizados]] · Produções: `06 - Produções/`.\n")
     return slug, d

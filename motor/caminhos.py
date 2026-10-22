@@ -84,8 +84,49 @@ def cache():
     return dados() / "cache"
 
 
-def formato():
-    return REPO / "formatos" / canal_json().get("formato", "explained")
+# Formato do vídeo: canal.json["formato"] aponta para formatos/<nome>/. Canal de antes de 2026-10-22 não tem
+# o campo e continua no explained, o único formato que havia.
+FORMATO_PADRAO = "explained"
+FORMATOS = REPO / "formatos"
+
+
+def nome_formato():
+    return canal_json().get("formato") or FORMATO_PADRAO
+
+
+def formato(nome=None):
+    """formatos/<nome>/: o que é do FORMATO (conhecimento, regras do storyboard, modelo do After, medidas do QA),
+    igual para todos os canais dele. Sem o nome, o formato do canal deste trabalho."""
+    return FORMATOS / (nome or nome_formato())
+
+
+def ficha(nome=None):
+    """formatos/<nome>/formato.json: o que o código precisa saber para rodar este formato."""
+    return _json(formato(nome) / "formato.json")
+
+
+def do_formato(arquivo, nome=None):
+    """Um arquivo do formato, pelo caminho que a ficha dá. `arquivo` é a chave na ficha ("storyboard.regras") ou
+    o nome do arquivo direto. Erro claro quando o formato não trouxe o seu."""
+    f = ficha(nome)
+    alvo = f
+    for parte in arquivo.split("."):
+        alvo = alvo.get(parte) if isinstance(alvo, dict) else None
+    p = formato(nome) / (alvo if isinstance(alvo, str) else arquivo)
+    if not p.exists():
+        raise SystemExit(f"o formato \"{nome or nome_formato()}\" não tem \"{arquivo}\": falta {p} "
+                         f"(ou o caminho dele em {formato(nome) / 'formato.json'})")
+    return p
+
+
+def formatos():
+    """Todos os formatos do repo, com a ficha de cada um, para a pessoa escolher."""
+    out = {}
+    for d in sorted(FORMATOS.iterdir()) if FORMATOS.is_dir() else []:
+        if (d / "formato.json").exists():
+            f = _json(d / "formato.json")
+            out[d.name] = {"nome": f.get("nome", d.name), "resumo": f.get("resumo", "")}
+    return out
 
 
 def referencias():

@@ -24,7 +24,7 @@ from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
 from . import limpeza
 from .estado import conferir_pendentes, previas as previas_do_bloco
-from .sistema import FORMATOS, ambiente_motor
+from .sistema import FORMATOS, FORMATO_PADRAO, ambiente_motor
 
 ETAPAS = ["narracao", "transcrever", "storyboard", "buscar", "escolher", "editar", "entregar"]
 
@@ -100,7 +100,7 @@ class Rodada:
 
     def _sistema_storyboard(self):
         # o que é do FORMATO vem de formatos/<formato>/; o que é do CANAL (aprendizados, regras do tema), do canal
-        f = FORMATOS / self.c.get("formato", "explained")
+        f = FORMATOS / (self.c.get("formato") or FORMATO_PADRAO)
         k = f / "conhecimento"
         arq_log = Path(self.c["conhecimento"]) / "05 - Aprendizados" / "Log de Aprendizados.md"
         entradas = re.split(r"\n(?=## 20\d\d-)", arq_log.read_text())[1:5] if arq_log.exists() else []

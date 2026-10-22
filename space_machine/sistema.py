@@ -21,6 +21,22 @@ MOTOR = REPO / "motor"
 FORMATOS = REPO / "formatos"
 APONTADOR = Path.home() / ".config" / "spacemachine" / "dados"
 
+# quem sabe onde fica cada coisa de um formato é o motor (motor/caminhos.py), usado também pelos scripts dele
+sys.path.insert(0, str(MOTOR))
+import caminhos as _caminhos  # noqa: E402
+
+FORMATO_PADRAO = _caminhos.FORMATO_PADRAO
+
+
+def formatos():
+    """Os formatos de vídeo do repo ({slug: {nome, resumo}}), para a pessoa escolher o do canal."""
+    return _caminhos.formatos()
+
+
+def ficha_formato(nome):
+    """formatos/<nome>/formato.json."""
+    return _caminhos.ficha(nome)
+
 
 def _pasta_dados():
     if os.environ.get("SM_DADOS"):
@@ -70,7 +86,7 @@ def _canal(pasta):
     cj = ler_json(pasta / "canal.json", {}) or {}
     return {
         "nome": cj.get("nome", pasta.name), "raiz": str(pasta), "ativo": cj.get("ativo", True),
-        "formato": cj.get("formato", "explained"), "idioma": cj.get("idioma", "en"), "tema": cj.get("tema", ""),
+        "formato": cj.get("formato") or FORMATO_PADRAO, "idioma": cj.get("idioma", "en"), "tema": cj.get("tema", ""),
         "producoes": str(pasta / "producoes"), "conhecimento": str(pasta / "conhecimento"),
         # o motor é um só para todos os canais
         "python": sys.executable, "scripts": str(MOTOR / "busca" / "scripts"), "editor": str(MOTOR / "edicao_ae"),
