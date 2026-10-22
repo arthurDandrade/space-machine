@@ -416,7 +416,8 @@ class Rodada:
         # a prévia aprovada VIRA o entregue (copiar deixava dois arquivos iguais de ~120 MB por bloco: 52 de 67 em
         # 2026-10-14); depois, as prévias antigas, os candidatos e o Auto-Save do bloco vão para o Lixo
         os.replace(previas[-1], destino)
-        detalhe = str(destino)
+        # relativo ao vídeo: no painel isto é a linha da etapa, e o caminho inteiro só cabia cortado
+        detalhe = str(destino.relative_to(self.video))
         try:
             r = limpeza.depois_de_entregar(self.p)
             if r:

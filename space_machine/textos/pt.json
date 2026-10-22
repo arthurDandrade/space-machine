@@ -195,6 +195,7 @@
  "app.video.claude": "Claude neste vídeo: {n} chamadas, {tokens} tokens equiv.",
  "app.video.mexido": "mexido {quando}",
  "app.video.aba_blocos": "Blocos",
+ "app.video.parte_produzir": "Produzir os blocos",
  "app.video.aba_publicacao": "Publicação",
  "app.video.filtro_todos": "Todos",
  "app.video.filtro_run": "Rodando",

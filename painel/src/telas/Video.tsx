@@ -258,7 +258,7 @@ function VideoFinal({ canal, v }: { canal: string; v: DetalheVideo }) {
   const faltam = v.n_blocos - f.entregues;
   const gb = (n: number) => (n / 1e9).toFixed(1).replace(".", ",");
   return (
-    <div className="final-card">
+    <div className="parte final-card">
       <div className="linha-fila">
         <div className="t-final"><Layers size={16} /><b>{t("app.final.titulo")}</b>
           {f.rodando ? <span className="selo run"><Loader size={12} className="gira" />{t("app.final.rodando")}</span>
@@ -343,28 +343,34 @@ export function VideoTela() {
   return (
     <>
       <Cabecalho
-        onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={`/c/${canal}/videos`}>{t("app.nav.videos")}</Link> › <b>{t(`app.coluna.${v.coluna}`)}</b></>}
-        titulo={<TituloCopiavel texto={v.titulo_pub || v.titulo} />}>
+        onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={`/c/${canal}/videos`}>{t("app.nav.videos")}</Link></>}
+        titulo={<><TituloCopiavel texto={v.titulo_pub || v.titulo} /> <span className="selo neutro coluna">{t(`app.coluna.${v.coluna}`)}</span></>}>
         <button className="bt" onClick={abrir} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} />{t("app.abrir_pasta")}</button>
+        <span className="separa" />
         <ExcluirVideo canal={canal} v={v} />
       </Cabecalho>
 
       <div className="video-topo">
         <CapaVideo canal={canal} v={v} />
         <div className="andamento cartao">
-          <div className="pct"><b>{pct}%</b><span>{t("app.video.blocos_entregues", { e: v.entregues, n: v.n_blocos })}</span></div>
-          <div className="segmentos grossos">{v.blocos.map((b) => <i key={b.nn} className={b.estado} title={`${b.nn} · ${b.topico}`} />)}</div>
-          <div className="selos">
-            {v.rodando > 0 && <span className="selo run"><span className="pulso" />{t("app.n_rodando", { n: v.rodando })}</span>}
-            {v.na_fila > 0 && <span className="selo neutro">{t("app.n_na_fila", { n: v.na_fila })}</span>}
-            {v.esperando > 0 && <span className="selo wait">{t("app.esperando_n", { n: v.esperando })}</span>}
+          <div className="parte">
+            <div className="pct"><b>{pct}%</b><span>{t("app.video.blocos_entregues", { e: v.entregues, n: v.n_blocos })}</span></div>
+            <div className="segmentos grossos">{v.blocos.map((b) => <i key={b.nn} className={b.estado} title={`${b.nn} · ${b.topico}`} />)}</div>
+            <div className="selos">
+              {v.rodando > 0 && <span className="selo run"><span className="pulso" />{t("app.n_rodando", { n: v.rodando })}</span>}
+              {v.na_fila > 0 && <span className="selo neutro">{t("app.n_na_fila", { n: v.na_fila })}</span>}
+              {v.esperando > 0 && <span className="selo wait">{t("app.esperando_n", { n: v.esperando })}</span>}
+            </div>
           </div>
-          <p className="sub">
+          <div className="parte">
+            <h4>{t("app.video.parte_produzir")}</h4>
+            <ControleFila canal={canal} v={v} />
+          </div>
+          <VideoFinal canal={canal} v={v} />
+          <p className="sub rodape-andamento">
             {t("app.video.claude", { n: v.consumo_detalhe.chamadas ?? 0, tokens: compacto(v.consumo_detalhe.equivalente ?? 0) })}
             {" · "}{t("app.video.mexido", { quando: haQuanto(t, v.mudou) })}
           </p>
-          <ControleFila canal={canal} v={v} />
-          <VideoFinal canal={canal} v={v} />
         </div>
       </div>
 

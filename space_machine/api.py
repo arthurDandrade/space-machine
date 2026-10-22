@@ -248,6 +248,11 @@ def detalhe_video(slug: str, video: str):
             "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
 
 
+def _curto(vd, texto):
+    """Caminho dentro do vídeo vira relativo: na linha da etapa, no painel, o caminho inteiro só cabia cortado."""
+    return texto.replace(f"{vd}/", "") if isinstance(texto, str) else texto
+
+
 @api.get("/c/{slug}/v/{video}/b/{nn}")
 def detalhe_bloco(slug: str, video: str, nn: str):
     b = _bloco_dir(slug, video, nn)
@@ -274,7 +279,7 @@ def detalhe_bloco(slug: str, video: str, nn: str):
         "feito": info["feito"], "atual": info["atual"], "rodando": info["rodando"], "parado": info["parado"],
         "aprovado": info["aprovado"], "travar_conferir": info["travar_conferir"],
         "etapa_atual": est.get("atual") or "",
-        "etapas": [{"id": e, **{k: (est.get("etapas", {}).get(e) or {}).get(k, "") for k in ("status", "detalhe", "quando")}}
+        "etapas": [{"id": e, **{k: _curto(vd, (est.get("etapas", {}).get(e) or {}).get(k, "")) for k in ("status", "detalhe", "quando")}}
                    for e in ETAPAS_RODAR],
         "previas": [{"v": int(re.search(r"_v(\d+)\.mp4$", p).group(1)), "url": _arquivo(p)} for p in info["previas"]],
         "entregue": _arquivo(entregue) if entregue.exists() else None,

@@ -171,13 +171,16 @@ export function BlocoTela() {
           {b.anterior ? <Link className="bt redondo" to={rota.bloco(canal, video, b.anterior)} title={t("app.bloco.anterior")}><ChevronLeft size={18} /></Link> : <span className="bt redondo apagado"><ChevronLeft size={18} /></span>}
           {b.proximo ? <Link className="bt redondo" to={rota.bloco(canal, video, b.proximo)} title={t("app.bloco.proximo")}><ChevronRight size={18} /></Link> : <span className="bt redondo apagado"><ChevronRight size={18} /></span>}
         </div>
-        <button className="bt redondo" onClick={() => enviar(`/api/c/${canal}/v/${video}/abrir`, { nn })} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} /></button>
-        {!b.rodando && <ApagarBloco canal={canal} b={b} />}
+        <button className="bt" onClick={() => enviar(`/api/c/${canal}/v/${video}/abrir`, { nn })} title={t("app.abrir_pasta_dica")}>
+          <FolderOpen size={16} />{t("app.abrir_pasta")}
+        </button>
         {b.rodando ? (
           <button className="bt perigo" disabled={acao.isPending} onClick={() => acao.mutate(`${base}/parar`)}><Square size={14} />{t("app.bloco.parar")}</button>
         ) : (
           <button className="bt primario" onClick={() => setRodarDe(rodarDe === null ? "" : null)}><Play size={16} />{t("app.bloco.rodar")}</button>
         )}
+        {/* apagar fica depois de um respiro, longe das setas de navegar */}
+        {!b.rodando && <><span className="separa" /><ApagarBloco canal={canal} b={b} /></>}
       </Cabecalho>
 
       {b.parado && !b.rodando && (
@@ -227,8 +230,6 @@ export function BlocoTela() {
             )}
           </div>
 
-          <Reels canal={canal} b={b} />
-
           {b.conferir.length > 0 && (
             <div className="cartao conferir">
               <div className="titulo-secao">
@@ -256,6 +257,8 @@ export function BlocoTela() {
             </div>
           )}
           {!b.conferir.length && b.conferidos > 0 && <p className="sub">{t("app.bloco.conferidos", { n: b.conferidos })}{b.revisao && <> · <a href={b.revisao} target="_blank" rel="noreferrer">{t("app.bloco.revisao")}</a></>}</p>}
+
+          <Reels canal={canal} b={b} />
         </div>
 
         <div className="coluna-dir">
