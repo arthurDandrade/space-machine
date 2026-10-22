@@ -39,6 +39,11 @@ export interface Formatos {
   padrao: string;
 }
 
+export interface Narracao {
+  provedor: string;
+  provedores: { id: string; nome: string; api: string }[];
+}
+
 export interface Canais {
   canais: ResumoCanal[];
   rodando: number;

@@ -27,6 +27,7 @@ from .estado import conferir_pendentes, previas as previas_do_bloco
 from .sistema import FORMATO_PADRAO, ambiente_motor, arquivo_formato, ficha_formato
 
 ETAPAS = ["narracao", "transcrever", "storyboard", "buscar", "escolher", "editar", "entregar"]
+NOMES_NARRACAO = {"fishaudio": "Fish Audio", "elevenlabs": "ElevenLabs"}
 
 
 def _aprovado(qa):
@@ -83,7 +84,8 @@ class Rodada:
         cod, saida = self.script("narracao", "gerar_narracao.py", self.p)
         if cod != 0 or not (self.p / "narracao.mp3").exists():
             raise Parada(f"narração falhou: {saida.strip()[-300:]}")
-        return "gerada (Fish Audio)"
+        job = ler_json(self.p / "_work" / "narracao_job.json", {}) or {}
+        return f"gerada ({NOMES_NARRACAO.get(job.get('provedor'), job.get('provedor') or 'TTS')})"
 
     def transcrever(self):
         if (self.p / "_work" / "palavras.json").exists():

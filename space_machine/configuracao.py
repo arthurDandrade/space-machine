@@ -18,8 +18,8 @@ from pathlib import Path
 import requests
 
 from .motor_claude import ENV as ENV_SISTEMA
-from .sistema import (CANAIS, FORMATO_PADRAO, ambiente_motor, canais, ficha_formato, formatos,
-                      gravar_json, ler_json)
+from .sistema import (CANAIS, FORMATO_PADRAO, PROVEDOR_NARRACAO_PADRAO, ambiente_motor, canais,
+                      ficha_formato, formatos, gravar_json, ler_json)
 
 # grupo -> (arquivo relativo à raiz do canal | None = Estudio/.env, [(chave, rótulo, secreta, ajuda)])
 APIS = [
@@ -33,10 +33,17 @@ APIS = [
               "A produção continua sem YouTube: nada busca, abre ou baixa vídeo de lá.",
      "campos": [("YOUTUBE_API_KEY", "Chave da API", True, "")]},
     {"id": "fish", "nome": "Fish Audio (narração)", "arquivo": ".env", "escopo": "canal",
-     "ajuda": "Chave em fish.audio/app/developers. O crédito de API é separado do crédito da plataforma.",
+     "ajuda": "Chave em fish.audio/app/developers. O crédito de API é separado do crédito da plataforma. Só é usada quando o canal está com a narração no Fish Audio (acima).",
      "campos": [("FISH_API_KEY", "Chave da API", True, ""),
                 ("FISH_VOICE_ID", "Voz (reference_id)", False, "id do modelo de voz"),
                 ("FISH_MODEL", "Modelo", False, "s2.1-pro (pago) ou s2.1-pro-free")]},
+    {"id": "elevenlabs", "nome": "ElevenLabs (narração)", "arquivo": ".env", "escopo": "canal",
+     "ajuda": "Chave em elevenlabs.io → Developers → API Keys. Só é usada quando o canal está com a narração no "
+              "ElevenLabs (acima).",
+     "campos": [("ELEVENLABS_API_KEY", "Chave da API", True, ""),
+                ("ELEVENLABS_VOICE_ID", "Voz (voice_id)", False, "id da voz"),
+                ("ELEVENLABS_MODEL", "Modelo", False, "eleven_multilingual_v2"),
+                ("ELEVENLABS_FORMAT", "Qualidade", False, "mp3_44100_128 (192 pede o plano Creator)")]},
     {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pexels.com/api.", "campos": [("PEXELS_API_KEY", "Chave da API", True, "")]},
     {"id": "pixabay", "nome": "Pixabay (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
@@ -48,6 +55,25 @@ APIS = [
      "ajuda": "Grátis em api.data.gov/signup. Sem a chave, o Smithsonian fica fora da busca.",
      "campos": [("SI_API_KEY", "Chave da API", True, "")]},
 ]
+
+
+# narração: o cartão de chaves de cada provedor de TTS (canal.json["narracao"]["provedor"])
+PROVEDOR_DA_API = {"fish": "fishaudio", "elevenlabs": "elevenlabs"}
+PROVEDORES_NARRACAO = [{"id": "fishaudio", "nome": "Fish Audio", "api": "fish"},
+                       {"id": "elevenlabs", "nome": "ElevenLabs", "api": "elevenlabs"}]
+
+
+def provedor_narracao(canal):
+    return (canal.get("narracao") or {}).get("provedor") or PROVEDOR_NARRACAO_PADRAO
+
+
+def salvar_provedor_narracao(slug, provedor):
+    if provedor not in {p["id"] for p in PROVEDORES_NARRACAO}:
+        raise ValueError(f"não conheço o provedor de narração \"{provedor}\"")
+    arq = CANAIS / slug / "canal.json"
+    cj = ler_json(arq, {}) or {}
+    cj["narracao"] = {**(cj.get("narracao") or {}), "provedor": provedor}
+    gravar_json(arq, cj)
 
 
 def _arquivo(api, canal):
@@ -198,8 +224,9 @@ def testar_api(canal, api_id):
             r = requests.get("https://api.si.edu/openaccess/api/v1.0/search",
                              params={"q": "stadium", "rows": 1, "api_key": chave}, timeout=20)
             return r.ok, "ok" if r.ok else f"HTTP {r.status_code}"
-        if api_id == "fish":
-            r = subprocess.run([canal["python"], str(Path(canal["scripts"]) / "gerar_narracao.py"), "--uso"],
+        if api_id in PROVEDOR_DA_API:
+            r = subprocess.run([canal["python"], str(Path(canal["scripts"]) / "gerar_narracao.py"), "--uso",
+                                "--provedor", PROVEDOR_DA_API[api_id]],
                                capture_output=True, text=True, timeout=60,
                                env=ambiente_motor(canal))
             return r.returncode == 0, (r.stdout or r.stderr).strip()[-300:]

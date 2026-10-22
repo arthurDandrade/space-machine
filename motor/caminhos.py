@@ -133,6 +133,17 @@ def referencias():
     return dados() / "referencias" / formato().name
 
 
+# Narração: qual serviço de TTS este canal usa (canal.json["narracao"]["provedor"]). Canal de antes de
+# 2026-10-22 não tem o campo e continua no Fish Audio, o único que havia.
+PROVEDOR_NARRACAO_PADRAO = "fishaudio"
+
+
+def narracao():
+    """canal.json["narracao"]: {"provedor": "fishaudio"|"elevenlabs"}."""
+    n = canal_json().get("narracao") or {}
+    return {"provedor": n.get("provedor") or PROVEDOR_NARRACAO_PADRAO, **n}
+
+
 def config_busca():
     """Config do buscador: padrão do motor (motor/busca/config.json) com canal.json["busca"] por cima."""
     cfg = dict(_json(MOTOR / "busca" / "config.json"))

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, KeyRound, Save, Sparkles, Upload, Wand2 } from "lucide-react";
-import { Cores, enviar, ErroApi, Formato, pegar, urlMarca } from "../api";
+import { Cores, enviar, ErroApi, Formato, Narracao, pegar, urlMarca } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { fundoDoCanal, iniciais } from "../componentes/Imagens";
@@ -344,16 +344,39 @@ function ImportarChaves({ canal, jaTem }: { canal: string; jaTem: Set<string> })
   );
 }
 
+function EscolherNarracao({ canal, narracao }: { canal: string; narracao: Narracao }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const trocar = useMutation({
+    mutationFn: (provedor: string) => enviar(`/api/c/${canal}/narracao`, { provedor }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+  return (
+    <form className="cartao" onSubmit={(e) => e.preventDefault()}>
+      <div className="titulo-secao"><h3>{t("app.chaves.narracao")}</h3></div>
+      <label className="campo">{t("app.chaves.narracao_quem")}
+        <select value={narracao.provedor} onChange={(e) => trocar.mutate(e.target.value)} disabled={trocar.isPending}>
+          {narracao.provedores.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+        </select>
+      </label>
+      <p className="sub">{t("app.chaves.narracao_explica")}</p>
+      {trocar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.salvo")}</span>}
+      {trocar.isError && <span className="erro">{(trocar.error as ErroApi).message}</span>}
+    </form>
+  );
+}
+
 export function ChavesTela() {
   const { canal = "" } = useParams();
   const { data: dc } = useCanal(canal);
-  const { data } = useQuery({ queryKey: ["chaves", canal], queryFn: () => pegar<{ apis: Api[] }>(`/api/c/${canal}/chaves`), refetchInterval: false });
+  const { data } = useQuery({ queryKey: ["chaves", canal], queryFn: () => pegar<{ apis: Api[]; narracao: Narracao }>(`/api/c/${canal}/chaves`), refetchInterval: false });
   const t = useT();
   if (!dc || !data) return null;
   return (
     <>
       <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.chaves")}</b></>} titulo={t("app.chaves.titulo")} />
       <p className="sub intro">{t("app.chaves.explica")}</p>
+      <EscolherNarracao canal={canal} narracao={data.narracao} />
       <ImportarChaves canal={canal} jaTem={new Set(data.apis.filter((a) => a.configurada).map((a) => a.id))} />
       <div className="apis">{data.apis.map((a) => <CartaoApi key={a.id} canal={canal} a={a} />)}</div>
     </>

@@ -760,9 +760,27 @@ def _apis_publicas(c):
     return out
 
 
+def _narracao(c):
+    """Quem narra este canal e as opções (o cartão de chaves de cada um vem na mesma lista de APIs)."""
+    return {"provedor": configuracao.provedor_narracao(c), "provedores": configuracao.PROVEDORES_NARRACAO}
+
+
 @api.get("/c/{slug}/chaves")
 def chaves(slug: str):
-    return {"apis": _apis_publicas(_canal(slug))}
+    c = _canal(slug)
+    return {"apis": _apis_publicas(c), "narracao": _narracao(c)}
+
+
+@api.post("/c/{slug}/narracao")
+def salvar_narracao(slug: str, provedor: str = Body(..., embed=True)):
+    """Troca o serviço de TTS do canal (vale para os próximos blocos; narração já gerada fica como está)."""
+    _canal(slug)
+    try:
+        configuracao.salvar_provedor_narracao(slug, provedor)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    _cache_falta["quando"] = 0
+    return {"ok": True, "narracao": _narracao(_canal(slug))}
 
 
 @api.get("/c/{slug}/chaves-importar")
@@ -779,7 +797,7 @@ def importar_chaves(slug: str, origem: str = Body(..., embed=True), apis: list =
     except ValueError as e:
         raise HTTPException(404, str(e))
     _cache_falta["quando"] = 0
-    return {"ok": True, "copiados": copiados, "apis": _apis_publicas(c)}
+    return {"ok": True, "copiados": copiados, "apis": _apis_publicas(c), "narracao": _narracao(c)}
 
 
 @api.post("/c/{slug}/chaves/{api_id}")
@@ -790,7 +808,7 @@ def salvar_chave(slug: str, api_id: str, valores: dict = Body({}, embed=True), a
     form = {k: str(v) for k, v in valores.items()} | {f"apagar_{k}": "1" for k in apagar}
     mudou = configuracao.salvar_api(c, api_id, form)
     _cache_falta["quando"] = 0
-    return {"ok": True, "mudou": mudou, "apis": _apis_publicas(c)}
+    return {"ok": True, "mudou": mudou, "apis": _apis_publicas(c), "narracao": _narracao(c)}
 
 
 @api.post("/c/{slug}/chaves/{api_id}/testar")

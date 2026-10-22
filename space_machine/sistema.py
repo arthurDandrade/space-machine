@@ -26,6 +26,7 @@ sys.path.insert(0, str(MOTOR))
 import caminhos as _caminhos  # noqa: E402
 
 FORMATO_PADRAO = _caminhos.FORMATO_PADRAO
+PROVEDOR_NARRACAO_PADRAO = _caminhos.PROVEDOR_NARRACAO_PADRAO
 
 
 def formatos():
@@ -91,7 +92,8 @@ def _canal(pasta):
     cj = ler_json(pasta / "canal.json", {}) or {}
     return {
         "nome": cj.get("nome", pasta.name), "raiz": str(pasta), "ativo": cj.get("ativo", True),
-        "formato": cj.get("formato") or FORMATO_PADRAO, "idioma": cj.get("idioma", "en"), "tema": cj.get("tema", ""),
+        "formato": cj.get("formato") or FORMATO_PADRAO, "narracao": cj.get("narracao") or {},
+        "idioma": cj.get("idioma", "en"), "tema": cj.get("tema", ""),
         "producoes": str(pasta / "producoes"), "conhecimento": str(pasta / "conhecimento"),
         # o motor é um só para todos os canais
         "python": sys.executable, "scripts": str(MOTOR / "busca" / "scripts"), "editor": str(MOTOR / "edicao_ae"),
