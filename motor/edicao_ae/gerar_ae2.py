@@ -1125,7 +1125,7 @@ def main():
              "cor_fundo": COR_FUNDO, "cor_sombra": COR_SOMBRA, "fundo_imagem": FUNDO_IMAGEM,
              "layers": M.layers, "salvar": str(proj / "edicao" / f"bloco_{a.item}_{suf}.aep"),
              "log": str(proj / "edicao" / f"log_{a.item}_{suf}.txt")}
-    modelo = (Path(__file__).parent / "montar_modelo2.jsx").read_text()
+    modelo = caminhos.do_formato("edicao.modelo").read_text()   # o modelo do After é do FORMATO do canal
     # posições/tempos finais de textos e cards (o QA confere texto por cima de imagem e texto rápido demais)
     reg = []
     for r_ in M.registro:

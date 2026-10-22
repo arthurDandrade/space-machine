@@ -9,5 +9,12 @@
    "02 - Cenas/Biblioteca de Cenas.md",
    "02 - Cenas/Da Narração às Cenas.md"
   ]
+ },
+ "cenas": "biblioteca_cenas.json",
+ "edicao": {
+  "modelo": "montar_modelo2.jsx"
+ },
+ "qa": {
+  "medidas": "medidas_qa.json"
  }
 }

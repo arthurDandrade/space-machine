@@ -51,24 +51,11 @@ import sys
 from pathlib import Path
 
 from comum import gravar_json, ler_json, log
+import caminhos   # motor/caminhos.py (o comum já põe no path): o formato do canal
 
-ORIENTACAO = {"B": "paisagem", "B4": "paisagem", "B5": "paisagem", "C1": "retrato", "C4": "retrato",
-              "D1": "retrato", "D3": "retrato", "D4": "retrato", "C2": "qualquer", "D2": "paisagem",
-              "E2": "retrato", "E3": "qualquer", "LOGOS": "qualquer", "A": "qualquer",
-              # v5–v8 (2026-10-05): C8 = par/trio com "troca" num card só; D5 = sanduíche (3º card vai ao meio,
-              # na frente); D6 = baralho (cascata de 3–4); B10 = card centralizado que desliza para a direita
-              # e abre espaço para o 1º rótulo à esquerda
-              "C8": "retrato", "D5": "retrato", "D6": "qualquer", "B10": "retrato",
-              # A4 = frases que trocam por fade; B11 = foco por cima (o estado anterior fica desfocado atrás);
-              # G1 = card + caixa de citação (campo "citacao" no card)
-              "A4": "qualquer", "B11": "qualquer", "G1": "qualquer",
-              # 4ª leva (2026-10-05): B9 lista que acumula; D7 recorte + par; E5 bandeira ao lado (card + "lateral");
-              # E6 diagrama PNG + card; F8 retrato → mapa por cima → data; F9 card + bandeira + mapa à esquerda;
-              # G2 tabela; G3 gráfico; M3 mapa que troca (card com "troca" + "dissolve"); M5 card + globo ("lateral");
-              # M6 silhueta PNG + mapa; M7 mapa com bandeira dentro ("sticker" + "pos": "dentro")
-              "B9": "paisagem", "D7": "retrato", "E5": "retrato", "E6": "retrato", "F8": "paisagem", "F9": "retrato",
-              "G2": "qualquer", "G3": "qualquer", "M3": "paisagem", "M5": "paisagem", "M6": "paisagem", "M7": "paisagem",
-              "C9": "qualquer"}   # C9 pilha: cards [de trás, da frente]
+# Orientação do asset por variação: é do FORMATO (formatos/<formato>/biblioteca_cenas.json). Cada código está
+# explicado em conhecimento/02 - Cenas/Biblioteca de Cenas.md do formato.
+ORIENTACAO = json.loads(caminhos.do_formato("cenas").read_text())["orientacao"]
 
 
 def gerar_mapa(proj, spec):

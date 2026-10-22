@@ -1,4 +1,6 @@
-"""Gera referencia.json a partir das detecções dos 4 vídeos de referência (4 fps)."""
+"""Gera as medidas da linha de base do QA a partir das detecções dos vídeos de referência (4 fps).
+
+Saída: formatos/<formato>/medidas_qa.json (o caminho vem da ficha do formato: qa.medidas)."""
 import json
 import sys
 from pathlib import Path
@@ -11,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import caminhos  # noqa: E402
 
 EST = caminhos.referencias() / "estudo_cenas"
+SAIDA = caminhos.do_formato("qa.medidas", exigir=False)
 SCR = Path(sys.argv[1]) if len(sys.argv) > 1 else None
 tot = {}
 for v in range(1, 5):
@@ -34,5 +37,6 @@ base = {
     "palavras_texto_solo": [2, 6],
     "max_textos_solo_seguidos": 4,
 }
-Path("referencia.json").write_text(json.dumps(base, ensure_ascii=False, indent=2))
+SAIDA.write_text(json.dumps(base, ensure_ascii=False, indent=2))
+print("→", SAIDA)
 print(json.dumps(base, ensure_ascii=False, indent=1))

@@ -48,7 +48,7 @@ As de texto por cima de imagem e texto pouco tempo leem `edicao/layout_<item>.js
 - Prévia atual v5 → **⚠️ aprovado com 1 atenção** (5 textos solo seguidos em 66 s; essa conferência saiu em 2026-10-15).
 
 ## Como funciona por dentro
-- `qa/referencia.json` = linha de base (gerada por `qa/linha_base.py` a partir das detecções em `Videos Referencias/estudo_cenas/det/`).
+- `medidas_qa.json` desta pasta do formato = linha de base (gerada por `motor/edicao_ae/qa/linha_base.py` a partir das detecções em `<dados>/referencias/<formato>/estudo_cenas/det/`).
 - **Conferência no pixel (2026-10-05):** o detector só reconhece cards **retangulares**, e card + globo/bandeira encostados (E5, M5, F9) some dele. Por isso o QA mede, numa passada só (`fracao_ocupada`), quanto de cada frame é diferente do fundo de papel:
   - **Palco vazio** só é acusado se a tela for >92% papel.
   - **Texto solo** só conta frames em que o texto ocupa <15% da tela (senão é um card que o detector perdeu).

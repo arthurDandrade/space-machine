@@ -15,29 +15,19 @@ import json
 import sys
 from pathlib import Path
 
-NOMES = {
-    "A1": "frase", "A2": "frase que se completa", "A3": "frase em 2 linhas", "A4": "frases encadeadas",
-    "B1": "card grande", "B2": "card vertical", "B3": "card + frases por cima", "B4": "card + rótulo ao lado",
-    "B5": "card + rótulos que trocam", "B6": "troca no mesmo quadro", "B7": "palavra/número no card",
-    "B9": "lista que acumula", "B10": "card que abre espaço p/ nome", "B11": "foco por cima",
-    "C1": "par lado a lado", "C2": "cascata", "C4": "comparação rotulada", "C5": "foto + mapa",
-    "C8": "âncora fixa (um card troca)", "C9": "pilha", "D1": "trio", "D2": "1 grande + pequenos",
-    "D3": "pessoa–objeto–pessoa", "D4": "esteira", "D5": "sanduíche", "D6": "baralho", "D7": "recorte + par",
-    "E2": "recorte + card", "E3": "recorte + texto", "E4": "logo no canto", "E5": "bandeira/logo colado ao lado",
-    "E6": "diagrama + card", "F8": "retrato → mapa → data", "F9": "lugar em camadas", "G1": "citação",
-    "G2": "tabela", "G3": "gráfico", "M1": "mapa sozinho", "M3": "mapa que troca", "M4": "par de mapas",
-    "M5": "card + globo", "M6": "silhueta + mapa", "M7": "bandeira no mapa", "LOGOS": "logos",
-}
-CARD_UNICO = {"B1", "B2", "B3", "B4", "B5", "B6", "B7", "B9", "B10", "M1"}
-TEXTO_SOLO = {"A1", "A2", "A3", "A4"}
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import caminhos  # noqa: E402  (motor/caminhos.py: o formato do canal e os arquivos dele)
 
-# metas (referências v1–v8 + o que o QA mede)
-MIN_VARIACOES, MAX_CARD_UNICO, MAX_SEGUIDOS = 8, 0.35, 2
-MIN_ASSET_S, MIN_ASSETS_MIN, MIN_CENAS_F = 1.8, 15.0, 0.40   # assets/min: meta da nota 20–25, aviso abaixo de 15
-# 2026-10-13, decisão do Arthur (mais variedade): texto solo até 20% (as referências têm ~30%) e nenhum tipo de
-# cena repetido no bloco (A1/A2/A3/A4 são tipos diferentes). Medido nos 21 blocos do Every NFL Position: média de
-# 23% de texto e 3–10 repetições por bloco, quase todas A1, C1 e B1.
-TEXTO_SOLO_FAIXA = (0.12, 0.20)
+# A Biblioteca de Cenas e as metas são do FORMATO do canal: formatos/<formato>/biblioteca_cenas.json
+# (nomes das variações, quais são card único, quais são texto solo e o que medir).
+BIBLIOTECA = json.loads(caminhos.do_formato("cenas").read_text())
+NOMES = BIBLIOTECA["nomes"]
+CARD_UNICO = set(BIBLIOTECA["card_unico"])
+TEXTO_SOLO = set(BIBLIOTECA["texto_solo"])
+_M = BIBLIOTECA["metas"]
+MIN_VARIACOES, MAX_CARD_UNICO, MAX_SEGUIDOS = _M["min_variacoes"], _M["max_card_unico"], _M["max_seguidos"]
+MIN_ASSET_S, MIN_ASSETS_MIN, MIN_CENAS_F = _M["min_asset_s"], _M["min_assets_min"], _M["min_cenas_f"]
+TEXTO_SOLO_FAIXA = tuple(_M["texto_solo_faixa"])
 
 
 def variacao(est_plan, est_ed):

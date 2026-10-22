@@ -105,15 +105,14 @@ def ficha(nome=None):
     return _json(formato(nome) / "formato.json")
 
 
-def do_formato(arquivo, nome=None):
+def do_formato(arquivo, nome=None, exigir=True):
     """Um arquivo do formato, pelo caminho que a ficha dá. `arquivo` é a chave na ficha ("storyboard.regras") ou
-    o nome do arquivo direto. Erro claro quando o formato não trouxe o seu."""
-    f = ficha(nome)
-    alvo = f
+    o nome do arquivo direto. Erro claro quando o formato não trouxe o seu (exigir=False para quem vai gerá-lo)."""
+    alvo = ficha(nome)
     for parte in arquivo.split("."):
         alvo = alvo.get(parte) if isinstance(alvo, dict) else None
     p = formato(nome) / (alvo if isinstance(alvo, str) else arquivo)
-    if not p.exists():
+    if exigir and not p.exists():
         raise SystemExit(f"o formato \"{nome or nome_formato()}\" não tem \"{arquivo}\": falta {p} "
                          f"(ou o caminho dele em {formato(nome) / 'formato.json'})")
     return p

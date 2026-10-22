@@ -28,9 +28,11 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
 from medidas import cards_validos, estaveis, ler_det, medir_deteccao  # noqa: E402
 
-REF = json.loads((AQUI / "referencia.json").read_text())
 sys.path.insert(0, str(AQUI.parents[1]))
 import caminhos  # noqa: E402
+
+# linha de base das medidas: é do FORMATO do canal (formatos/<formato>/medidas_qa.json)
+REF = json.loads(caminhos.do_formato("qa.medidas").read_text())
 
 REFS_DIR = caminhos.referencias()        # vídeos de referência do formato (opcionais: sem eles, a folha não compara)
 EST = REFS_DIR / "estudo_cenas"
