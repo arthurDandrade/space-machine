@@ -34,6 +34,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import caminhos  # noqa: E402
 
 UA = "SpaceMachine-narracao/3.0"
+
+
+class SemPermissao(Exception):
+    """A chave autenticou, mas não tem permissão para esta leitura (chave restrita a TTS, p.ex.)."""
 MARCACAO = re.compile(r"^\[[^\]]*\]$")  # linha inteira entre colchetes: [VISUAL: ...] e afins
 
 
@@ -41,7 +45,20 @@ def config(nome):
     return caminhos.env(nome)
 
 
-def pedir(url, corpo=None, headers=None, timeout=60, metodo=None):
+def recado(corpo):
+    """A frase que o serviço mandou, em vez do JSON inteiro (os dois embrulham o recado em "detail")."""
+    txt = corpo.decode(errors="replace") if isinstance(corpo, bytes) else str(corpo)
+    try:
+        d = json.loads(txt)
+    except ValueError:
+        return txt[:300]
+    d = d.get("detail", d) if isinstance(d, dict) else d
+    if isinstance(d, dict):
+        return str(d.get("message") or d.get("msg") or d)[:300]
+    return str(d)[:300]
+
+
+def pedir(url, corpo=None, headers=None, timeout=60, metodo=None, erro_ok=None):
     """Chamada HTTP com as esperas do limite de uso. Devolve os bytes da resposta."""
     dados = json.dumps(corpo).encode() if corpo is not None else None
     h = {"Content-Type": "application/json", "User-Agent": UA, **(headers or {})}
@@ -51,12 +68,14 @@ def pedir(url, corpo=None, headers=None, timeout=60, metodo=None):
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
+            if e.code in (erro_ok or ()):
+                raise SemPermissao(recado(e.read())) from None
             if e.code in (429, 503) and tentativa < 4:
                 espera = int(e.headers.get("Retry-After") or 15)
                 print(f"{e.code} (limite/carga), esperando {espera}s…")
                 time.sleep(espera)
                 continue
-            sys.exit(f"HTTP {e.code} em {url}: {e.read().decode(errors='replace')[:500]}")
+            sys.exit(f"HTTP {e.code}: {recado(e.read())} ({url.split('?')[0]})")
 
 
 # ---------------- Fish Audio ----------------
@@ -143,7 +162,13 @@ def onze_modelos():
 
 
 def onze_uso():
-    r = json.loads(pedir(ONZE + "/v1/user/subscription", headers=onze_chave()))
+    try:
+        bruto = pedir(ONZE + "/v1/user/subscription", headers=onze_chave(), erro_ok=(401,))
+    except SemPermissao as e:
+        # chave restrita (só TTS, por exemplo): autenticou, mas não pode ler o uso
+        print(f"chave aceita, mas sem permissão para ler o uso: {e}")
+        return {}
+    r = json.loads(bruto)
     return {k: r.get(k) for k in ("tier", "status", "character_count", "character_limit",
                                   "next_character_count_reset_unix")}
 
@@ -212,7 +237,9 @@ def main():
         prov["modelos"]()
         return
     if a.uso:
-        print(json.dumps(prov["uso"](), indent=2))
+        u = prov["uso"]()
+        if u:                      # vazio = o provedor já explicou por que não deu para ler
+            print(json.dumps(u, indent=2))
         return
     if not a.bloco:
         ap.error("informe a pasta do bloco, --vozes, --modelos ou --uso")
