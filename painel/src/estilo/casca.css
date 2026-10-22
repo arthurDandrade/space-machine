@@ -57,16 +57,27 @@
 .cabecalho h1 { margin-top: 2px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
 .cabecalho .acoes { display: flex; align-items: center; gap: 10px; }
 
-/* topo do nível do produtor (escolha de canais) */
-.topo-produtor { display: flex; align-items: center; gap: 12px; max-width: 1240px; margin: 0 auto; padding: 26px 32px 0; }
+/* topo do nível do produtor: marca, as três áreas (Início, Modelagem, Configurações) e o canto da direita */
+.topo-produtor { display: flex; align-items: center; gap: 10px; max-width: 1240px; margin: 0 auto; padding: 22px 32px 0; }
 .topo-produtor .esp { flex: 1; }
 .marca-sm { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.01em; font-size: 16px; }
 .marca-sm img { width: 32px; height: 32px; border-radius: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); font-size: 13px; font-weight: 600; color: var(--ink2); transition: color 0.15s; }
+.areas { display: flex; gap: 2px; margin-left: 18px; padding: 3px; border-radius: 999px; background: var(--raised); }
+.areas a {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 700; color: var(--ink2); transition: background 0.15s, color 0.15s;
+}
+.areas a svg { color: var(--ink3); transition: color 0.15s; }
+.areas a:hover { color: var(--ink); }
+.areas a:hover svg { color: var(--ink2); }
+.areas a.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow); }
+.areas a.on svg { color: var(--accent-text); }
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow); font-size: 13px; font-weight: 600; color: var(--ink2); white-space: nowrap; flex: none; transition: color 0.15s; }
 .chip:hover { color: var(--ink); }
-.chip .ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
-.chip.alerta .ponto { background: var(--wait); }
-.chip.alerta { color: var(--wait); }
+.chip > svg { color: var(--ink3); }
+.chip.ok > svg { color: var(--ok); }
+.chip.alerta, .chip.alerta > svg { color: var(--wait); }
+.chip.atualizar, .chip.atualizar > svg { color: var(--accent-text); }
 
 @media (max-width: 900px) {
   .app { grid-template-columns: minmax(0, 1fr); }
@@ -81,8 +92,12 @@
   .principal { padding: 16px 16px 40px; }
   .cabecalho { flex-wrap: wrap; align-items: flex-start; }
   .cabecalho h1 { font-size: 24px; }
-  .topo-produtor { padding: 18px 16px 0; }
+  .topo-produtor { padding: 14px 16px 0; flex-wrap: wrap; gap: 8px; }
   .topo-produtor .chip span.txt { display: none; }
+  .topo-produtor .busca-botao { min-width: 0; width: 40px; padding: 0; justify-content: center; }
+  .topo-produtor .busca-botao span, .topo-produtor .busca-botao kbd { display: none; }
+  .areas { order: 9; width: 100%; margin: 4px 0 0; overflow-x: auto; scrollbar-width: none; }
+  .areas a { flex: none; }
 }
 
 /* busca (⌘K) */

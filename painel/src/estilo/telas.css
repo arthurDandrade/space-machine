@@ -1,9 +1,20 @@
 /* ---------------- escolha de canais (nível do produtor) ---------------- */
 .nivel-produtor { min-height: 100vh; padding-bottom: 60px; }
-.ola { max-width: 1240px; margin: 0 auto; padding: 54px 32px 26px; }
+.ola { max-width: 1240px; margin: 0 auto; padding: 46px 32px 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .ola h1 { font-size: 40px; line-height: 1.1; letter-spacing: -0.03em; font-weight: 800; }
-.ola p { margin: 10px 0 0; color: var(--ink2); font-size: 16px; }
+.ola p { margin: 8px 0 0; color: var(--ink2); font-size: 16px; }
 .ola p b { color: var(--ink); }
+/* os três números do momento, uma vez só (antes se repetiam na frase e no rodapé) */
+.agora { display: flex; gap: 8px; flex-wrap: wrap; }
+.agora .stat { display: flex; align-items: center; gap: 10px; padding: 9px 14px 9px 10px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+.agora a.stat { transition: transform 0.2s var(--ease), box-shadow 0.2s; }
+.agora a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-hi); }
+.agora .ic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+.agora .ic.run { background: var(--run-bg); color: var(--run); }
+.agora .ic.wait { background: var(--wait-bg); color: var(--wait); }
+.agora .ic.ok { background: var(--ok-bg); color: var(--ok); }
+.agora b { display: block; font-size: 16px; line-height: 1.2; letter-spacing: -0.02em; }
+.agora span { font-size: 12px; color: var(--ink2); }
 .canais { max-width: 1240px; margin: 0 auto; padding: 0 32px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
 @keyframes sobe { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .canal {
@@ -39,28 +50,23 @@
 .canal.novo:hover { border-color: var(--ink3); box-shadow: none; }
 .canal.novo .mais { width: 56px; height: 56px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow); display: grid; place-items: center; }
 .canal.novo b { font-size: 16px; }
-.rodape-produtor { max-width: 1240px; margin: 0 auto; padding: 34px 32px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.mini { background: var(--card); border-radius: 20px; padding: 16px 18px; box-shadow: var(--shadow); display: flex; gap: 14px; align-items: center; }
-.mini .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; }
-.mini .ic.run { background: var(--run-bg); color: var(--run); }
-.mini .ic.wait { background: var(--wait-bg); color: var(--wait); }
-.mini .ic.ok { background: var(--ok-bg); color: var(--ok); }
-.mini b { display: block; font-size: 15px; }
-.mini span { font-size: 12.5px; color: var(--ink2); }
-
-/* ---------------- canais para modelar (tela inicial) ---------------- */
-.modelar { max-width: 1240px; margin: 0 auto; padding: 40px 32px 0; }
-.modelar .titulo-secao h3 { display: flex; align-items: center; gap: 8px; }
-.modelar .titulo-secao h3 svg { color: var(--ink3); }
-.colar-link { display: flex; gap: 10px; }
-.colar-link input {
-  flex: 1; min-width: 0; height: 44px; padding: 0 14px; font: inherit; font-size: 14px; color: var(--ink);
-  background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
-}
-.colar-link input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-.colar-link .bt { height: 44px; flex: none; }
-.modelar .erro { margin-top: 10px; }
-.vazio-modelar { margin: 14px 0 0; max-width: 760px; }
+/* ---------------- modelagem de canais (área própria do produtor) ---------------- */
+/* telas do produtor que não são a inicial nem as configurações (hoje: modelagem) */
+.tela-produtor { max-width: 1240px; margin: 0 auto; padding: 34px 32px 0; }
+.cabeca-tela { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.cabeca-tela h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+/* na área própria o cabeçalho é o título da página; dentro das configurações é o título do painel */
+.tela-produtor > .cabeca-tela h2 { font-size: 30px; }
+.cabeca-tela .sub { margin: 6px 0 0; max-width: 680px; line-height: 1.55; }
+.cabeca-tela .acoes { display: flex; align-items: center; gap: 10px; }
+.colar-link { display: flex; align-items: flex-end; gap: 12px; }
+.colar-link .campo { flex: 1; min-width: 0; margin: 0; }
+.colar-link .bt { flex: none; }
+.tela-produtor > .erro { margin-top: 10px; }
+.vazio-modelar { display: flex; gap: 14px; align-items: flex-start; margin-top: 16px; padding: 22px; max-width: 760px; border-radius: var(--raio); border: 1.5px dashed var(--line); }
+.vazio-modelar .ic { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; background: var(--raised); color: var(--ink3); }
+.vazio-modelar b { display: block; font-size: 15px; }
+.vazio-modelar p { margin: 4px 0 0; line-height: 1.6; }
 .sem-chave {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 14px 16px;
   border-radius: 18px; background: var(--wait-bg); color: var(--ink);
@@ -425,11 +431,24 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 }
 
 /* ---------------- configurações ---------------- */
-.config-produtor { max-width: 1240px; margin: 0 auto; padding: 40px 32px 0; }
-.config-produtor h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
-.config-produtor .abas { margin: 18px 0 22px; }
-.config-produtor .abas a { padding: 10px 14px; font-weight: 700; color: var(--ink2); border-bottom: 2px solid transparent; }
-.config-produtor .abas a.on { color: var(--ink); border-color: var(--accent); }
+/* barra lateral agrupada por assunto (canais → produção → sistema), como a moldura do canal */
+.config-produtor { max-width: 1240px; margin: 0 auto; padding: 34px 32px 0; }
+.config-produtor > h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+.config-produtor > .sub { margin: 7px 0 0; max-width: 640px; line-height: 1.55; }
+.config-layout { display: grid; grid-template-columns: 228px minmax(0, 1fr); gap: 32px; align-items: start; margin-top: 26px; }
+.config-nav { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 14px; }
+.config-nav .grupo { display: flex; flex-direction: column; gap: 2px; }
+.config-nav .rot { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); padding: 4px 12px 5px; }
+.config-nav a {
+  display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 12px; color: var(--ink2);
+  font-weight: 600; font-size: 14px; transition: background 0.15s, color 0.15s;
+}
+.config-nav a svg { color: var(--ink3); transition: color 0.15s; }
+.config-nav a:hover { background: var(--raised); color: var(--ink); }
+.config-nav a:hover svg { color: var(--ink2); }
+.config-nav a.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 700; }
+.config-nav a.on svg { color: var(--accent-text); }
+.config-painel { min-width: 0; padding-bottom: 20px; }
 .config-grade { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 .cores-grade { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .campo.cor input[type="color"] { width: 100%; height: 40px; padding: 3px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); cursor: pointer; }
@@ -477,11 +496,16 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .escolher-apis .marcar { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
 .escolher-apis .marcar input { width: auto; height: auto; }
 .escolher-apis .marcar em { font-style: normal; color: var(--ink3); font-weight: 500; }
-.lista-canais { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
-.linha-canal { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); flex-wrap: wrap; }
+.lista-canais { display: flex; flex-direction: column; gap: 10px; }
+.linha-canal { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); flex-wrap: wrap; }
+.linha-canal.inativo { opacity: 0.7; }
 .linha-canal .t { flex: 1; min-width: 160px; display: flex; flex-direction: column; }
+.linha-canal .t b { font-size: 15px; }
+.linha-canal .atalhos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.novo-canal { margin-top: 4px; }
 .novo-canal .cores-grade { margin-top: 4px; }
 .tabela-modelos { display: flex; flex-direction: column; margin-top: 12px; }
+.tabela-modelos .linha-modelo:last-child { border-bottom: 0; }
 .linha-modelo { display: grid; grid-template-columns: minmax(0, 1fr) 150px 110px 140px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .linha-modelo .t { display: flex; flex-direction: column; }
 .linha-modelo select { height: 38px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
@@ -509,12 +533,22 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
   .linha-modelo .t { grid-column: 1 / -1; }
   .cores-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .config-produtor { padding: 24px 16px 0; }
+  .config-layout { grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+  .config-nav { position: static; flex-direction: row; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+  .config-nav .grupo { flex-direction: row; gap: 4px; }
+  .config-nav .rot { display: none; }
+  .config-nav a { white-space: nowrap; }
+  .tela-produtor { padding: 22px 16px 0; }
+  .ola { padding: 30px 16px 20px; }
 }
 .rola-x { overflow-x: auto; }
 
 /* diálogo, lixeira */
 .dialogo-fundo { position: fixed; inset: 0; z-index: 100; background: rgba(10, 11, 15, 0.4); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; animation: aparece 0.15s ease-out; }
 .dialogo { width: min(480px, 100%); background: var(--card); border-radius: 22px; box-shadow: var(--shadow-hi); padding: 22px; }
+.dialogo.largo { width: min(760px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+.dialogo.largo .corpo-dialogo { overflow-y: auto; margin-bottom: 16px; }
+.dialogo.largo .corpo-dialogo > .sub { margin: 0 0 16px; line-height: 1.6; }
 .dialogo h3 { font-size: 18px; font-weight: 800; }
 .corpo-dialogo { margin: 10px 0 18px; color: var(--ink2); font-size: 14px; line-height: 1.6; }
 .corpo-dialogo p { margin: 0 0 8px; }

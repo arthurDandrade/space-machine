@@ -1,4 +1,5 @@
-// Nível do produtor: o painel sempre abre aqui. Um card por canal; escolher um entra na produção dele.
+// Início do produtor: o painel sempre abre aqui. A tela tem um trabalho só — escolher em qual canal você vai
+// mexer. Saudação, os três números do momento (rodando, esperando, gasto do Claude) e um card por canal.
 // Teclas 1–9 entram direto no canal daquela posição.
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,7 +8,6 @@ import { ArrowRight, Hand, Loader, Plus, Sparkles } from "lucide-react";
 import { Canais, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
 import { TopoProdutor } from "../casca/TopoProdutor";
 import { Capa, fundoDoCanal, iniciais, LogoCanal } from "../componentes/Imagens";
-import { Modelar } from "../componentes/Modelar";
 import { compacto, saudacao, useT } from "../textos";
 
 function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
@@ -55,6 +55,26 @@ function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
   );
 }
 
+/** Os três números do momento, ao lado da saudação (antes se repetiam no rodapé da tela). */
+function Agora({ data }: { data?: Canais }) {
+  const t = useT();
+  const itens = [
+    { ic: <Loader size={16} />, cls: "run", n: data?.rodando ?? 0, rot: "app.canais.stat_rodando", para: "" },
+    { ic: <Hand size={16} />, cls: "wait", n: data?.esperando ?? 0, rot: "app.canais.stat_esperando", para: "" },
+    { ic: <Sparkles size={16} />, cls: "ok", n: compacto(data?.consumo_7d ?? 0), rot: "app.canais.stat_tokens", para: "/config/consumo" },
+  ];
+  return (
+    <div className="agora">
+      {itens.map((i) => {
+        const miolo = <><span className={`ic ${i.cls}`}>{i.ic}</span><div><b>{i.n}</b><span>{t(i.rot)}</span></div></>;
+        return i.para
+          ? <Link key={i.rot} className="stat" to={i.para}>{miolo}</Link>
+          : <div key={i.rot} className="stat">{miolo}</div>;
+      })}
+    </div>
+  );
+}
+
 export function EscolhaCanais() {
   const t = useT();
   const navegar = useNavigate();
@@ -71,45 +91,29 @@ export function EscolhaCanais() {
     return () => window.removeEventListener("keydown", tecla);
   }, [canais, navegar]);
 
-  const agora = [
-    data?.rodando ? t(data.rodando === 1 ? "app.canais.um_rodando" : "app.canais.n_rodando", { n: data.rodando }) : "",
-    data?.esperando ? t("app.esperando_n", { n: data.esperando }) : "",
-  ].filter(Boolean);
-
   return (
     <div className="nivel-produtor">
       <TopoProdutor />
 
       <section className="ola">
-        <h1>{saudacao(t)}.</h1>
-        <p>
-          {t(canais.length ? "app.canais.escolha" : "app.canais.primeiro")}
-          {agora.length > 0 && <> {t("app.canais.agora")} <b>{agora.join(` ${t("app.e")} `)}</b>.</>}
-        </p>
+        <div>
+          <h1>{saudacao(t)}.</h1>
+          {/* enquanto a lista não chega, nenhuma das duas frases: "crie seu primeiro canal" piscava sem motivo */}
+          <p>{data ? t(canais.length ? "app.canais.escolha" : "app.canais.primeiro") : " "}</p>
+        </div>
+        {canais.length > 0 && <Agora data={data} />}
       </section>
 
       <div className="canais">
         {canais.map((c, i) => <CartaoCanal key={c.slug} c={c} i={i} />)}
-        <Link className="canal novo" to="/config/canais?novo=1" style={{ animationDelay: `${canais.length * 60}ms` }}>
-          <span className="mais"><Plus size={22} /></span>
-          <b>{t("app.canais.novo")}</b>
-          <span className="sub">{t("app.canais.novo_sub")}</span>
-        </Link>
+        {data && (
+          <Link className="canal novo" to="/config/canais?novo=1" style={{ animationDelay: `${canais.length * 60}ms` }}>
+            <span className="mais"><Plus size={22} /></span>
+            <b>{t("app.canais.novo")}</b>
+            <span className="sub">{t("app.canais.novo_sub")}</span>
+          </Link>
+        )}
       </div>
-
-      <Modelar />
-
-      {canais.length > 0 && (
-        <div className="rodape-produtor">
-          <div className="mini"><span className="ic run"><Loader size={18} /></span>
-            <div><b>{t(data?.rodando === 1 ? "app.canais.um_rodando" : "app.canais.n_rodando", { n: data?.rodando ?? 0 })}</b>
-              <span>{t("app.canais.em_todos")}</span></div></div>
-          <div className="mini"><span className="ic wait"><Hand size={18} /></span>
-            <div><b>{t("app.esperando_n", { n: data?.esperando ?? 0 })}</b><span>{t("app.canais.em_todos")}</span></div></div>
-          <div className="mini"><span className="ic ok"><Sparkles size={18} /></span>
-            <div><b>{t("app.canais.tokens", { n: compacto(data?.consumo_7d ?? 0) })}</b><span>{t("app.canais.claude_7d")}</span></div></div>
-        </div>
-      )}
     </div>
   );
 }

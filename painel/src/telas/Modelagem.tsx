@@ -1,11 +1,13 @@
-// Canais que você quer modelar, na tela inicial: você cola o link e o sistema traz nome, logo e tamanho
-// (space_machine/modelar.py, pela API oficial do YouTube). Nada abre nem baixa vídeo: o link do card é um
-// link comum, que só vai ao YouTube quando VOCÊ clica.
+// Modelagem: área própria do produtor (antes era uma seção espremida no fim da tela inicial). Guarda os canais
+// que você quer usar de modelo — você cola o link e o sistema traz nome, logo e tamanho (space_machine/modelar.py,
+// pela API oficial do YouTube). Nada abre nem baixa vídeo: o link do card é um link comum, que só vai ao YouTube
+// quando VOCÊ clica.
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, KeyRound, Plus, RefreshCw, Target, Trash2 } from "lucide-react";
 import { CanaisModelo, CanalModelo, enviar, pegar, urlLogoModelo } from "../api";
-import { Dialogo } from "./Dialogo";
+import { CabecaTela, TopoProdutor } from "../casca/TopoProdutor";
+import { Dialogo } from "../componentes/Dialogo";
 import { compacto, useT } from "../textos";
 
 function Logo({ c }: { c: CanalModelo }) {
@@ -96,7 +98,7 @@ function PedirChave() {
   );
 }
 
-export function Modelar() {
+export function Modelagem() {
   const t = useT();
   const qc = useQueryClient();
   const [link, setLink] = useState("");
@@ -108,24 +110,37 @@ export function Modelar() {
   const itens = data?.itens ?? [];
 
   return (
-    <section className="modelar">
-      <div className="titulo-secao">
-        <h3><Target size={16} />{t("app.modelar.titulo")}</h3>
-        <span className="sub">{t("app.modelar.n", { n: itens.length })}</span>
-      </div>
-      <form className="colar-link" onSubmit={(e) => { e.preventDefault(); adicionar.mutate(); }}>
-        <input value={link} placeholder={t("app.modelar.colar")} onChange={(e) => setLink(e.target.value)} />
-        <button className="bt primario" disabled={!link.trim() || adicionar.isPending}>
-          <Plus size={16} />{t(adicionar.isPending ? "app.modelar.buscando" : "app.modelar.adicionar")}
-        </button>
-      </form>
-      {adicionar.isError && <p className="erro">{adicionar.error.message}</p>}
-      {data && !data.tem_chave && <PedirChave />}
-      {itens.length > 0 ? (
-        <div className="modelos">{itens.map((c) => <CartaoModelo key={c.id} c={c} />)}</div>
-      ) : (
-        <p className="sub vazio-modelar">{t("app.modelar.vazio")}</p>
-      )}
-    </section>
+    <div className="nivel-produtor">
+      <TopoProdutor />
+      <section className="tela-produtor">
+        <CabecaTela titulo={t("app.modelar.titulo")} sub={t("app.modelar.pagina_sub")}>
+          {itens.length > 0 && <span className="selo neutro">{t("app.modelar.n", { n: itens.length })}</span>}
+        </CabecaTela>
+
+        <form className="colar-link cartao" onSubmit={(e) => { e.preventDefault(); adicionar.mutate(); }}>
+          <label className="campo">
+            {t("app.modelar.link")}
+            <input value={link} placeholder={t("app.modelar.colar")} onChange={(e) => setLink(e.target.value)} />
+          </label>
+          <button className="bt primario" disabled={!link.trim() || adicionar.isPending}>
+            <Plus size={16} />{t(adicionar.isPending ? "app.modelar.buscando" : "app.modelar.adicionar")}
+          </button>
+        </form>
+        {adicionar.isError && <p className="erro">{adicionar.error.message}</p>}
+        {data && !data.tem_chave && <PedirChave />}
+
+        {itens.length > 0 ? (
+          <div className="modelos">{itens.map((c) => <CartaoModelo key={c.id} c={c} />)}</div>
+        ) : (
+          <div className="vazio-modelar">
+            <span className="ic"><Target size={22} /></span>
+            <div>
+              <b>{t("app.modelar.vazio_titulo")}</b>
+              <p className="sub">{t("app.modelar.vazio")}</p>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

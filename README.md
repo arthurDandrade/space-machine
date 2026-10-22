@@ -34,10 +34,12 @@ O instalador:
 - pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`);
 - cria o app **Space Machine** na área de trabalho (se você quiser): clicar abre o painel e, se ele não estiver ligado, liga em segundo plano. Para refazer: `./spacemachine atalho`.
 
-O painel abre em http://localhost:8765, na escolha de canais. Em ⚙ › **Primeiros passos** você vê o que ainda falta e como resolver.
+O painel abre em http://localhost:8765, na escolha de canais. No topo ficam as três áreas do painel: **Início**
+(seus canais), **Modelagem** (os canais que você quer usar de modelo) e **Configurações**. Em Configurações ›
+**Primeiros passos** você vê o que ainda falta e como resolver.
 
 ## Atualizar
-Quando sai uma versão nova, o painel avisa no topo e em ⚙ › **Atualizar**: lá você vê o que mudou e clica em
+Quando sai uma versão nova, o painel avisa no topo e em Configurações › **Atualizar**: lá você vê o que mudou e clica em
 **Atualizar o Space Machine**. Ele traz o código novo do GitHub, reinstala só o que mudou, remonta o painel e reinicia
 (a página recarrega sozinha). A sua pasta de dados não é tocada: canais, produções, chaves e cache ficam todos lá.
 No Terminal é `./spacemachine atualizar` (ou `--conferir`, só para olhar).
@@ -49,7 +51,7 @@ No After Effects, ligue: Settings › Scripting & Expressions › **Allow Script
 
 ## Primeiro vídeo
 O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher um, entra na produção daquele canal.
-1. **Novo canal** (o último card da escolha de canais): nome, tema, idioma da narração, cores, fonte, logo, banner e fundo.
+1. **Novo canal** (o último card da escolha de canais, ou o botão em Configurações › Canais): nome, tema, idioma da narração, cores, fonte, logo, banner e fundo.
 2. **Regras do tema** (na barra lateral do canal): clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
 3. **Chaves** (na barra lateral do canal): o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
 4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.

@@ -1,16 +1,19 @@
 // Configurações do Space Machine (do produtor, valem para todos os canais): canais (com o novo canal),
-// modelos do Claude por etapa, consumo, limpeza do disco e primeiros passos.
+// modelos do Claude por etapa, consumo, limpeza do disco e primeiros passos. A moldura — barra lateral por
+// assunto e o cabeçalho de cada painel — está em casca/TopoProdutor.tsx.
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowRight, Check, CircleAlert, CircleCheck, HardDrive, KeyRound, Palette, Plus, RotateCw, Save, Sparkles, Trash2 } from "lucide-react";
 import { Atualizacao, Atualizou, Canais, Formatos, enviar, pegar, rota } from "../api";
+import { CabecaTela } from "../casca/TopoProdutor";
 import { Dialogo } from "../componentes/Dialogo";
 import { LogoCanal } from "../componentes/Imagens";
 import { AnelConsumo } from "../componentes/Pecas";
 import { compacto, haQuanto, useT } from "../textos";
 
-function NovoCanal() {
+/** Criar canal é um diálogo: antes o formulário ficava sempre aberto e engolia a lista de canais. */
+function NovoCanal({ fechar }: { fechar: () => void }) {
   const t = useT();
   const qc = useQueryClient();
   const navegar = useNavigate();
@@ -31,10 +34,16 @@ function NovoCanal() {
   };
   const impact = data?.fontes.find((f) => f.nome === "Impact")?.arquivo;
   return (
-    <form className="cartao novo-canal" id="novo" onSubmit={criar}>
-      <div className="titulo-secao"><h3>{t("app.canais.novo")}</h3></div>
+    <Dialogo largo titulo={t("app.canais.novo")} fechar={fechar}
+      acoes={<>
+        <button type="button" className="bt" onClick={fechar}>{t("app.cancelar")}</button>
+        <button className="bt primario" form="novo-canal" disabled={enviando}>
+          <Plus size={16} />{enviando ? t("app.enviando") : t("app.config.criar_canal")}
+        </button>
+        {erro && <span className="erro">{erro}</span>}
+      </>}>
       <p className="sub">{t("app.config.novo_explica")}</p>
-      <div className="duas-col">
+      <form className="novo-canal duas-col" id="novo-canal" onSubmit={criar}>
         <div>
           <label className="campo">{t("app.config.nome_canal")}<input name="nome" required placeholder="Space Explained" /></label>
           <label className="campo">{t("app.config.formato")}
@@ -72,44 +81,50 @@ function NovoCanal() {
             ))}
           </div>
         </div>
-      </div>
-      <div className="rodape-form">
-        <button className="bt primario" disabled={enviando}><Plus size={16} />{enviando ? t("app.enviando") : t("app.config.criar_canal")}</button>
-        {erro && <span className="erro">{erro}</span>}
-      </div>
-    </form>
+      </form>
+    </Dialogo>
   );
 }
 
 export function CanaisConfigTela() {
   const t = useT();
   const qc = useQueryClient();
-  const [params] = useSearchParams();
-  const ref = useRef<HTMLDivElement>(null);
+  const [params, setParams] = useSearchParams();
   const { data } = useQuery({ queryKey: ["canais"], queryFn: () => pegar<Canais>("/api/canais") });
   const ativar = useMutation({
     mutationFn: ({ slug, nome, ativo }: { slug: string; nome: string; ativo: boolean }) => enviar(`/api/c/${slug}/config`, { nome, ativo }),
     onSettled: () => qc.invalidateQueries(),
   });
-  useEffect(() => { if (params.has("novo")) ref.current?.scrollIntoView({ behavior: "smooth" }); }, [params, data]);
+  // "Novo canal" na tela inicial chega aqui com ?novo=1 e já abre o diálogo
+  const [novo, setNovo] = useState(params.has("novo"));
+  const fechar = () => { setNovo(false); if (params.has("novo")) setParams({}, { replace: true }); };
   return (
     <>
+      <CabecaTela titulo={t("app.config.titulo_canais")} sub={t("app.config.canais_sub")}>
+        <button className="bt primario" onClick={() => setNovo(true)}><Plus size={16} />{t("app.canais.novo")}</button>
+      </CabecaTela>
       <div className="lista-canais">
         {(data?.canais ?? []).map((c) => (
-          <div key={c.slug} className="linha-canal" style={c.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
+          <div key={c.slug} className={`linha-canal ${c.ativo ? "" : "inativo"}`}
+               style={c.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
             <LogoCanal canal={c.slug} nome={c.nome} cores={c.cores} tem={c.logo} />
-            <div className="t"><b>{c.nome}</b><span className="sub">{c.tema} · {t("app.config.n_videos", { n: c.n_videos })}</span></div>
-            <label className="interruptor">
+            <div className="t">
+              <b>{c.nome}</b>
+              <span className="sub">{c.tema} · {t("app.config.n_videos", { n: c.n_videos })}</span>
+            </div>
+            <label className="interruptor" title={t("app.config.ativo_dica")}>
               <input type="checkbox" checked={c.ativo} onChange={(e) => ativar.mutate({ slug: c.slug, nome: c.nome, ativo: e.target.checked })} />
               <span className="trilho" /><span>{t(c.ativo ? "app.config.ativo" : "app.canais.inativo")}</span>
             </label>
-            <Link className="bt pequeno" to={`/c/${c.slug}/identidade`}><Palette size={14} />{t("app.nav.identidade")}</Link>
-            <Link className="bt pequeno" to={`/c/${c.slug}/chaves`}><KeyRound size={14} />{t("app.nav.chaves")}</Link>
-            <Link className="bt pequeno primario" to={`/c/${c.slug}`}>{t("app.config.entrar")}<ArrowRight size={14} /></Link>
+            <div className="atalhos">
+              <Link className="bt pequeno" to={`/c/${c.slug}/identidade`}><Palette size={14} />{t("app.nav.identidade")}</Link>
+              <Link className="bt pequeno" to={`/c/${c.slug}/chaves`}><KeyRound size={14} />{t("app.nav.chaves")}</Link>
+              <Link className="bt pequeno primario" to={`/c/${c.slug}`}>{t("app.config.entrar")}<ArrowRight size={14} /></Link>
+            </div>
           </div>
         ))}
       </div>
-      <div ref={ref}><NovoCanal /></div>
+      {novo && <NovoCanal fechar={fechar} />}
     </>
   );
 }
@@ -141,11 +156,12 @@ export function ModelosTela() {
     mutationFn: () => enviar("/api/config/modelos", { modelos, esforco, after_app: after }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["modelos"] }),
   });
-  if (!data) return null;
+  const cabeca = <CabecaTela titulo={t("app.config.aba_modelos")} sub={t("app.modelos.explica")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
   return (
-    <form className="cartao" onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
-      <p className="sub">{t("app.modelos.explica")}</p>
-      <div className="tabela-modelos">
+    <form onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
+      {cabeca}
+      <div className="cartao tabela-modelos">
         {data.linhas.map((l) => (
           <div key={l.id} className="linha-modelo">
             <div className="t"><b>{l.nome}</b><span className="sub">{l.ajuda}</span></div>
@@ -159,8 +175,10 @@ export function ModelosTela() {
           </div>
         ))}
       </div>
-      <label className="campo" style={{ marginTop: 18, maxWidth: 420 }}>{t("app.modelos.after")}<input value={after} onChange={(e) => setAfter(e.target.value)} /></label>
-      <div className="rodape-form">
+      <div className="cartao" style={{ marginTop: 16 }}>
+        <label className="campo" style={{ maxWidth: 420, margin: 0 }}>{t("app.modelos.after")}<input value={after} onChange={(e) => setAfter(e.target.value)} /></label>
+      </div>
+      <div className="rodape-form" style={{ marginTop: 16 }}>
         <button className="bt primario" disabled={salvar.isPending}><Save size={16} />{t("comum.salvar")}</button>
         {salvar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.modelos.salvo")}</span>}
         {salvar.isError && <span className="erro">{salvar.error.message}</span>}
@@ -179,11 +197,12 @@ interface Consumo {
 export function ConsumoTela() {
   const t = useT();
   const { data } = useQuery({ queryKey: ["consumo"], queryFn: () => pegar<Consumo>("/api/consumo") });
-  if (!data) return null;
+  const cabeca = <CabecaTela titulo={t("app.config.aba_consumo")} sub={t("app.consumo.explica")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
   const total = data.por_etapa.reduce((s, e) => s + e.tokens, 0);
   return (
     <>
-      <p className="sub intro">{t("app.consumo.explica")}</p>
+      {cabeca}
       <div className="consumo-topo">
         <div className="cartao"><div className="titulo-secao"><h3>{t("app.consumo.tudo")}</h3><span className="sub">{t("app.consumo.semana", { n: compacto(data.total_7d) })}</span></div>
           <AnelConsumo total={total} etapas={data.por_etapa.map((e) => ({ etapa: e.etapa, tokens: e.tokens }))} /></div>
@@ -229,11 +248,13 @@ export function PassosTela() {
     mutationFn: () => enviar<{ ok: boolean; mensagem: string }>("/api/primeiros-passos/testar-claude"),
     onSettled: () => qc.invalidateQueries({ queryKey: ["canais"] }),
   });
-  if (!data) return <div className="carregando">{t("app.carregando")}</div>;
+  // o título fica de pé enquanto os dados não chegam: painel vazio parecia tela quebrada
+  const cabeca = <CabecaTela titulo={t("app.config.aba_passos")} sub={t("pp.sub")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
   const faltam = data.itens.filter((i) => !i.ok).length;
   return (
     <>
-      <p className="sub intro">{t("pp.sub")}</p>
+      {cabeca}
       {faltam === 0 ? <div className="aviso-ok"><CircleCheck size={16} />{t("pp.tudo_ok")}</div>
         : <div className="aviso-parado"><CircleAlert size={18} /><div><b>{t("app.passos.faltam", { n: faltam })}</b></div></div>}
       <div className="cartao passos-lista">
@@ -283,13 +304,14 @@ export function LimpezaTela() {
     mutationFn: (ligada: boolean) => enviar("/api/limpeza/automatica", { ligada }),
     onSettled: () => qc.invalidateQueries({ queryKey: ["limpeza"] }),
   });
-  if (!data) return <div className="carregando">{t("app.carregando")}</div>;
+  const cabeca = <CabecaTela titulo={t("app.config.aba_limpeza")} sub={t("app.limpeza.explica")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
   const soma = escolhidas.reduce((s, c) => s + (data.categorias[c] || 0), 0);
   const usado = data.disco.total ? (data.disco.total - data.disco.livre) / data.disco.total : 0;
   const marcar = (c: string, sim: boolean) => setEscolhidas(sim ? [...escolhidas, c] : escolhidas.filter((x) => x !== c));
   return (
     <>
-      <p className="sub intro">{t("app.limpeza.explica")}</p>
+      {cabeca}
       {limpar.data && (
         <div className="aviso-ok">
           <CircleCheck size={16} />
@@ -415,13 +437,14 @@ export function AtualizarTela() {
       setReiniciando(false);
     },
   });
-  if (!data) return <div className="carregando">{t("app.carregando")}</div>;
+  const cabeca = <CabecaTela titulo={t("app.config.aba_atualizar")} sub={t("app.att.explica")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
   const feito = atualizar.data;
   const impedimento = data.impedimento && (data.atrasado > 0 || data.impedimento === "sem_git") ? data.impedimento : "";
   const pode = data.atrasado > 0 && !impedimento && !reiniciando;
   return (
     <>
-      <p className="sub intro">{t("app.att.explica")}</p>
+      {cabeca}
       <div className="cartao versao-att">
         <div className="t">
           <span className="sub">{t("app.att.sua_versao")}</span>
