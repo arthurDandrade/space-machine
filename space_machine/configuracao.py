@@ -344,7 +344,7 @@ def regras_em_texto(regras):
 def sugerir_regras(c, slug):
     """O Claude propõe as regras do tema a partir do nome, tema e idioma (nada é salvo). ErroClaude se falhar."""
     from .motor_claude import chamar
-    from .sistema import PACOTE, config
+    from .sistema import arquivo_formato, config
     schema = {"type": "object", "additionalProperties": False,
               "required": ["escolha", "storyboard", "genericas", "genericas_hist", "proibidos", "permitido_se", "trocas"],
               "properties": {"escolha": {"type": "array", "items": {"type": "string"}},
@@ -357,7 +357,7 @@ def sugerir_regras(c, slug):
                                         "required": ["padrao", "por", "exceto"],
                                         "properties": {"padrao": {"type": "string"}, "por": {"type": "string"},
                                                        "exceto": {"type": "string"}}}}}}
-    r = chamar("regras", (PACOTE / "prompts" / "regras_tema.md").read_text(),
+    r = chamar("regras", arquivo_formato("prompts/regras_tema.md", c.get("formato")).read_text(),
                f"Canal: {c['nome']}\nTema: {c['tema']}\nIdioma da narração: {c['idioma']}", schema=schema,
                modelo=config()["modelos"].get("storyboard"), ctx={"canal": slug})
     r.pop("_uso", None)

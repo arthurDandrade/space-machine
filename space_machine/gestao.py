@@ -170,7 +170,7 @@ def gerar_descricao(c, slug, video):
                             for b in blocos if (b / "roteiro.txt").exists())
     schema = {"type": "object", "additionalProperties": False, "required": ["resumo", "intro", "cta"],
               "properties": {"resumo": {"type": "string"}, "intro": {"type": "string"}, "cta": {"type": "string"}}}
-    r = chamar("descricao", prompt("descricao_youtube"),
+    r = chamar("descricao", prompt("descricao_youtube", formato=c.get("formato")),
                f"Título: {titulo}\nCanal: {c['nome']}\nIdioma: {c['idioma']}\n\n# Roteiros\n{roteiros}",
                schema=schema, modelo=config()["modelos"]["descricao"],
                ctx={"canal": slug, "video": video})

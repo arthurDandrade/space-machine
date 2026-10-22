@@ -24,7 +24,7 @@ from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
 from . import limpeza
 from .estado import conferir_pendentes, previas as previas_do_bloco
-from .sistema import FORMATOS, FORMATO_PADRAO, ambiente_motor
+from .sistema import FORMATO_PADRAO, ambiente_motor, arquivo_formato, ficha_formato
 
 ETAPAS = ["narracao", "transcrever", "storyboard", "buscar", "escolher", "editar", "entregar"]
 
@@ -99,22 +99,26 @@ class Rodada:
         return (cand.exists() and any(cand.iterdir())) or (self.p / "escolhas.json").exists()
 
     def _sistema_storyboard(self):
-        # o que é do FORMATO vem de formatos/<formato>/; o que é do CANAL (aprendizados, regras do tema), do canal
-        f = FORMATOS / (self.c.get("formato") or FORMATO_PADRAO)
-        k = f / "conhecimento"
+        # o que é do FORMATO vem de formatos/<formato>/, pelos caminhos da ficha dele; o que é do CANAL
+        # (aprendizados, regras do tema) vem do canal
+        fmt = self.c.get("formato")
+        k = arquivo_formato("conhecimento", fmt)
         arq_log = Path(self.c["conhecimento"]) / "05 - Aprendizados" / "Log de Aprendizados.md"
         entradas = re.split(r"\n(?=## 20\d\d-)", arq_log.read_text())[1:5] if arq_log.exists() else []
         compilar = (Path(self.c["scripts"]) / "compilar_cenas.py").read_text()
         doc = compilar[:compilar.index('"""', 3) + 3]
-        exemplo = next((x for x in [self.video / "blocos" / "01" / "cenas.json", f / "exemplo_cenas.json"]
+        exemplo = next((x for x in [self.video / "blocos" / "01" / "cenas.json",
+                                    arquivo_formato("storyboard.exemplo_cenas", fmt)]
                         if x.exists() and x.parent != self.p), None)
         partes = [
             motor.prompt("storyboard", self.c),
-            "# Regras do storyboard (o storyboard.py mede as que dá)\n" + (f / "storyboard.md").read_text(),
+            "# Regras do storyboard (o storyboard.py mede as que dá)\n"
+            + arquivo_formato("storyboard.regras", fmt).read_text(),
             "# Formato do cenas.json (topo do compilar_cenas.py)\n" + doc,
-            "# Biblioteca de Cenas\n" + (k / "02 - Cenas" / "Biblioteca de Cenas.md").read_text(),
-            "# Da Narração às Cenas\n" + (k / "02 - Cenas" / "Da Narração às Cenas.md").read_text(),
         ]
+        # as notas de conhecimento que este formato manda junto (o título é o nome do arquivo)
+        for nota in ficha_formato(fmt or FORMATO_PADRAO).get("storyboard", {}).get("conhecimento", []):
+            partes.append(f"# {Path(nota).stem}\n" + (k / nota).read_text())
         if entradas:
             partes.append("# Aprendizados recentes deste canal (topo do Log)\n" + "\n".join(entradas))
         if exemplo:
@@ -346,7 +350,7 @@ class Rodada:
 
     def _corrigir_qa(self, qa):
         """Uma correção automática: o Claude recebe o QA + cenas.json e devolve o cenas.json corrigido."""
-        sistema = self._sistema_storyboard() + "\n\n" + motor.prompt("qa")
+        sistema = self._sistema_storyboard() + "\n\n" + motor.prompt("qa", formato=self.c.get("formato"))
         texto = (f"## Relatório do QA (qa_{self.nn}.md)\n{qa}\n\n## cenas.json atual\n"
                  f"{(self.p / 'cenas.json').read_text()}\n\n## transcrição\n"
                  f"{(self.p / '_work' / 'transcricao.txt').read_text()}\n\n"

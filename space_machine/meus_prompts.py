@@ -1,7 +1,7 @@
 """Prompts do canal: arquivos .md em <dados>/canais/<canal>/prompts/ (ex.: o prompt de fazer roteiros).
 
 O nome do arquivo é o título do prompt ("Roteiro do vídeo.md"), para ficar legível no Finder e na pasta de
-conhecimento. Apagar no painel move para prompts/_lixeira/ (nada se perde). Não confundir com space_machine/prompts/,
+conhecimento. Apagar no painel move para prompts/_lixeira/ (nada se perde). Não confundir com formatos/<formato>/prompts/,
 que são os prompts das etapas do motor.
 """
 import re

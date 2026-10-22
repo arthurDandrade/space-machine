@@ -1,7 +1,7 @@
 """Única porta de entrada do Space Machine para o Claude: `claude -p` enxuto, pela assinatura.
 
 Cada chamada sai sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão do Claude Code:
-só o prompt da etapa (space_machine/prompts/*.md), os dados e as imagens (base64, sem turno extra de Read).
+só o prompt da etapa (formatos/<formato>/prompts/*.md), os dados e as imagens (base64, sem turno extra de Read).
 A resposta vem em JSON validado (--json-schema) e o consumo de cada chamada vai para <dados>/space_machine.sqlite.
 
 Login: o `claude` do terminal precisa estar logado. Para rodar sem conversa (painel, launchd), gere um token
@@ -24,7 +24,6 @@ from PIL import Image
 
 from .sistema import DADOS, PACOTE, REPO as RAIZ, canais, config  # noqa: F401  (config/canais: usados por outros módulos)
 
-PROMPTS = PACOTE / "prompts"
 BANCO = DADOS / "space_machine.sqlite"
 ENV = DADOS / ".env"
 # pasta neutra: sem CLAUDE.md em nenhum diretório acima (a pasta de dados fica fora do repo)
@@ -46,10 +45,19 @@ REGRA_DA_ETAPA = {"escolher_imagem": "escolha", "escolher_video": "escolha", "co
                   "confirmar_trecho": "escolha", "storyboard": "storyboard", "qa": "storyboard"}
 
 
-def prompt(nome, canal=None):
-    """Lê space_machine/prompts/<nome>.md sem o cabeçalho de comentário (linhas que começam com '<!--').
-    Com o canal, acrescenta o tema e as regras do tema dele (o prompt da etapa é do FORMATO, igual para todos)."""
-    txt = (PROMPTS / f"{nome}.md").read_text()
+def arquivo_prompt(nome, formato=None):
+    """formatos/<formato>/prompts/<nome>.md: o prompt de cada etapa é do FORMATO do vídeo."""
+    from .sistema import arquivo_formato
+    return arquivo_formato(f"prompts/{nome}.md", formato)
+
+
+def prompt(nome, canal=None, formato=None):
+    """Lê o prompt da etapa no formato do vídeo, sem o cabeçalho de comentário (linhas que começam com '<!--').
+    Com o canal, acrescenta o tema e as regras do tema dele (o prompt da etapa é do FORMATO, igual para todos os
+    canais dele). Sem o canal, diga o `formato` — senão vale o padrão."""
+    if canal and not formato:
+        formato = canal.get("formato")
+    txt = arquivo_prompt(nome, formato).read_text()
     txt = "\n".join(l for l in txt.splitlines() if not l.startswith("<!--")).strip()
     if canal:
         cj = json.loads((Path(canal["raiz"]) / "canal.json").read_text())

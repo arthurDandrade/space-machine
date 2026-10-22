@@ -20,7 +20,7 @@ Dentro de uma conversa do Claude Code, cada saída de script e cada folha de con
 
 ## Como a chamada é enxuta
 O código fica em `space_machine/motor_claude.py`.
-- Sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão. Só vai o prompt curto da etapa (`space_machine/prompts/*.md`).
+- Sem MCP, sem CLAUDE.md, sem memória e sem o system prompt padrão. Só vai o prompt curto da etapa (`formatos/<formato>/prompts/*.md`).
 - A imagem vai em base64 direto na mensagem, sem um turno extra de Read.
 - A resposta volta em JSON validado (`--json-schema`).
 - **`--effort low` e `MAX_THINKING_TOKENS=0` nas escolhas.** Sem isso, o Sonnet "pensava" de 1,5 a 8,7 mil tokens de saída por resposta (a saída pesa 5×) e o gasto ficava em ~40 mil por asset, quase igual ao do subagente.
@@ -53,7 +53,7 @@ O código fica em `space_machine/motor_claude.py`.
 O Space Machine é um repositório git local (antes: `Estudio/` e `ProFootball/`). Mudança no código = commit (nada de `_backup_*`). Revisão de 2026-10-13 e o que ela corrigiu: [[Log de Aprendizados]].
 
 ## Regra de manutenção
-Os prompts em `space_machine/prompts/` são **resumos** de [[Critérios de Escolha]]. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
+Os prompts em `formatos/<formato>/prompts/` são **resumos** de [[Critérios de Escolha]]. Quando uma regra de escolha nova entrar no [[Log de Aprendizados]], o prompt correspondente também precisa ser atualizado.
 
 ## Orquestrador (Fase 2, pronta)
 `python -m space_machine rodar <bloco> [--de etapa] [--ate etapa] [--obs "..."]`: narração → transcrição → storyboard → busca → escolha → edição + QA → entrega (`edicao/bloco N.mp4`).

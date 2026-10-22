@@ -38,6 +38,11 @@ def ficha_formato(nome):
     return _caminhos.ficha(nome)
 
 
+def arquivo_formato(arquivo, formato=None):
+    """Um arquivo da pasta do formato ("prompts/storyboard.md"), com erro claro se o formato não trouxer o seu."""
+    return _caminhos.do_formato(arquivo, formato or FORMATO_PADRAO)
+
+
 def _pasta_dados():
     if os.environ.get("SM_DADOS"):
         return Path(os.environ["SM_DADOS"]).expanduser()
