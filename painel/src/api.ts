@@ -28,6 +28,17 @@ export interface ResumoCanal {
   rodando_agora: string[];
 }
 
+export interface Formato {
+  slug: string;
+  nome: string;
+  resumo: string;
+}
+
+export interface Formatos {
+  formatos: Formato[];
+  padrao: string;
+}
+
 export interface Canais {
   canais: ResumoCanal[];
   rodando: number;

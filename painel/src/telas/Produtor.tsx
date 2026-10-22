@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownToLine, ArrowRight, Check, CircleAlert, CircleCheck, HardDrive, KeyRound, Palette, Plus, RotateCw, Save, Sparkles, Trash2 } from "lucide-react";
-import { Atualizacao, Atualizou, Canais, enviar, pegar, rota } from "../api";
+import { Atualizacao, Atualizou, Canais, Formatos, enviar, pegar, rota } from "../api";
 import { Dialogo } from "../componentes/Dialogo";
 import { LogoCanal } from "../componentes/Imagens";
 import { AnelConsumo } from "../componentes/Pecas";
@@ -15,6 +15,8 @@ function NovoCanal() {
   const qc = useQueryClient();
   const navegar = useNavigate();
   const { data } = useQuery({ queryKey: ["fontes"], queryFn: () => pegar<{ fontes: { arquivo: string; nome: string }[] }>("/api/fontes"), staleTime: Infinity });
+  const { data: fmt } = useQuery({ queryKey: ["formatos"], queryFn: () => pegar<Formatos>("/api/formatos"), staleTime: Infinity });
+  const [formato, setFormato] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const criar = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -35,6 +37,14 @@ function NovoCanal() {
       <div className="duas-col">
         <div>
           <label className="campo">{t("app.config.nome_canal")}<input name="nome" required placeholder="Space Explained" /></label>
+          <label className="campo">{t("app.config.formato")}
+            {fmt && (
+              <select name="formato" value={formato || fmt.padrao} onChange={(e) => setFormato(e.target.value)}>
+                {fmt.formatos.map((f) => <option key={f.slug} value={f.slug}>{f.nome}</option>)}
+              </select>
+            )}
+          </label>
+          <p className="sub">{fmt?.formatos.find((f) => f.slug === (formato || fmt.padrao))?.resumo ?? t("app.config.formato_explica")}</p>
           <label className="campo">{t("app.config.tema")}<input name="tema" required placeholder="astronomia" /></label>
           <label className="campo">{t("app.config.idioma")}
             <select name="idioma" defaultValue="en">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, KeyRound, Save, Sparkles, Upload, Wand2 } from "lucide-react";
-import { Cores, enviar, ErroApi, pegar, urlMarca } from "../api";
+import { Cores, enviar, ErroApi, Formato, pegar, urlMarca } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { fundoDoCanal, iniciais } from "../componentes/Imagens";
@@ -15,6 +15,7 @@ type Regras = Record<"escolha" | "storyboard" | "genericas" | "genericas_hist" |
 interface ConfigCanal {
   slug: string; nome: string; ativo: boolean; tema: string; idioma: string; cores: Cores; fonte: string;
   fontes: { arquivo: string; nome: string }[]; banner: boolean; logo: boolean; regras: Regras;
+  formato: string; formatos: Formato[];
 }
 const useConfig = (canal: string) =>
   useQuery({ queryKey: ["config", canal], queryFn: () => pegar<ConfigCanal>(`/api/c/${canal}/config`) });
@@ -66,6 +67,7 @@ export function IdentidadeTela() {
   const [ativo, setAtivo] = useState(true);
   const [cores, setCores] = useState<Cores>({});
   const [fonte, setFonte] = useState("");
+  const [formato, setFormato] = useState("");
   const [versao, setVersao] = useState(Date.now());
   // preenche uma vez: os dados se atualizam ao vivo e não podem apagar o que você está digitando
   const preenchido = useRef(false);
@@ -73,11 +75,12 @@ export function IdentidadeTela() {
     if (data && !preenchido.current) {
       preenchido.current = true;
       setNome(data.nome); setAtivo(data.ativo); setCores(data.cores); setFonte(data.fonte);
+      setFormato(data.formato);
     }
   }, [data]);
   const salvar = useMutation({
     mutationFn: async () => {
-      await enviar(`/api/c/${canal}/config`, { nome, ativo });
+      await enviar(`/api/c/${canal}/config`, { nome, ativo, formato });
       await enviar(`/api/c/${canal}/identidade`, { cores, fonte });
     },
     onSuccess: () => qc.invalidateQueries(),
@@ -98,6 +101,12 @@ export function IdentidadeTela() {
               </select>
             </label>
           </div>
+          <label className="campo">{t("app.ident.formato")}
+            <select value={formato} onChange={(e) => setFormato(e.target.value)}>
+              {data.formatos.map((f) => <option key={f.slug} value={f.slug}>{f.nome}</option>)}
+            </select>
+          </label>
+          <p className="sub">{t("app.ident.formato_troca")}</p>
           <div className="cores-grade">
             {CORES.map(([k, rot]) => (
               <label key={k} className="campo cor">{t(rot)}

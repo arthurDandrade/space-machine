@@ -22,7 +22,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
                primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
-from .sistema import DADOS, REPO, config, ler_json
+from .sistema import DADOS, FORMATO_PADRAO, REPO, config, formatos, ler_json
 
 api = APIRouter(prefix="/api")
 IMAGENS = (".png", ".jpg", ".jpeg", ".webp")
@@ -665,16 +665,24 @@ def config_canal(slug: str):
     cj = ler_json(Path(c["raiz"]) / "canal.json", {}) or {}
     ident = cj.get("identidade", {}) or {}
     return {"slug": slug, "nome": c["nome"], "ativo": bool(c.get("ativo")), "tema": c.get("tema", ""),
-            "idioma": c.get("idioma", "en"), "cores": _identidade(c), "fonte": ident.get("fonte_marca_arquivo", ""),
+            "idioma": c.get("idioma", "en"), "formato": c.get("formato") or FORMATO_PADRAO,
+            "formatos": [{"slug": s, **f} for s, f in formatos().items()],
+            "cores": _identidade(c), "fonte": ident.get("fonte_marca_arquivo", ""),
             "fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()],
             "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
             "regras": configuracao.regras_em_texto(cj.get("regras", {}) or {})}
 
 
 @api.post("/c/{slug}/config")
-def salvar_config_canal(slug: str, nome: str = Body(..., embed=True), ativo: bool = Body(True, embed=True)):
+def salvar_config_canal(slug: str, nome: str = Body(..., embed=True), ativo: bool = Body(True, embed=True),
+                        formato: str = Body("", embed=True)):
     c = _canal(slug)
-    configuracao.salvar_canal(slug, nome=nome.strip() or c["nome"], ativo=bool(ativo))
+    campos = {"nome": nome.strip() or c["nome"], "ativo": bool(ativo)}
+    if formato.strip():
+        if formato not in formatos():
+            raise HTTPException(400, f"não existe o formato \"{formato}\"")
+        campos["formato"] = formato
+    configuracao.salvar_canal(slug, **campos)
     return {"ok": True}
 
 
@@ -916,8 +924,15 @@ def lista_fontes():
     return {"fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()]}
 
 
+@api.get("/formatos")
+def lista_formatos():
+    """Os formatos de vídeo do repo (formatos/<nome>/formato.json), para escolher o do canal."""
+    return {"formatos": [{"slug": s, **f} for s, f in formatos().items()], "padrao": FORMATO_PADRAO}
+
+
 @api.post("/canais/novo")
 async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str = Form("en"),
+                     formato: str = Form(""),
                      cor_fundo: str = Form(...), cor_texto: str = Form(...), cor_destaque: str = Form(...),
                      cor_caixa: str = Form(...), cor_sombra: str = Form(...), fonte: str = Form(...),
                      logo: UploadFile = File(None), fundo: UploadFile = File(None), banner: UploadFile = File(None)):
@@ -938,7 +953,8 @@ async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str =
                 arqs[campo].write_bytes(await up.read())
         try:
             slug, pasta = configuracao.criar_canal(nome.strip(), tema.strip(), idioma.strip() or "en", cores, fonte,
-                                                   logo=arqs.get("logo"), fundo=arqs.get("fundo"))
+                                                   logo=arqs.get("logo"), fundo=arqs.get("fundo"),
+                                                   formato=formato.strip() or None)
         except ValueError as e:
             raise HTTPException(400, str(e))
         if arqs.get("banner"):
