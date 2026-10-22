@@ -1,6 +1,6 @@
-// Configurações do Space Machine (do produtor, valem para todos os canais): canais (com o novo canal),
-// modelos do Claude por etapa, consumo, limpeza do disco e primeiros passos. A moldura — barra lateral por
-// assunto e o cabeçalho de cada painel — está em casca/TopoProdutor.tsx.
+// Configurações do Space Machine (do produtor, valem para todos os canais): canais (com o novo canal), consumo,
+// limpeza do disco e primeiros passos. O modelo do Claude de cada etapa é de cada canal (telas/ConfigCanal.tsx).
+// A moldura — barra lateral por assunto e o cabeçalho de cada painel — está em casca/TopoProdutor.tsx.
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -129,64 +129,6 @@ export function CanaisConfigTela() {
   );
 }
 
-interface Modelos {
-  linhas: { id: string; nome: string; ajuda: string; modelo: string; esforco: string; chamadas: number; media: number; ultimo: string }[];
-  modelos: { id: string; nome: string }[];
-  esforcos: string[];
-  after_app: string;
-}
-
-export function ModelosTela() {
-  const t = useT();
-  const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: ["modelos"], queryFn: () => pegar<Modelos>("/api/config/modelos"), refetchInterval: false });
-  const [modelos, setModelos] = useState<Record<string, string>>({});
-  const [esforco, setEsforco] = useState<Record<string, string>>({});
-  const [after, setAfter] = useState("");
-  const preenchido = useRef(false);
-  useEffect(() => {
-    if (data && !preenchido.current) {
-      preenchido.current = true;
-      setModelos(Object.fromEntries(data.linhas.map((l) => [l.id, l.modelo])));
-      setEsforco(Object.fromEntries(data.linhas.map((l) => [l.id, l.esforco])));
-      setAfter(data.after_app);
-    }
-  }, [data]);
-  const salvar = useMutation({
-    mutationFn: () => enviar("/api/config/modelos", { modelos, esforco, after_app: after }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["modelos"] }),
-  });
-  const cabeca = <CabecaTela titulo={t("app.config.aba_modelos")} sub={t("app.modelos.explica")} />;
-  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
-      {cabeca}
-      <div className="cartao tabela-modelos">
-        {data.linhas.map((l) => (
-          <div key={l.id} className="linha-modelo">
-            <div className="t"><b>{l.nome}</b><span className="sub">{l.ajuda}</span></div>
-            <select value={modelos[l.id] ?? ""} onChange={(e) => setModelos({ ...modelos, [l.id]: e.target.value })}>
-              {data.modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
-            </select>
-            <select value={esforco[l.id] ?? "low"} onChange={(e) => setEsforco({ ...esforco, [l.id]: e.target.value })}>
-              {data.esforcos.map((x) => <option key={x}>{x}</option>)}
-            </select>
-            <div className="num"><b>{compacto(l.media)}</b><span>{t("app.modelos.por_chamada", { n: l.chamadas })}</span></div>
-          </div>
-        ))}
-      </div>
-      <div className="cartao" style={{ marginTop: 16 }}>
-        <label className="campo" style={{ maxWidth: 420, margin: 0 }}>{t("app.modelos.after")}<input value={after} onChange={(e) => setAfter(e.target.value)} /></label>
-      </div>
-      <div className="rodape-form" style={{ marginTop: 16 }}>
-        <button className="bt primario" disabled={salvar.isPending}><Save size={16} />{t("comum.salvar")}</button>
-        {salvar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.modelos.salvo")}</span>}
-        {salvar.isError && <span className="erro">{salvar.error.message}</span>}
-      </div>
-    </form>
-  );
-}
-
 interface Consumo {
   total_7d: number;
   por_etapa: { etapa: string; chamadas: number; tokens: number; media: number }[];
@@ -243,7 +185,16 @@ export function ConsumoTela() {
 export function PassosTela() {
   const t = useT();
   const qc = useQueryClient();
-  const { data, isFetching } = useQuery({ queryKey: ["passos"], queryFn: () => pegar<{ itens: { ok: boolean; nome: string; detalhe: string; como: string }[] }>("/api/primeiros-passos"), refetchInterval: false });
+  const { data, isFetching } = useQuery({ queryKey: ["passos"], queryFn: () => pegar<{ itens: { ok: boolean; nome: string; detalhe: string; como: string }[]; after_app: string }>("/api/primeiros-passos"), refetchInterval: false });
+  const [after, setAfter] = useState("");
+  const preenchido = useRef(false);
+  useEffect(() => {
+    if (data && !preenchido.current) { preenchido.current = true; setAfter(data.after_app); }
+  }, [data]);
+  const salvarAfter = useMutation({
+    mutationFn: () => enviar("/api/primeiros-passos/after", { after_app: after }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["passos"] }),
+  });
   const testar = useMutation({
     mutationFn: () => enviar<{ ok: boolean; mensagem: string }>("/api/primeiros-passos/testar-claude"),
     onSettled: () => qc.invalidateQueries({ queryKey: ["canais"] }),
@@ -265,6 +216,14 @@ export function PassosTela() {
           </div>
         ))}
       </div>
+      <form className="cartao" style={{ marginTop: 16 }} onSubmit={(e) => { e.preventDefault(); salvarAfter.mutate(); }}>
+        <div className="rodape-form" style={{ margin: 0, alignItems: "flex-end" }}>
+          <label className="campo" style={{ maxWidth: 420, margin: 0 }}>{t("app.passos.after")}<input value={after} onChange={(e) => setAfter(e.target.value)} /></label>
+          <button className="bt" disabled={salvarAfter.isPending}><Save size={16} />{t("comum.salvar")}</button>
+          {salvarAfter.isSuccess && <span className="selo ok"><Check size={12} />{t("app.passos.after_salvo")}</span>}
+          {salvarAfter.isError && <span className="erro">{salvarAfter.error.message}</span>}
+        </div>
+      </form>
       <div className="rodape-form" style={{ marginTop: 16 }}>
         <button className="bt" disabled={testar.isPending} onClick={() => testar.mutate()}><Sparkles size={16} />{testar.isPending ? t("app.passos.testando") : t("pp.testar_claude")}</button>
         <button className="bt pequeno" disabled={isFetching} onClick={() => qc.invalidateQueries({ queryKey: ["passos"] })}>{t("app.passos.conferir")}</button>

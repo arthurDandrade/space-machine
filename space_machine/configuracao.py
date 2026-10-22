@@ -373,7 +373,7 @@ def regras_em_texto(regras):
 def sugerir_regras(c, slug):
     """O Claude propõe as regras do tema a partir do nome, tema e idioma (nada é salvo). ErroClaude se falhar."""
     from .motor_claude import chamar
-    from .sistema import arquivo_formato, config
+    from .sistema import arquivo_formato, config_canal
     schema = {"type": "object", "additionalProperties": False,
               "required": ["escolha", "storyboard", "genericas", "genericas_hist", "proibidos", "permitido_se", "trocas"],
               "properties": {"escolha": {"type": "array", "items": {"type": "string"}},
@@ -388,7 +388,7 @@ def sugerir_regras(c, slug):
                                                        "exceto": {"type": "string"}}}}}}
     r = chamar("regras", arquivo_formato("prompts/regras_tema.md", c.get("formato")).read_text(),
                f"Canal: {c['nome']}\nTema: {c['tema']}\nIdioma da narração: {c['idioma']}", schema=schema,
-               modelo=config()["modelos"].get("storyboard"), ctx={"canal": slug})
+               modelo=config_canal(c)["modelos"].get("storyboard"), canal=c, ctx={"canal": slug})
     r.pop("_uso", None)
     if r.get("permitido_se", "").strip() in ('""', "''"):       # o modelo às vezes devolve as aspas do exemplo
         r["permitido_se"] = ""
@@ -398,7 +398,7 @@ def sugerir_regras(c, slug):
             "trocas": json.dumps(r["trocas"], ensure_ascii=False) if r["trocas"] else ""}
 
 
-# ---------------- modelos do Claude por etapa ----------------
+# ---------------- modelos do Claude por etapa (de cada canal) ----------------
 MODELOS = [("claude-opus-5-5", "Opus 5.5"), ("claude-sonnet-5-5", "Sonnet 5.5"), ("claude-haiku-5-5", "Haiku 5.5"),
            ("claude-fable-5-1", "Fable 5.1")]
 ESFORCOS = ["low", "medium", "high", "xhigh", "max"]
@@ -414,30 +414,36 @@ ETAPAS_CLAUDE = [
 ]
 
 
-def estado_modelos():
-    """Modelo e esforço de cada etapa, com a média de tokens por chamada e o último modelo usado."""
-    from .motor_claude import _banco, config as cfg_motor
-    cfg = cfg_motor()
+def estado_modelos(slug, c):
+    """Modelo e esforço de cada etapa NESTE canal, com a média de tokens por chamada e o último modelo usado nele."""
+    from .motor_claude import _banco
+    from .sistema import config_canal
+    cfg = config_canal(c)
     con = _banco()
     medias = {e: (n, eq) for e, n, eq in con.execute(
-        "select etapa, count(*), avg(equivalente) from chamadas where ok=1 group by etapa")}
+        "select etapa, count(*), avg(equivalente) from chamadas where ok=1 and canal=? group by etapa", (slug,))}
     ultimos = {e: m for e, m in con.execute(
-        "select etapa, modelo from chamadas where ok=1 and id in (select max(id) from chamadas group by etapa)")}
+        "select etapa, modelo from chamadas where ok=1 and canal=? and id in "
+        "(select max(id) from chamadas where canal=? group by etapa)", (slug, slug))}
     con.close()
     linhas = [{"id": i, "nome": n, "ajuda": a, "modelo": cfg["modelos"].get(i, ""), "esforco": cfg["esforco"].get(i, "low"),
                "chamadas": medias.get(i, (0, 0))[0], "media": round(medias.get(i, (0, 0))[1] or 0),
                "ultimo": ultimos.get(i, "")} for i, n, a in ETAPAS_CLAUDE]
-    return {"linhas": linhas, "modelos": [{"id": m, "nome": n} for m, n in MODELOS], "esforcos": ESFORCOS,
-            "after_app": cfg.get("after_app", "")}
+    return {"linhas": linhas, "modelos": [{"id": m, "nome": n} for m, n in MODELOS], "esforcos": ESFORCOS}
 
 
-def salvar_modelos(modelos, esforco, after_app=""):
-    """modelos/esforco: {etapa: valor}; valores fora da lista são ignorados."""
-    from .sistema import salvar_config
+def salvar_modelos(slug, modelos, esforco):
+    """Grava no canal.json deste canal. modelos/esforco: {etapa: valor}; valores fora da lista são ignorados."""
     validos = {m for m, _ in MODELOS}
     etapas = {e for e, _, _ in ETAPAS_CLAUDE}
-    mud = {"modelos": {e: m for e, m in (modelos or {}).items() if e in etapas and m in validos},
-           "esforco": {e: x for e, x in (esforco or {}).items() if e in etapas and x in ESFORCOS}}
-    if after_app.strip() and re.fullmatch(r"[\w .-]+", after_app.strip()):
-        mud["after_app"] = after_app.strip()
-    salvar_config(mud)
+    salvar_canal(slug,
+                 modelos={e: m for e, m in (modelos or {}).items() if e in etapas and m in validos},
+                 esforco={e: x for e, x in (esforco or {}).items() if e in etapas and x in ESFORCOS})
+
+
+def salvar_after_app(nome):
+    """Nome do app do After Effects em /Applications (vale para todos os canais: é a máquina)."""
+    from .sistema import salvar_config
+    if not re.fullmatch(r"[\w .-]+", (nome or "").strip()):
+        raise ValueError("nome de app inválido")
+    salvar_config({"after_app": nome.strip()})

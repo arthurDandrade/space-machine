@@ -816,6 +816,19 @@ def salvar_chave(slug: str, api_id: str, valores: dict = Body({}, embed=True), a
     return {"ok": True, "mudou": mudou, "apis": _apis_publicas(c), "narracao": _narracao(c)}
 
 
+@api.get("/c/{slug}/modelos")
+def modelos(slug: str):
+    """Modelo e esforço do Claude em cada etapa DESTE canal (canal.json › modelos/esforco)."""
+    return configuracao.estado_modelos(slug, _canal(slug))
+
+
+@api.post("/c/{slug}/modelos")
+def salvar_modelos(slug: str, modelos: dict = Body({}, embed=True), esforco: dict = Body({}, embed=True)):
+    _canal(slug)
+    configuracao.salvar_modelos(slug, modelos, esforco)
+    return {"ok": True}
+
+
 @api.post("/c/{slug}/chaves/{api_id}/testar")
 def testar_chave(slug: str, api_id: str):
     if api_id not in {a["id"] for a in configuracao.APIS}:
@@ -825,18 +838,6 @@ def testar_chave(slug: str, api_id: str):
 
 
 # ---------------- configurações do produtor ----------------
-@api.get("/config/modelos")
-def modelos():
-    return configuracao.estado_modelos()
-
-
-@api.post("/config/modelos")
-def salvar_modelos(modelos: dict = Body({}, embed=True), esforco: dict = Body({}, embed=True),
-                   after_app: str = Body("", embed=True)):
-    configuracao.salvar_modelos(modelos, esforco, after_app)
-    return {"ok": True}
-
-
 @api.get("/consumo")
 def consumo():
     con = _banco()
@@ -864,7 +865,17 @@ def consumo():
 def primeiros_passos_lista():
     itens = primeiros_passos.checar()
     _cache_falta.update(quando=time.time(), falta=any(not i["ok"] for i in itens))
-    return {"itens": itens}
+    return {"itens": itens, "after_app": config().get("after_app", "")}
+
+
+@api.post("/primeiros-passos/after")
+def salvar_after(after_app: str = Body(..., embed=True)):
+    """O nome do app do After Effects muda a cada versão anual; é da máquina, vale para todos os canais."""
+    try:
+        configuracao.salvar_after_app(after_app)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "after_app": config().get("after_app", "")}
 
 
 @api.post("/primeiros-passos/testar-claude")

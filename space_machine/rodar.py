@@ -55,7 +55,7 @@ class Rodada:
         self.ctx = contexto(self.p)
         self.nn = self.p.name
         self.video = self.p.parent.parent
-        self.cfg = motor.config()
+        self.cfg = motor.config_canal(self.c)
         self.obs = obs
         self.de = None
         (self.p / "_estudio").mkdir(exist_ok=True)
@@ -183,7 +183,7 @@ class Rodada:
         voltas = self.cfg.get("storyboard_voltas", 4)
         ok, retorno = False, ""
         for volta in range(voltas + 1):
-            r = motor.chamar("storyboard", sistema, texto, modelo=self.cfg["modelos"]["storyboard"], ctx=self.ctx,
+            r = motor.chamar("storyboard", sistema, texto, canal=self.c, ctx=self.ctx,
                              timeout=self.cfg.get("storyboard_timeout_s", 1200), sessao=(sid, volta == 0),
                              texto_livre=True)
             with open(self.log("storyboard"), "a") as f:
@@ -358,7 +358,7 @@ class Rodada:
                  f"{(self.p / '_work' / 'transcricao.txt').read_text()}\n\n"
                  "Corrija as FALHAS mexendo o mínimo possível e devolva o cenas.json completo. "
                  "Mantenha os \"id\" dos cards que já existem; card novo vem sem id.")
-        r = motor.chamar("qa", sistema, texto, modelo=self.cfg["modelos"]["qa"], ctx=self.ctx,
+        r = motor.chamar("qa", sistema, texto, canal=self.c, ctx=self.ctx,
                          timeout=self.cfg.get("storyboard_timeout_s", 1200), texto_livre=True)
         cenas = motor._extrair_json(r["texto"])
         shutil.copy2(self.p / "cenas.json", self.p / "_estudio" / f"cenas_antes_qa_{time.strftime('%H%M%S')}.json")
@@ -451,7 +451,7 @@ class Rodada:
         # antes de qualquer etapa: o claude responde com os modelos que este trecho vai usar?
         # (versão velha, login vencido ou modelo errado paravam o bloco no meio da etapa)
         try:
-            motor.checar_claude(ETAPAS[i0:i1 + 1])
+            motor.checar_claude(ETAPAS[i0:i1 + 1], canal=self.c)
         except motor.ErroClaude as e:
             limite = isinstance(e, motor.LimiteDeUso)
             self.estado["parado"] = {"etapa": "checagem do Claude",

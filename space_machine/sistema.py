@@ -1,7 +1,7 @@
 """Onde ficam os dados do Space Machine e o que tem neles (config, canais).
 
 O código (este repo) é o mesmo para todo mundo. Tudo o que é de quem usa fica na pasta de dados:
-  space_machine.json   modelos/esforço por etapa, paralelo, app do After (padrões em config_padrao.json)
+  space_machine.json   paralelo, app do After, limpeza (padrões em config_padrao.json)
   .env                 CLAUDE_CODE_OAUTH_TOKEN
   space_machine.sqlite consumo das chamadas e gestão (ideias, publicação)
   cache/  logs/  referencias/<formato>/
@@ -98,6 +98,19 @@ def _canal(pasta):
         # o motor é um só para todos os canais
         "python": sys.executable, "scripts": str(MOTOR / "busca" / "scripts"), "editor": str(MOTOR / "edicao_ae"),
     }
+
+
+def config_canal(c):
+    """config() com os modelos e o esforço do Claude DESTE canal por cima (canal.json › modelos/esforco).
+
+    Que modelo o Claude usa em cada etapa é escolha de cada canal (painel › canal › Modelos do Claude):
+    o config_padrao.json só diz com o que um canal começa, enquanto ninguém escolheu."""
+    cfg = config()
+    cj = ler_json(Path(c["raiz"]) / "canal.json", {}) or {}
+    for chave in ("modelos", "esforco"):
+        if isinstance(cj.get(chave), dict):
+            cfg[chave] = {**cfg.get(chave, {}), **cj[chave]}
+    return cfg
 
 
 def canais():

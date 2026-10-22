@@ -50,7 +50,7 @@ class Bloco:
         self.p = Path(caminho).resolve()
         self.slug, self.c = canal_do_bloco(self.p)
         self.ctx = contexto(self.p)
-        self.cfg = motor.config()
+        self.cfg = motor.config_canal(self.c)
         self.sombra = sombra
         self.modelo = modelo
         self.plano = ler_json(self.p / "plano.json")
@@ -134,7 +134,7 @@ class Bloco:
 
     def chamar(self, etapa, prompt, texto, imagens, schema, aid, modelo=None):
         r = motor.chamar(etapa, motor.prompt(prompt, self.c), texto, imagens=imagens, schema=schema,
-                         modelo=modelo or self.modelo, ctx={**self.ctx, "asset": aid})
+                         modelo=modelo or self.modelo, canal=self.c, ctx={**self.ctx, "asset": aid})
         uso = r.pop("_uso")
         self.registrar(f"[{aid}] {etapa} ({uso['modelo']}, {uso['equivalente']:,} equiv.): "
                        f"{json.dumps(r, ensure_ascii=False)}")
@@ -640,7 +640,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     if not a.modelo:
         try:
-            motor.checar_claude(["escolher"])
+            motor.checar_claude(["escolher"], canal=canal_do_bloco(a.bloco)[1])
         except motor.ErroClaude as e:
             raise SystemExit(f"Checagem do Claude falhou: {e}")
     b = Bloco(a.bloco, sombra=a.sombra, modelo=a.modelo)

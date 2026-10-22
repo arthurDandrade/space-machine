@@ -1,5 +1,7 @@
 // Configurações de um canal: identidade (nome, cores, fonte, logo, banner, com prévia), regras do tema,
-// log de aprendizados e chaves de API. Chave secreta nunca chega inteira aqui: só a máscara.
+// log de aprendizados, modelos do Claude por etapa e chaves de API. Que modelo roda cada etapa é escolha de
+// cada canal (canal.json › modelos/esforco): um canal pode ser todo Opus e o outro todo Haiku.
+// Chave secreta nunca chega inteira aqui: só a máscara.
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +11,7 @@ import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { fundoDoCanal, iniciais } from "../componentes/Imagens";
 import { Markdown } from "../componentes/Markdown";
-import { useT } from "../textos";
+import { compacto, useT } from "../textos";
 
 type Regras = Record<"escolha" | "storyboard" | "genericas" | "genericas_hist" | "proibidos" | "permitido_se" | "trocas", string>;
 interface ConfigCanal {
@@ -377,5 +379,64 @@ export function ChavesTela() {
       <ImportarChaves canal={canal} jaTem={new Set(data.apis.filter((a) => a.configurada).map((a) => a.id))} />
       <div className="apis">{data.apis.map((a) => <CartaoApi key={a.id} canal={canal} a={a} />)}</div>
     </>
+  );
+}
+
+
+// ---------------- modelos do Claude, por etapa, deste canal ----------------
+interface Modelos {
+  linhas: { id: string; nome: string; ajuda: string; modelo: string; esforco: string; chamadas: number; media: number; ultimo: string }[];
+  modelos: { id: string; nome: string }[];
+  esforcos: string[];
+}
+
+export function ModelosTela() {
+  const { canal = "" } = useParams();
+  const t = useT();
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["modelos", canal], queryFn: () => pegar<Modelos>(`/api/c/${canal}/modelos`), refetchInterval: false });
+  const [modelos, setModelos] = useState<Record<string, string>>({});
+  const [esforco, setEsforco] = useState<Record<string, string>>({});
+  const preenchido = useRef("");
+  useEffect(() => {
+    // o canal pode trocar sem a tela sair: os campos são preenchidos de novo a cada canal
+    if (data && preenchido.current !== canal) {
+      preenchido.current = canal;
+      setModelos(Object.fromEntries(data.linhas.map((l) => [l.id, l.modelo])));
+      setEsforco(Object.fromEntries(data.linhas.map((l) => [l.id, l.esforco])));
+    }
+  }, [data, canal]);
+  const salvar = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/modelos`, { modelos, esforco }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["modelos", canal] }),
+  });
+  const cabeca = <Cabecalho titulo={t("app.modelos.titulo")} sub={t("app.modelos.explica")} />;
+  if (!data) return <>{cabeca}<div className="carregando">{t("app.carregando")}</div></>;
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
+      {cabeca}
+      <div className="cartao tabela-modelos">
+        {data.linhas.map((l) => (
+          <div key={l.id} className="linha-modelo">
+            <div className="t"><b>{l.nome}</b><span className="sub">{l.ajuda}</span></div>
+            <select value={modelos[l.id] ?? ""} onChange={(e) => setModelos({ ...modelos, [l.id]: e.target.value })}>
+              {data.modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </select>
+            <select value={esforco[l.id] ?? "low"} onChange={(e) => setEsforco({ ...esforco, [l.id]: e.target.value })}>
+              {data.esforcos.map((x) => <option key={x}>{x}</option>)}
+            </select>
+            <div className="num">
+              {l.chamadas ? <><b>{compacto(l.media)}</b><span>{t("app.modelos.por_chamada", { n: l.chamadas })}</span></>
+                : <span>{t("app.modelos.sem_chamada")}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rodape-form" style={{ marginTop: 16 }}>
+        <button className="bt primario" disabled={salvar.isPending}><Save size={16} />{t("comum.salvar")}</button>
+        {salvar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.modelos.salvo")}</span>}
+        {salvar.isError && <span className="erro">{salvar.error.message}</span>}
+      </div>
+    </form>
   );
 }

@@ -161,7 +161,6 @@ def gerar_descricao(c, slug, video):
     Devolve {"descricao", "avisos"}; ErroClaude se o Claude falhar."""
     from .final import entregues
     from .motor_claude import chamar, prompt
-    from .sistema import config
     vd = Path(c["producoes"]) / video
     titulo = dados_video(slug, video).get("titulo_pub") or estado.titulo_video(vd)
     blocos = sorted(b for b in (vd / "blocos").glob("*") if b.is_dir() and b.name.isdigit()) \
@@ -172,8 +171,7 @@ def gerar_descricao(c, slug, video):
               "properties": {"resumo": {"type": "string"}, "intro": {"type": "string"}, "cta": {"type": "string"}}}
     r = chamar("descricao", prompt("descricao_youtube", formato=c.get("formato")),
                f"Título: {titulo}\nCanal: {c['nome']}\nIdioma: {c['idioma']}\n\n# Roteiros\n{roteiros}",
-               schema=schema, modelo=config()["modelos"]["descricao"],
-               ctx={"canal": slug, "video": video})
+               schema=schema, canal=c, ctx={"canal": slug, "video": video})
     avisos = []
     caps = capitulos(vd, r["intro"].strip() or "Intro")
     if not caps:

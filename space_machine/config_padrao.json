@@ -1,5 +1,5 @@
 {
- "_modelos": "Modelo do Claude por etapa (editável no painel em Configurações › Modelos).",
+ "_modelos": "Com que modelo do Claude um canal começa em cada etapa. Quem manda é o canal.json de cada canal (painel › canal › Modelos do Claude); isto aqui é só o ponto de partida.",
  "modelos": {
   "escolher_imagem": "claude-sonnet-5-5",
   "escolher_video": "claude-sonnet-5-5",
@@ -14,7 +14,7 @@
  "imagem_lado_max": 1568,
  "nova_busca_max": 2,
  "finalizar_tentativas": 3,
- "_esforco": "--effort do claude -p por etapa: low (sem raciocínio, mais barato), medium, high, xhigh, max.",
+ "_esforco": "--effort do claude -p por etapa: low (sem raciocínio, mais barato), medium, high, xhigh, max. Também é só o ponto de partida: cada canal tem o seu.",
  "esforco": {
   "escolher_imagem": "low",
   "escolher_video": "low",

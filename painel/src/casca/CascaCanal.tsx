@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BookOpen, CalendarDays, Check, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, LayoutGrid, Lightbulb,
-  ListChecks, ScrollText, Palette, Plus,
+  ListChecks, ScrollText, Palette, Plus, Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Canais, PainelCanal, pegar, rota } from "../api";
@@ -107,6 +107,7 @@ export function CascaCanal() {
     { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
     { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },
     { rot: "app.nav.aprendizados", icone: BookOpen, para: `/c/${canal}/aprendizados` },
+    { rot: "app.nav.modelos", icone: Sparkles, para: `/c/${canal}/modelos` },
     { rot: "app.nav.chaves", icone: KeyRound, para: `/c/${canal}/chaves` },
   ];
 

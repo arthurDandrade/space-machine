@@ -5,8 +5,8 @@ import { BaloesDeAviso } from "./componentes/Avisos";
 import { Busca } from "./componentes/Busca";
 import { CascaCanal } from "./casca/CascaCanal";
 import { CascaProdutor } from "./casca/TopoProdutor";
-import { AprendizadosTela, ChavesTela, IdentidadeTela, RegrasTela } from "./telas/ConfigCanal";
-import { AtualizarTela, CanaisConfigTela, ConsumoTela, LimpezaTela, ModelosTela, PassosTela } from "./telas/Produtor";
+import { AprendizadosTela, ChavesTela, IdentidadeTela, ModelosTela, RegrasTela } from "./telas/ConfigCanal";
+import { AtualizarTela, CanaisConfigTela, ConsumoTela, LimpezaTela, PassosTela } from "./telas/Produtor";
 import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
 import { Modelagem } from "./telas/Modelagem";
@@ -59,7 +59,6 @@ export const rotas = createBrowserRouter(
           children: [
             { index: true, element: <Navigate to="canais" replace /> },
             { path: "canais", element: <CanaisConfigTela /> },
-            { path: "modelos", element: <ModelosTela /> },
             { path: "consumo", element: <ConsumoTela /> },
             { path: "limpeza", element: <LimpezaTela /> },
             { path: "passos", element: <PassosTela /> },
@@ -82,6 +81,7 @@ export const rotas = createBrowserRouter(
             { path: "regras", element: <RegrasTela /> },
             { path: "aprendizados", element: <AprendizadosTela /> },
             { path: "chaves", element: <ChavesTela /> },
+            { path: "modelos", element: <ModelosTela /> },
             { path: "v/:video", element: <VideoTela /> },
             { path: "v/:video/b/:nn", element: <BlocoTela /> },
           ],

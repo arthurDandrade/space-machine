@@ -5,7 +5,7 @@ import { ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowDownToLine, ChartPie, CircleAlert, CircleCheck, LayoutGrid, ListChecks, Settings, Sparkles, Target, Trash2, Tv,
+  ArrowDownToLine, ChartPie, CircleAlert, CircleCheck, LayoutGrid, ListChecks, Settings, Target, Trash2, Tv,
 } from "lucide-react";
 import { Canais, pegar } from "../api";
 import { useSistema, useT } from "../textos";
@@ -89,7 +89,6 @@ const GRUPOS: { rot: string; itens: { id: string; rot: string; icone: typeof Tv 
   {
     rot: "app.config.grupo_producao",
     itens: [
-      { id: "modelos", rot: "app.config.aba_modelos", icone: Sparkles },
       { id: "consumo", rot: "app.config.aba_consumo", icone: ChartPie },
       { id: "limpeza", rot: "app.config.aba_limpeza", icone: Trash2 },
     ],

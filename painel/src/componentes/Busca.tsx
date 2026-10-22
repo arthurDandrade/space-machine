@@ -51,12 +51,12 @@ export function Busca() {
        ["app.nav.esperando", `/c/${noCanal}/esperando`], ["app.nav.ideias", rota.ideias(noCanal)], ["app.nav.calendario", rota.calendario(noCanal)],
        ["app.nav.prompts", `/c/${noCanal}/prompts`],
        ["app.novo_video", rota.novoVideo(noCanal)], ["app.nav.identidade", `/c/${noCanal}/identidade`], ["regras.titulo", `/c/${noCanal}/regras`],
-       ["app.nav.aprendizados", `/c/${noCanal}/aprendizados`], ["app.nav.chaves", `/c/${noCanal}/chaves`]]
+       ["app.nav.aprendizados", `/c/${noCanal}/aprendizados`], ["app.nav.modelos", `/c/${noCanal}/modelos`],
+       ["app.nav.chaves", `/c/${noCanal}/chaves`]]
     : [];
   const config = [["app.produtor.nav_modelagem", "/modelagem"], ["app.config.aba_canais", "/config/canais"],
-    ["app.config.aba_modelos", "/config/modelos"], ["app.config.aba_consumo", "/config/consumo"],
-    ["app.config.aba_limpeza", "/config/limpeza"], ["app.config.aba_passos", "/config/passos"],
-    ["app.config.aba_atualizar", "/config/atualizar"]];
+    ["app.config.aba_consumo", "/config/consumo"], ["app.config.aba_limpeza", "/config/limpeza"],
+    ["app.config.aba_passos", "/config/passos"], ["app.config.aba_atualizar", "/config/atualizar"]];
 
   return (
     <Command.Dialog open={aberta} onOpenChange={setAberta} label={t("app.busca.buscar")} className="busca" overlayClassName="busca-fundo">

@@ -64,7 +64,7 @@ def checar():
                          f"./instalar.sh baixa (ou: curl -L -o {m} https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{m.name})"))
     app, instalado, permitido = _after()
     out.append(_item(instalado, "After Effects", app if instalado else f"{app} não encontrado em /Applications",
-                     "Instale o After Effects. Se for outra versão, troque o nome do app em Modelos › After Effects."))
+                     "Instale o After Effects. Se for outra versão, troque o nome do app aqui embaixo."))
     if instalado:
         out.append(_item(permitido, "After Effects: scripts podem gravar arquivos",
                          "ligado" if permitido else "desligado ou nunca aberto",

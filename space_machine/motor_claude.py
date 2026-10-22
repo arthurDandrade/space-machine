@@ -22,7 +22,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from .sistema import DADOS, PACOTE, REPO as RAIZ, canais, config  # noqa: F401  (config/canais: usados por outros módulos)
+from .sistema import (DADOS, PACOTE, REPO as RAIZ, canais, config,  # noqa: F401  (usados por outros módulos)
+                      config_canal)
 
 BANCO = DADOS / "space_machine.sqlite"
 ENV = DADOS / ".env"
@@ -70,7 +71,7 @@ def prompt(nome, canal=None, formato=None):
     return txt
 
 
-# etapas do `rodar` que chamam o Claude → chaves de config()["modelos"] (space_machine.json) que elas usam
+# etapas do `rodar` que chamam o Claude → chaves de ["modelos"] (canal.json do canal) que elas usam
 MODELOS_DA_ETAPA = {"storyboard": ["storyboard"],
                     "escolher": ["escolher_imagem", "escolher_video", "confirmar_trecho", "conferir"],
                     "editar": ["qa"]}
@@ -114,19 +115,21 @@ def _ping(modelo):
         return (r.stderr or r.stdout).strip()[-400:] or f"saiu com código {r.returncode}"
 
 
-def checar_claude(etapas, atualizar=True):
+def checar_claude(etapas, atualizar=True, canal=None):
     """Antes de rodar: o `claude` existe, está logado e aceita os modelos das etapas pedidas?
 
-    Uma chamada mínima por modelo (resultado guardado por 15 min em dados/claude_checagem.json).
+    Os modelos são os DESTE canal; sem canal (teste do painel, fila esperando o limite passar), testa os de
+    todos os canais. Uma chamada mínima por modelo (resultado guardado por 15 min em dados/claude_checagem.json).
     Se o claude estiver velho demais para o modelo, roda `claude update` uma vez e testa de novo.
     Falha → ErroClaude (ou LimiteDeUso) com o que você precisa fazer.
     """
-    modelos = config()["modelos"]
+    cfgs = [config_canal(canal)] if canal else [config_canal(c) for c in canais().values()] or [config()]
     precisa = {}
-    for etapa in etapas:
-        for chave in MODELOS_DA_ETAPA.get(etapa, []):
-            if chave in modelos:
-                precisa.setdefault(modelos[chave], chave)
+    for cfg in cfgs:
+        for etapa in etapas:
+            for chave in MODELOS_DA_ETAPA.get(etapa, []):
+                if chave in cfg["modelos"]:
+                    precisa.setdefault(cfg["modelos"][chave], chave)
     if not precisa:
         return
     versao = _versao_claude()
@@ -167,7 +170,7 @@ def checar_claude(etapas, atualizar=True):
                 raise LimiteDeUso(f"checagem: {erro}")
             if "model" in baixo and any(s in baixo for s in ("not found", "invalid", "not exist", "unknown")):
                 raise ErroClaude(f"o modelo {modelo} (usado em {chave}) não existe para este claude. "
-                                 f"Troque na página Modelos do painel. ({erro})")
+                                 f"Troque em Modelos do Claude, no canal, no painel. ({erro})")
             raise ErroClaude(f"o claude não respondeu ao teste com {modelo} (usado em {chave}): {erro}")
         cache[f"{versao}|{modelo}"] = agora
         DADOS.mkdir(parents=True, exist_ok=True)
@@ -241,15 +244,17 @@ def _extrair_json(texto):
 
 
 def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None, timeout=None, sessao=None,
-           texto_livre=False):
+           texto_livre=False, canal=None):
     """Uma chamada isolada ao Claude. imagens: caminhos (ou (rotulo, caminho)). Devolve o JSON da resposta.
 
+    canal: de quem saem o modelo e o esforço desta etapa (canal.json › modelos/esforco). Sem canal, valem os
+    padrões do config_padrao.json. `modelo` força um modelo (ex.: --modelo na linha de comando).
     ctx: {canal, video, bloco, asset} só para o registro de consumo.
     sessao: (uuid, nova?) — conversa curta de uma etapa (ex.: voltas de correção do storyboard). A 1ª chamada
     cria a sessão com esse id; as seguintes retomam (--resume) e o prompt de sistema vem do cache.
     texto_livre: devolve {"texto": ...} sem exigir JSON (respostas grandes, como o cenas.json inteiro).
     """
-    cfg = config()
+    cfg = config_canal(canal) if canal else config()
     modelo = modelo or cfg["modelos"].get(etapa, "sonnet")
     ctx = ctx or {}
     conteudo = []
