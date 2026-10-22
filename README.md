@@ -68,11 +68,14 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 
 ## Onde fica cada coisa
 **Código** (este repo, igual para todo mundo):
-- `space_machine/`: orquestrador, servidor e API do painel, prompts das etapas e textos do painel (`textos/pt.json`).
+- `space_machine/`: orquestrador, servidor e API do painel, e os textos do painel (`textos/pt.json`).
 - `painel/`: o painel (React). O instalador monta e o `./spacemachine` remonta quando ele muda.
 - `motor/busca/`: busca, escolha, download, narração, transcrição, mapas e tabelas.
 - `motor/edicao_ae/`: montagem no After Effects, render e controle de qualidade.
-- `formatos/explained/`: regras e notas do formato, iguais para todos os canais.
+- `formatos/<formato>/`: tudo o que é do FORMATO do vídeo — as notas, as regras do storyboard, os prompts das
+  etapas, a biblioteca de cenas, o modelo do After e as medidas do QA. Vale para todos os canais daquele
+  formato. Cada canal diz o seu em `canal.json` (você escolhe ao criar o canal no painel). Hoje vem com o
+  `explained`; veja `formatos/LEIAME.md` para criar outro.
 
 **Dados** (a sua pasta, fora do git):
 - `space_machine.json`: modelo e esforço do Claude por etapa, o app do After e a limpeza automática ao entregar.
@@ -80,7 +83,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 - `space_machine.sqlite`: consumo e gestão.
 - `cache/`.
 - `canais/<canal>/`:
-  - `canal.json`: identidade e regras do tema;
+  - `canal.json`: formato do vídeo, identidade e regras do tema;
   - `.env`: chaves do canal;
   - `identidade/`;
   - `conhecimento/`: Log de Aprendizados do canal;
