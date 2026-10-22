@@ -2,6 +2,7 @@
 
 Uso:
   gerar_narracao.py --vozes [BUSCA]              lista vozes (minhas + busca por nome)
+  gerar_narracao.py --modelos                    lista os modelos de TTS que a conta pode usar
   gerar_narracao.py --uso                        créditos/caracteres restantes
   gerar_narracao.py <pasta do bloco> [--voz ID] [--speed 1.0] [--modelo ...]
       lê <bloco>/roteiro.txt (ignora linhas que começam com '#' e as marcações
@@ -12,7 +13,9 @@ Uso:
 Quem narra o canal: canal.json["narracao"]["provedor"] (painel › canal › Chaves). Sem o campo, Fish Audio.
 Chaves e voz ficam no .env do canal (painel › Chaves):
   Fish Audio   FISH_API_KEY, FISH_VOICE_ID (o reference_id do modelo de voz), FISH_MODEL (padrão s2.1-pro)
-  ElevenLabs   ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (padrão eleven_multilingual_v2),
+  ElevenLabs   ELEVENLABS_API_KEY (começa com "sk_"; o painel do ElevenLabs também mostra o ID da chave,
+               que NÃO serve), ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (padrão eleven_v4, o de melhor
+               qualidade; até 10.000 caracteres por chamada — um bloco nosso tem ~1.700),
                ELEVENLABS_FORMAT (padrão mp3_44100_128; mp3_44100_192 pede o plano Creator ou acima)
 Docs: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
       https://elevenlabs.io/docs/api-reference/text-to-speech/convert
@@ -88,6 +91,11 @@ def fish_vozes(busca):
             print(f"{v.get('_id')}\t{v.get('title')}\t{','.join(v.get('languages') or [])}")
 
 
+def fish_modelos():
+    print("O Fish Audio escolhe o modelo no cabeçalho da chamada: s1, s2-pro, s2.1-pro, s2.1-pro-free.")
+    print("Veja os atuais em https://docs.fish.audio.")
+
+
 def fish_uso():
     return json.loads(pedir(FISH + "/wallet/self/api-credit", headers=fish_chave()))
 
@@ -104,7 +112,7 @@ def onze_chave():
 
 
 def onze_gerar(texto, voz, speed, modelo):
-    modelo = modelo or config("ELEVENLABS_MODEL") or "eleven_multilingual_v2"
+    modelo = modelo or config("ELEVENLABS_MODEL") or "eleven_v4"
     formato = config("ELEVENLABS_FORMAT") or "mp3_44100_128"
     print(f"gerando {len(texto)} caracteres (ElevenLabs, modelo {modelo}, voz {voz}, {formato})…")
     corpo = {"text": texto, "model_id": modelo}
@@ -127,6 +135,13 @@ def onze_vozes(busca):
         print(f"{v.get('voice_id')}\t{v.get('name')}\t{v.get('category', '')}\t{idiomas}")
 
 
+def onze_modelos():
+    for m in json.loads(pedir(ONZE + "/v1/models", headers=onze_chave())):
+        if m.get("can_do_text_to_speech"):
+            lim = (m.get("maximum_text_length_per_request") or "?")
+            print(f"{m.get('model_id')}\t{m.get('name', '')}\taté {lim} caracteres")
+
+
 def onze_uso():
     r = json.loads(pedir(ONZE + "/v1/user/subscription", headers=onze_chave()))
     return {k: r.get(k) for k in ("tier", "status", "character_count", "character_limit",
@@ -135,9 +150,9 @@ def onze_uso():
 
 PROVEDORES = {
     "fishaudio": {"nome": "Fish Audio", "voz_env": "FISH_VOICE_ID",
-                  "gerar": fish_gerar, "vozes": fish_vozes, "uso": fish_uso},
+                  "gerar": fish_gerar, "vozes": fish_vozes, "uso": fish_uso, "modelos": fish_modelos},
     "elevenlabs": {"nome": "ElevenLabs", "voz_env": "ELEVENLABS_VOICE_ID",
-                   "gerar": onze_gerar, "vozes": onze_vozes, "uso": onze_uso},
+                   "gerar": onze_gerar, "vozes": onze_vozes, "uso": onze_uso, "modelos": onze_modelos},
 }
 
 
@@ -182,6 +197,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("bloco", nargs="?")
     ap.add_argument("--vozes", nargs="?", const="", metavar="BUSCA")
+    ap.add_argument("--modelos", action="store_true")
     ap.add_argument("--uso", action="store_true")
     ap.add_argument("--voz")
     ap.add_argument("--speed", type=float, default=1.0)
@@ -192,11 +208,14 @@ def main():
     if a.vozes is not None:
         prov["vozes"](a.vozes)
         return
+    if a.modelos:
+        prov["modelos"]()
+        return
     if a.uso:
         print(json.dumps(prov["uso"](), indent=2))
         return
     if not a.bloco:
-        ap.error("informe a pasta do bloco, --vozes ou --uso")
+        ap.error("informe a pasta do bloco, --vozes, --modelos ou --uso")
     voz = a.voz or config(prov["voz_env"])
     if not voz:
         sys.exit(f"Sem voz: use --voz ID ou {prov['voz_env']} no .env do canal (veja --vozes)")

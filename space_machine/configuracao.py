@@ -39,11 +39,12 @@ APIS = [
                 ("FISH_VOICE_ID", "Voz (reference_id)", False, "id do modelo de voz"),
                 ("FISH_MODEL", "Modelo", False, "s2.1-pro (pago) ou s2.1-pro-free")]},
     {"id": "elevenlabs", "nome": "ElevenLabs (narração)", "arquivo": ".env", "escopo": "canal",
-     "ajuda": "Chave em elevenlabs.io → Developers → API Keys. Só é usada quando o canal está com a narração no "
-              "ElevenLabs (acima).",
-     "campos": [("ELEVENLABS_API_KEY", "Chave da API", True, ""),
+     "ajuda": "Chave em elevenlabs.io → Developers → API Keys. Copie a chave que começa com \"sk_\", mostrada só "
+              "quando você cria ou gira a chave — o ID que a lista mostra depois NÃO serve. Só é usada quando o "
+              "canal está com a narração no ElevenLabs (acima).",
+     "campos": [("ELEVENLABS_API_KEY", "Chave da API", True, "começa com sk_"),
                 ("ELEVENLABS_VOICE_ID", "Voz (voice_id)", False, "id da voz"),
-                ("ELEVENLABS_MODEL", "Modelo", False, "eleven_multilingual_v2"),
+                ("ELEVENLABS_MODEL", "Modelo", False, "eleven_v4 (melhor) ou eleven_v4_turbo"),
                 ("ELEVENLABS_FORMAT", "Qualidade", False, "mp3_44100_128 (192 pede o plano Creator)")]},
     {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pexels.com/api.", "campos": [("PEXELS_API_KEY", "Chave da API", True, "")]},
