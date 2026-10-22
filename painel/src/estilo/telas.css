@@ -120,6 +120,8 @@
 .bt.vidro { background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: none; backdrop-filter: blur(6px); }
 .bt.vidro:hover { background: rgba(255, 255, 255, 0.24); }
 .erro-acao { color: #ffd2cc !important; font-size: 13px !important; }
+/* sem nada em produção o herói não precisa do tamanho de um vídeo em andamento */
+.heroi.vazio-heroi { min-height: 220px; }
 .vazio-heroi .txt { max-width: 70%; }
 
 .espera { display: flex; flex-direction: column; gap: 10px; }
@@ -149,7 +151,8 @@
 .etapa.vazia .n { color: var(--ink3); }
 .etapa.on .n, .etapa.on .r { color: var(--accent-text); }
 .etapa:not(:last-child)::after { content: ""; position: absolute; right: -5px; top: 50%; width: 9px; height: 9px; border-top: 2px solid var(--line); border-right: 2px solid var(--line); transform: translateY(-50%) rotate(45deg); z-index: 1; }
-.filtros { display: flex; align-items: center; gap: 10px; margin: 16px 0 12px; min-height: 32px; }
+.filtros { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; min-height: 32px; }
+.filtros h4 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -0.01em; }
 .videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
 .video { position: relative; border-radius: 22px; overflow: hidden; background: var(--card); box-shadow: var(--shadow); transition: transform 0.25s var(--ease), box-shadow 0.25s; animation: sobe 0.45s var(--ease) both; display: flex; flex-direction: column; }
 .video:hover { transform: translateY(-4px); box-shadow: var(--shadow-hi); }

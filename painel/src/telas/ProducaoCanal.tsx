@@ -12,11 +12,18 @@ import { useCanal } from "../casca/CascaCanal";
 import { TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { AnelConsumo, CartaoVideo, ItemEsperando, LinhaRodando, Segmentos } from "../componentes/Pecas";
-import { saudacao, useT } from "../textos";
+import { useT } from "../textos";
 
 const ICONES: Record<Coluna, typeof Cog> = {
   ideia: Lightbulb, roteiro: FileText, producao: Cog, edicao_final: Scissors, agendado: CalendarClock, publicado: CircleCheck,
 };
+
+/** Que canal é este, no lugar da segunda saudação do dia. Os números do processo vêm logo abaixo, no funil. */
+function resumoCanal(t: ReturnType<typeof useT>, dados: PainelCanal) {
+  const c = dados.canal;
+  return [c.tema, t(`app.idioma.${c.idioma}`, undefined, c.idioma), t("app.videos.titulo", { n: dados.videos.length })]
+    .filter(Boolean).join(" · ");
+}
 
 function Heroi({ canal, v }: { canal: string; v: Video | null }) {
   const t = useT();
@@ -98,9 +105,7 @@ function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
         })}
       </div>
       <div className="filtros">
-        <span className="sub">
-          {filtro ? `${t(`app.coluna.${filtro}`)} · ${lista.length}` : t("app.producao.todos_videos", { n: lista.length })}
-        </span>
+        <h4>{filtro ? `${t(`app.coluna.${filtro}`)} · ${lista.length}` : t("app.producao.todos_videos", { n: lista.length })}</h4>
         {filtro && <button className="bt pequeno" onClick={() => setFiltro(null)}>{t("app.producao.ver_todos")}</button>}
       </div>
       {filtro === "ideia" ? (
@@ -165,7 +170,7 @@ export function ProducaoCanal() {
 
   return (
     <>
-      <Cabecalho onde={<>{c.nome} › <b>{t("app.nav.producao")}</b></>} titulo={saudacao(t)} />
+      <Cabecalho titulo={c.nome} sub={resumoCanal(t, data)} />
 
       <div className="g1">
         <Heroi canal={canal} v={data.destaque} />

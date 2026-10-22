@@ -1,4 +1,6 @@
-// Topo de cada tela de canal: onde você está, o título e as ações da tela; o botão de tema fica sempre à direita.
+// Topo de cada tela de canal: o título, uma linha dizendo para que a tela serve e as ações dela; busca, avisos e
+// tema ficam sempre à direita. O caminho (`onde`) só aparece onde é caminho de verdade — vídeo e bloco, que estão
+// dentro de outra coisa. Nas telas de primeiro nível a barra lateral já diz o canal e em que tela você está.
 import { ReactNode } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Sino } from "../componentes/Avisos";
@@ -16,12 +18,14 @@ export function BotaoTema() {
   );
 }
 
-export function Cabecalho({ onde, titulo, children }: { onde: ReactNode; titulo: ReactNode; children?: ReactNode }) {
+export function Cabecalho({ onde, titulo, sub, children }:
+{ onde?: ReactNode; titulo: ReactNode; sub?: ReactNode; children?: ReactNode }) {
   return (
     <header className="cabecalho">
       <div>
-        <div className="onde">{onde}</div>
+        {onde && <div className="onde">{onde}</div>}
         <h1>{titulo}</h1>
+        {sub && <p className="sub">{sub}</p>}
       </div>
       <div className="acoes">
         {children}

@@ -36,6 +36,7 @@
 .logo-canal.gerado { display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px; letter-spacing: -0.02em; }
 
 .nav { margin-top: 20px; display: flex; flex-direction: column; gap: 2px; }
+.nav > .rot:first-child { padding-top: 4px; }
 .nav .rot { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); padding: 14px 12px 6px; }
 .nav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--ink2); font-weight: 600; font-size: 14px; transition: background 0.15s, color 0.15s; }
 .nav a:hover { background: var(--raised); color: var(--ink); }
@@ -49,13 +50,14 @@
 .conta .av { width: 32px; height: 32px; border-radius: 9px; }
 
 .principal { padding: 22px 32px 48px; min-width: 0; max-width: 1400px; width: 100%; }
-.cabecalho { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 22px; }
+.cabecalho { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 22px; }
 .cabecalho > div:first-child { flex: 1; min-width: 0; }
 .cabecalho .onde { color: var(--ink2); font-size: 13px; }
 .cabecalho .onde b { color: var(--ink); font-weight: 700; }
 .cabecalho .onde a:hover { color: var(--ink); }
 .cabecalho h1 { margin-top: 2px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
-.cabecalho .acoes { display: flex; align-items: center; gap: 10px; }
+.cabecalho .sub { margin: 7px 0 0; max-width: 720px; line-height: 1.55; }
+.cabecalho .acoes { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
 
 /* topo do nível do produtor: marca, as três áreas (Início, Modelagem, Configurações) e o canto da direita */
 .topo-produtor { display: flex; align-items: center; gap: 10px; max-width: 1240px; margin: 0 auto; padding: 22px 32px 0; }

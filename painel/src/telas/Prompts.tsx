@@ -166,7 +166,7 @@ export function PromptsTela() {
          onDragOver={(e) => { if ([...e.dataTransfer.types].includes("Files")) { e.preventDefault(); setSobre(true); } }}
          onDragLeave={(e) => { if (e.currentTarget === e.target) setSobre(false); }}
          onDrop={(e) => { e.preventDefault(); setSobre(false); importar([...e.dataTransfer.files]); }}>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.prompts")}</b></>} titulo={t("app.prompts.titulo")}>
+      <Cabecalho titulo={t("app.prompts.titulo")} sub={t("app.prompts.explica")}>
         <button className="bt" onClick={() => campo.current?.click()}><Upload size={16} />{t("app.prompts.importar")}</button>
         <button className="bt redondo" title={t("app.abrir_pasta_dica")} onClick={() => enviar(`/api/c/${canal}/prompts-pasta`)}><FolderOpen size={16} /></button>
         <button className="bt primario" onClick={() => abrir(NOVO)}><Plus size={16} />{t("app.prompts.novo")}</button>

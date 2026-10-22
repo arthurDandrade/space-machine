@@ -92,15 +92,18 @@ export function CascaCanal() {
 
   if (error) throw error;
   const c = data?.canal;
+  // três grupos, pelo que você veio fazer: acompanhar o que está rodando, planejar o que vem, ajustar o canal
   const itens: (Item | string)[] = [
+    "app.nav.secao_acompanhar",
     { rot: "app.nav.producao", icone: LayoutDashboard, para: `/c/${canal}`, fim: true },
     { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos` },
-    { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
     { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
+    "app.nav.secao_planejar",
+    { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
     { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal) },
     { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
     { rot: "app.nav.prompts", icone: ScrollText, para: `/c/${canal}/prompts` },
-    "app.nav.secao_canal",
+    "app.nav.secao_ajustes",
     { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
     { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },
     { rot: "app.nav.aprendizados", icone: BookOpen, para: `/c/${canal}/aprendizados` },

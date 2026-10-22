@@ -90,7 +90,7 @@ export function IdentidadeTela() {
   const mudouImagem = () => { setVersao(Date.now()); qc.invalidateQueries(); };
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.identidade")}</b></>} titulo={t("app.ident.titulo")} />
+      <Cabecalho titulo={t("app.ident.titulo")} sub={t("app.ident.explica")} />
       <div className="config-grade">
         <form className="cartao" onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
           <div className="duas-col">
@@ -182,12 +182,11 @@ export function RegrasTela() {
   if (!dc || !regras) return null;
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("regras.titulo")}</b></>} titulo={t("regras.titulo")}>
+      <Cabecalho titulo={t("regras.titulo")} sub={t("regras.sub")}>
         <button className="bt" disabled={sugerir.isPending} onClick={() => sugerir.mutate()}>
           <Wand2 size={16} />{sugerir.isPending ? t("app.regras.perguntando") : t("regras.sugerir")}
         </button>
       </Cabecalho>
-      <p className="sub intro">{t("regras.sub")}</p>
       {sugerido && <div className="aviso-ok"><Sparkles size={16} />{t("regras.sugeridas")}</div>}
       {sugerir.isError && <p className="erro">{sugerir.error.message}</p>}
       <form className="cartao" onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
@@ -219,8 +218,7 @@ export function AprendizadosTela() {
   if (!dc || !data) return null;
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.aprendizados")}</b></>} titulo={t("app.aprendizados.titulo")} />
-      <p className="sub intro">{t("app.aprendizados.explica")}</p>
+      <Cabecalho titulo={t("app.aprendizados.titulo")} sub={t("app.aprendizados.explica")} />
       {data.texto ? <div className="cartao leitura"><Markdown texto={data.texto.replace(/^---[\s\S]*?---\n/, "")} /></div>
         : <div className="vazio">{t("app.aprendizados.vazio")}</div>}
     </>
@@ -374,8 +372,7 @@ export function ChavesTela() {
   if (!dc || !data) return null;
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.chaves")}</b></>} titulo={t("app.chaves.titulo")} />
-      <p className="sub intro">{t("app.chaves.explica")}</p>
+      <Cabecalho titulo={t("app.chaves.titulo")} sub={t("app.chaves.explica")} />
       <EscolherNarracao canal={canal} narracao={data.narracao} />
       <ImportarChaves canal={canal} jaTem={new Set(data.apis.filter((a) => a.configurada).map((a) => a.id))} />
       <div className="apis">{data.apis.map((a) => <CartaoApi key={a.id} canal={canal} a={a} />)}</div>

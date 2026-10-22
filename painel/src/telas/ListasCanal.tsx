@@ -61,7 +61,7 @@ export function VideosCanal() {
   );
   return (
     <>
-      <Cabecalho onde={<>{data.canal.nome} › <b>{t("app.nav.videos")}</b></>} titulo={t("app.videos.titulo", { n: data.videos.length })}>
+      <Cabecalho titulo={t("app.videos.titulo", { n: data.videos.length })} sub={t("app.videos.explica")}>
         <Link className="bt primario" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
       </Cabecalho>
       <div className="barra-filtros">
@@ -94,8 +94,7 @@ export function EsperandoCanal() {
   if (!data) return null;
   return (
     <>
-      <Cabecalho onde={<>{data.canal.nome} › <b>{t("app.nav.esperando")}</b></>} titulo={t("app.esperando_voce_titulo")} />
-      <p className="sub intro">{t("app.esperando.explica")}</p>
+      <Cabecalho titulo={t("app.esperando_voce_titulo")} sub={t("app.esperando.explica")} />
       {data.esperando.length ? (
         <div className="espera larga">{data.esperando.map((e) => <ItemEsperando key={e.video + e.nn} canal={canal} e={e} />)}</div>
       ) : (

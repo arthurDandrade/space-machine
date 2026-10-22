@@ -71,8 +71,7 @@ export function IdeiasTela() {
   const ideias = data?.ideias ?? [];
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.ideias")}</b></>} titulo={t("app.ideias.titulo")} />
-      <p className="sub intro">{t("app.ideias.explica")}</p>
+      <Cabecalho titulo={t("app.ideias.titulo")} sub={t("app.ideias.explica")} />
       <div className="ideias-grade">
         <FormIdeia canal={canal} />
         <div className="lista-ideias">
@@ -158,8 +157,7 @@ export function QuadroTela() {
   };
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.quadro")}</b></>} titulo={t("app.quadro.titulo")} />
-      <p className="sub intro">{t("app.quadro.explica")}</p>
+      <Cabecalho titulo={t("app.quadro.titulo")} sub={t("app.quadro.explica")} />
       <DndContext sensors={sensores} onDragEnd={soltar}>
         <div className="quadro" ref={quadro}>
           {dc.colunas.map((c) => (
@@ -203,12 +201,11 @@ export function CalendarioTela() {
   const nomeMes = t("app.meses").split(",")[data.mes_n - 1];
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.nav.calendario")}</b></>} titulo={`${nomeMes} ${data.ano}`}>
+      <Cabecalho titulo={`${nomeMes} ${data.ano}`} sub={t("app.cal.explica")}>
         <button className="bt redondo" onClick={() => setParams({ mes: data.ant })} title={t("app.cal.anterior")}><ChevronLeft size={18} /></button>
         <button className="bt" onClick={() => setParams({})}>{t("app.cal.hoje")}</button>
         <button className="bt redondo" onClick={() => setParams({ mes: data.prox })} title={t("app.cal.proximo")}><ChevronRight size={18} /></button>
       </Cabecalho>
-      <p className="sub intro">{t("app.cal.explica")}</p>
       <div className="cal">
         {t("app.dias_semana_seg").split(",").map((d) => <div key={d} className="cab">{d}</div>)}
         {data.semanas.flat().map((d) => (
@@ -277,7 +274,7 @@ export function NovoVideoTela() {
   const n = divisao.partes.length + (divisao.cold ? 1 : 0);
   return (
     <>
-      <Cabecalho onde={<>{dc.canal.nome} › <b>{t("app.novo_video")}</b></>} titulo={t("app.novo.titulo")} />
+      <Cabecalho titulo={t("app.novo.titulo")} sub={t("app.novo.explica")} />
       <form className="novo-grade" onSubmit={(e) => { e.preventDefault(); criar.mutate(); }}>
         <div className="cartao">
           <label className="campo">{t("app.novo.titulo_video")}<input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Every NFL Team Name Explained" required /></label>
