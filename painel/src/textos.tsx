@@ -21,8 +21,9 @@ export function useT() {
   };
 }
 
-// números: 14901276 → "14,9 M"; 4538 → "4,5 mil"; 12 → "12"
+// números: 4_500_000_000 → "4,5 bi"; 14901276 → "14,9 M"; 4538 → "4,5 mil"; 12 → "12"
 export function compacto(n: number) {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1).replace(".", ",")} bi`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} M`;
   if (n >= 10_000) return `${Math.round(n / 1000)} mil`;
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(".", ",")} mil`;

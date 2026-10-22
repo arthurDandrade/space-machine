@@ -1,6 +1,7 @@
 """Configuração pelo painel: chaves de API (do sistema e de cada canal) e criação de canais novos.
 
   <dados>/.env                CLAUDE_CODE_OAUTH_TOKEN                                  (motor_claude.py)
+                              YOUTUBE_API_KEY (modelar.py: nome e logo dos canais a modelar)
   <dados>/canais/<slug>/.env  FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL (gerar_narracao.py),
                               PEXELS_API_KEY, PIXABAY_API_KEY, SERPER_API_KEY, SI_API_KEY (fontes.py)
 Os scripts do motor leem as chaves por motor/caminhos.env(). Os arquivos são gravados com permissão 600 e o painel
@@ -25,6 +26,11 @@ APIS = [
      "ajuda": "Token da sua assinatura para o Space Machine chamar o Claude sem conversa. Gere no Terminal com "
               "`claude setup-token` e cole aqui.",
      "campos": [("CLAUDE_CODE_OAUTH_TOKEN", "Token", True, "")]},
+    {"id": "youtube", "nome": "YouTube (nome e logo dos canais a modelar)", "arquivo": None, "escopo": "sistema",
+     "ajuda": "Chave da YouTube Data API v3 (grátis em console.cloud.google.com → APIs e serviços → Credenciais). "
+              "Serve só para, quando VOCÊ cola um link na tela inicial, trazer o nome e o logo daquele canal. "
+              "A produção continua sem YouTube: nada busca, abre ou baixa vídeo de lá.",
+     "campos": [("YOUTUBE_API_KEY", "Chave da API", True, "")]},
     {"id": "fish", "nome": "Fish Audio (narração)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Chave em fish.audio/app/developers. O crédito de API é separado do crédito da plataforma.",
      "campos": [("FISH_API_KEY", "Chave da API", True, ""),
@@ -82,6 +88,27 @@ def mascara(v):
     if not v:
         return ""
     return "•" * 8 + v[-4:] if len(v) > 8 else "•" * len(v)
+
+
+def _api_de_sistema(api_id):
+    api = next((a for a in APIS if a["id"] == api_id), None)
+    if not api or api["escopo"] != "sistema":
+        raise ValueError("essa chave é de um canal")
+    return api
+
+
+def chave_sistema(api_id):
+    """A chave de uma API que vale para todos os canais (<dados>/.env)."""
+    api = _api_de_sistema(api_id)
+    return ler_env(ENV_SISTEMA).get(api["campos"][0][0], "")
+
+
+def salvar_chave_sistema(api_id, valor):
+    """Grava (ou apaga, com valor vazio) a chave de uma API de sistema. Devolve a máscara do que ficou."""
+    api = _api_de_sistema(api_id)
+    valor = (valor or "").strip()
+    gravar_env(ENV_SISTEMA, {api["campos"][0][0]: valor or None})
+    return mascara(valor)
 
 
 def estado_apis(canal):
@@ -175,6 +202,10 @@ def testar_api(canal, api_id):
                                capture_output=True, text=True, timeout=60,
                                env=ambiente_motor(canal))
             return r.returncode == 0, (r.stdout or r.stderr).strip()[-300:]
+        if api_id == "youtube":
+            r = requests.get("https://www.googleapis.com/youtube/v3/channels",
+                             params={"part": "snippet", "forHandle": "@youtube", "key": chave}, timeout=20)
+            return r.ok, "ok" if r.ok else f"HTTP {r.status_code}: {r.text[:160]}"
         if api_id == "serper":
             return True, "não testado de propósito (cada busca do Serper gasta crédito pago)"
         if api_id == "claude":

@@ -36,6 +36,28 @@ export interface Canais {
   falta_algo: boolean;
 }
 
+export interface CanalModelo {
+  id: number;
+  canal_id: string;
+  url: string;
+  nome: string;
+  handle: string;
+  descricao: string;
+  inscritos: number;
+  videos: number;
+  vistas: number;
+  pais: string;
+  notas: string;
+  tem_logo: boolean;
+  criado: string;
+  atualizado: string;
+}
+
+export interface CanaisModelo {
+  itens: CanalModelo[];
+  tem_chave: boolean;
+}
+
 export interface Fila {
   ativa: boolean;
   status: string;
@@ -234,6 +256,8 @@ export const enviar = <T = { ok: boolean },>(url: string, corpo?: unknown) =>
 
 // endereços das imagens (a API gera e guarda em cache)
 export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${canal}/marca/${qual}`;
+// logo guardado de um canal que você quer modelar (cache/modelos/ nos dados)
+export const urlLogoModelo = (id: number) => `/api/modelar/${id}/logo`;
 // v: versão da capa do vídeo (muda quando a thumbnail muda), para o navegador não mostrar a antiga do cache
 export const urlCapa = (canal: string, video: string, nn?: string, v?: number) => {
   const q = [nn ? `nn=${nn}` : "", v ? `v=${v}` : ""].filter(Boolean).join("&");

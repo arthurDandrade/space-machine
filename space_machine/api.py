@@ -18,7 +18,8 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, primeiros_passos, reels, textos
+from . import (capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, modelar,
+               primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, config, ler_json
@@ -912,6 +913,68 @@ async def novo_canal(nome: str = Form(...), tema: str = Form(...), idioma: str =
             shutil.copy2(arqs["banner"], Path(pasta) / "identidade" / arqs["banner"].name)
     _cache_falta["quando"] = 0
     return {"ok": True, "slug": slug}
+
+
+# ---------------- canais a modelar ----------------
+@api.get("/modelar")
+def canais_a_modelar():
+    return {"itens": modelar.lista(), "tem_chave": bool(modelar.chave())}
+
+
+@api.post("/modelar")
+def adicionar_a_modelar(link: str = Body(..., embed=True)):
+    try:
+        return {"ok": True, "item": modelar.adicionar(link)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@api.post("/modelar/{ref_id}/atualizar")
+def atualizar_a_modelar(ref_id: int):
+    try:
+        return {"ok": True, "item": modelar.atualizar(ref_id)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@api.post("/modelar/{ref_id}/notas")
+def notas_a_modelar(ref_id: int, notas: str = Body("", embed=True)):
+    try:
+        modelar.salvar_notas(ref_id, notas)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return {"ok": True}
+
+
+@api.post("/modelar/{ref_id}/excluir")
+def excluir_a_modelar(ref_id: int):
+    try:
+        modelar.remover(ref_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return {"ok": True}
+
+
+@api.get("/modelar/{ref_id}/logo")
+def logo_a_modelar(ref_id: int):
+    try:
+        f = modelar.arquivo_logo(ref_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    if not f:
+        raise HTTPException(404, "esse canal não tem logo guardado")
+    return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+@api.post("/config/chaves/{api_id}")
+def salvar_chave_sistema(api_id: str, valor: str = Body("", embed=True)):
+    """Chave que vale para todos os canais (hoje: Claude e YouTube), para não ter de entrar num canal só por isso."""
+    try:
+        mostrar = configuracao.salvar_chave_sistema(api_id, valor)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    _cache_falta["quando"] = 0
+    return {"ok": True, "mostrar": mostrar}
 
 
 # ---------------- ao vivo ----------------

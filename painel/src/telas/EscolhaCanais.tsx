@@ -7,6 +7,7 @@ import { ArrowRight, Hand, Loader, Plus, Sparkles } from "lucide-react";
 import { Canais, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
 import { TopoProdutor } from "../casca/TopoProdutor";
 import { Capa, fundoDoCanal, iniciais, LogoCanal } from "../componentes/Imagens";
+import { Modelar } from "../componentes/Modelar";
 import { compacto, saudacao, useT } from "../textos";
 
 function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
@@ -95,6 +96,8 @@ export function EscolhaCanais() {
           <span className="sub">{t("app.canais.novo_sub")}</span>
         </Link>
       </div>
+
+      <Modelar />
 
       {canais.length > 0 && (
         <div className="rodape-produtor">

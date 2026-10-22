@@ -48,6 +48,45 @@
 .mini b { display: block; font-size: 15px; }
 .mini span { font-size: 12.5px; color: var(--ink2); }
 
+/* ---------------- canais para modelar (tela inicial) ---------------- */
+.modelar { max-width: 1240px; margin: 0 auto; padding: 40px 32px 0; }
+.modelar .titulo-secao h3 { display: flex; align-items: center; gap: 8px; }
+.modelar .titulo-secao h3 svg { color: var(--ink3); }
+.colar-link { display: flex; gap: 10px; }
+.colar-link input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 14px; font: inherit; font-size: 14px; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+}
+.colar-link input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.colar-link .bt { height: 44px; flex: none; }
+.modelar .erro { margin-top: 10px; }
+.vazio-modelar { margin: 14px 0 0; max-width: 760px; }
+.sem-chave {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 14px 16px;
+  border-radius: 18px; background: var(--wait-bg); color: var(--ink);
+}
+.sem-chave .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--card); color: var(--wait); }
+.sem-chave .t { flex: 1; min-width: 220px; }
+.sem-chave .t b { display: block; font-size: 14px; }
+.sem-chave input { height: 36px; width: 240px; padding: 0 12px; font: inherit; font-size: 13px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 11px; }
+.modelos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+.modelo { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.modelo .topo { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.modelo .topo .t { min-width: 0; }
+.modelo .topo b { display: block; font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logo-modelo { width: 46px; height: 46px; border-radius: 50%; overflow: hidden; flex: none; background: var(--raised); }
+.logo-modelo img { width: 100%; height: 100%; object-fit: cover; }
+.logo-modelo.vazio { display: grid; place-items: center; font-weight: 800; color: var(--ink3); font-size: 18px; }
+.modelo .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.modelo .num { background: var(--raised); border-radius: 12px; padding: 8px 10px; min-width: 0; }
+.modelo .num b { display: block; font-size: 16px; letter-spacing: -0.02em; font-weight: 800; }
+.modelo .num span { font-size: 11.5px; color: var(--ink2); }
+.modelo .notas { min-height: 52px; resize: vertical; padding: 9px 11px; font: inherit; font-size: 13px; color: var(--ink); background: var(--raised); border: 1px solid transparent; border-radius: 12px; }
+.modelo .notas:focus { outline: none; border-color: var(--accent); background: var(--card); }
+.modelo .acoes { display: flex; gap: 8px; align-items: center; margin-top: auto; }
+.modelo .acoes .so-icone { margin-left: auto; padding: 0 9px; color: var(--ink3); }
+.modelo .acoes .so-icone:hover { color: var(--bad); }
+
 /* ---------------- produção do canal ---------------- */
 .g1 { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 20px; }
 .heroi { position: relative; border-radius: 28px; overflow: hidden; min-height: 300px; background: var(--accent); color: #fff; display: flex; }
