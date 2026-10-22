@@ -18,7 +18,7 @@ O Claude só entra nas decisões: planejar as cenas, escolher os assets e corrig
 - **Assinatura do Claude** e o **Claude Code** instalado (`npm install -g @anthropic-ai/claude-code`).
 - **Homebrew** (https://brew.sh).
 - Chaves grátis de **Pixabay** ou **Pexels** (vídeos e fotos livres).
-- **Fish Audio** para a narração. Também dá para gravar a sua e pôr um `narracao.mp3` em cada bloco.
+- **Fish Audio** ou **ElevenLabs** para a narração — você escolhe por canal em Canal › Chaves. Também dá para gravar a sua e pôr um `narracao.mp3` em cada bloco.
 - Opcionais: Smithsonian (fotos históricas, grátis) e Serper (Google Imagens, pago, usado só como último recurso).
 
 ## Instalar
@@ -83,7 +83,7 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 - `space_machine.sqlite`: consumo e gestão.
 - `cache/`.
 - `canais/<canal>/`:
-  - `canal.json`: formato do vídeo, identidade e regras do tema;
+  - `canal.json`: formato do vídeo, quem narra, identidade e regras do tema;
   - `.env`: chaves do canal;
   - `identidade/`;
   - `conhecimento/`: Log de Aprendizados do canal;

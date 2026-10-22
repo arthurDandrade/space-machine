@@ -2,7 +2,8 @@
 
   <dados>/.env                CLAUDE_CODE_OAUTH_TOKEN                                  (motor_claude.py)
                               YOUTUBE_API_KEY (modelar.py: nome e logo dos canais a modelar)
-  <dados>/canais/<slug>/.env  FISH_API_KEY, FISH_VOICE_ID, FISH_MODEL (gerar_narracao.py),
+  <dados>/canais/<slug>/.env  FISH_API_KEY/FISH_VOICE_ID/FISH_MODEL ou ELEVENLABS_* (gerar_narracao.py;
+                              quem narra o canal: canal.json["narracao"]["provedor"]),
                               PEXELS_API_KEY, PIXABAY_API_KEY, SERPER_API_KEY, SI_API_KEY (fontes.py)
 Os scripts do motor leem as chaves por motor/caminhos.env(). Os arquivos são gravados com permissão 600 e o painel
 nunca mostra uma chave inteira (só os 4 últimos caracteres).
@@ -188,7 +189,7 @@ def chaves_de_outros(slug_destino):
 
 def importar_chaves(destino, slug_origem, ids):
     """Copia para `destino` a chave de API que o canal de origem já tem. Só os campos secretos: o que é identidade
-    do canal (voz do Fish, modelo) continua o daqui. Devolve os ids copiados."""
+    do canal (voz, modelo) continua o daqui. Devolve os ids copiados."""
     origem = canais().get(slug_origem)
     if not origem:
         raise ValueError("canal de origem não encontrado")
