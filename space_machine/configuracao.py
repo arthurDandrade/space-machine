@@ -51,7 +51,7 @@ APIS = [
               "a API de áudio pede assinatura Pro ou Plus. O id da voz sai da lista de vozes da conta. Só é usada "
               "quando o canal está com a narração no Dark Planner (acima).",
      "campos": [("DARKPLANNER_API_KEY", "Chave da API", True, "começa com dpk_"),
-                ("DARKPLANNER_VOICE_ID", "Voz (voice_id)", False, "id da voz na sua conta")]},
+                ("DARKPLANNER_VOICE_ID", "Voz", False, "o id, o apelido ou o nome da voz")]},
     {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pexels.com/api.", "campos": [("PEXELS_API_KEY", "Chave da API", True, "")]},
     {"id": "pixabay", "nome": "Pixabay (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",

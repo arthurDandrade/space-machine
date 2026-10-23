@@ -17,7 +17,8 @@ Chaves e voz ficam no .env do canal (painel › Chaves):
                que NÃO serve), ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (padrão eleven_v4, o de melhor
                qualidade; até 10.000 caracteres por chamada — um bloco nosso tem ~1.700),
                ELEVENLABS_FORMAT (padrão mp3_44100_128; mp3_44100_192 pede o plano Creator ou acima)
-  Dark Planner DARKPLANNER_API_KEY (começa com "dpk_"), DARKPLANNER_VOICE_ID (o id da voz em --vozes).
+  Dark Planner DARKPLANNER_API_KEY (começa com "dpk_"), DARKPLANNER_VOICE_ID (o id, o apelido ou o
+               nome da voz: são ~1.000, veja com --vozes).
                Não tem modelo para escolher: a voz já diz tudo. Gera em fila (manda o texto, espera o job
                ficar pronto e baixa o MP3), aceita speed de 0.5 a 1.5 e pede assinatura Pro ou Plus.
 Docs: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
@@ -183,6 +184,7 @@ def onze_uso():
 DARK = "https://app.darkplanner.com.br/api/v1/audio"
 DARK_ESPERA = 5        # as consultas aceitam no máximo 1 por segundo
 DARK_LIMITE = 30 * 60  # desiste depois disso e manda ver o painel do Dark Planner
+DARK_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
 def dark_chave():
@@ -190,6 +192,28 @@ def dark_chave():
     if not chave:
         sys.exit("Sem chave: defina DARKPLANNER_API_KEY no .env do canal (painel › Chaves)")
     return {"X-API-Key": chave}
+
+
+def dark_catalogo():
+    return json.loads(pedir(DARK + "/voices", headers=dark_chave())).get("voices") or []
+
+
+def dark_voz(voz):
+    """Na hora de gerar o Dark Planner só aceita o id; aqui o apelido ("clark") e o nome também servem."""
+    if DARK_UUID.match(voz):
+        return voz
+    v = voz.strip().lower()
+    vozes = dark_catalogo()
+    achadas = ([x for x in vozes if v in ((x.get("slug") or "").lower(), (x.get("name") or "").lower())]
+               or [x for x in vozes if v in f"{x.get('slug', '')} {x.get('name', '')}".lower()])
+    if not achadas:
+        sys.exit(f"Não achei a voz \"{voz}\" na sua conta do Dark Planner (veja as suas com --vozes)")
+    if len(achadas) > 1:
+        nomes = ", ".join(x.get("name", "") for x in achadas[:5])
+        sys.exit(f"\"{voz}\" serve para {len(achadas)} vozes ({nomes}…): ponha o id ou o apelido inteiro "
+                 "(veja com --vozes)")
+    print(f"voz \"{voz}\" = {achadas[0].get('name')} ({achadas[0].get('id')})")
+    return achadas[0]["id"]
 
 
 def dark_estado(job):
@@ -229,6 +253,7 @@ def dark_baixar(job):
 def dark_gerar(texto, voz, speed, modelo):
     if modelo:
         print("O Dark Planner não escolhe modelo: ignorando --modelo.")
+    voz = dark_voz(voz)
     print(f"gerando {len(texto)} caracteres (Dark Planner, voz {voz})…")
     r = json.loads(pedir(DARK + "/generate", {"text": texto, "voice_id": voz, "speed": speed},
                          headers=dark_chave(), timeout=120))
@@ -240,13 +265,13 @@ def dark_gerar(texto, voz, speed, modelo):
 
 
 def dark_vozes(busca):
-    vozes = json.loads(pedir(DARK + "/voices", headers=dark_chave())).get("voices") or []
+    vozes = dark_catalogo()
     if busca:
         b = busca.lower()
         vozes = [v for v in vozes if b in f"{v.get('name', '')} {v.get('slug', '')}".lower()]
-    print(f"== vozes ({len(vozes)})")
+    print(f"== vozes ({len(vozes)})  id\tapelido\tnome")
     for v in vozes:
-        print(f"{v.get('id')}\t{v.get('name')}\t{v.get('gender', '')}")
+        print(f"{v.get('id')}\t{v.get('slug', '')}\t{v.get('name')}\t{v.get('gender', '')}")
 
 
 def dark_modelos():
