@@ -2,7 +2,7 @@
 
   <dados>/.env                CLAUDE_CODE_OAUTH_TOKEN                                  (motor_claude.py)
                               YOUTUBE_API_KEY (modelar.py: nome e logo dos canais a modelar)
-  <dados>/canais/<slug>/.env  FISH_API_KEY/FISH_VOICE_ID/FISH_MODEL ou ELEVENLABS_* (gerar_narracao.py;
+  <dados>/canais/<slug>/.env  FISH_*, ELEVENLABS_* ou DARKPLANNER_* (gerar_narracao.py;
                               quem narra o canal: canal.json["narracao"]["provedor"]),
                               PEXELS_API_KEY, PIXABAY_API_KEY, SERPER_API_KEY, SI_API_KEY (fontes.py)
 Os scripts do motor leem as chaves por motor/caminhos.env(). Os arquivos são gravados com permissão 600 e o painel
@@ -46,6 +46,12 @@ APIS = [
                 ("ELEVENLABS_VOICE_ID", "Voz (voice_id)", False, "id da voz"),
                 ("ELEVENLABS_MODEL", "Modelo", False, "eleven_v4 (melhor) ou eleven_v4_turbo"),
                 ("ELEVENLABS_FORMAT", "Qualidade", False, "mp3_44100_128 (192 pede o plano Creator)")]},
+    {"id": "darkplanner", "nome": "Dark Planner (narração)", "arquivo": ".env", "escopo": "canal",
+     "ajuda": "Chave em app.darkplanner.com.br/api-docs → Minha chave → Gerar Chave de API (começa com \"dpk_\"); "
+              "a API de áudio pede assinatura Pro ou Plus. O id da voz sai da lista de vozes da conta. Só é usada "
+              "quando o canal está com a narração no Dark Planner (acima).",
+     "campos": [("DARKPLANNER_API_KEY", "Chave da API", True, "começa com dpk_"),
+                ("DARKPLANNER_VOICE_ID", "Voz (voice_id)", False, "id da voz na sua conta")]},
     {"id": "pexels", "nome": "Pexels (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em pexels.com/api.", "campos": [("PEXELS_API_KEY", "Chave da API", True, "")]},
     {"id": "pixabay", "nome": "Pixabay (vídeos e fotos livres)", "arquivo": ".env", "escopo": "canal",
@@ -59,10 +65,21 @@ APIS = [
 ]
 
 
-# narração: o cartão de chaves de cada provedor de TTS (canal.json["narracao"]["provedor"])
-PROVEDOR_DA_API = {"fish": "fishaudio", "elevenlabs": "elevenlabs"}
-PROVEDORES_NARRACAO = [{"id": "fishaudio", "nome": "Fish Audio", "api": "fish"},
-                       {"id": "elevenlabs", "nome": "ElevenLabs", "api": "elevenlabs"}]
+# Narração: cada provedor de TTS (canal.json["narracao"]["provedor"]) com o cartão de chaves dele ("api"),
+# o prefixo das chaves no .env e onde a pessoa pega a chave. Quem gera é motor/busca/scripts/gerar_narracao.py.
+PROVEDORES_NARRACAO = [{"id": "fishaudio", "nome": "Fish Audio", "api": "fish",
+                        "prefixo": "FISH", "site": "fish.audio"},
+                       {"id": "elevenlabs", "nome": "ElevenLabs", "api": "elevenlabs",
+                        "prefixo": "ELEVENLABS", "site": "elevenlabs.io"},
+                       {"id": "darkplanner", "nome": "Dark Planner", "api": "darkplanner",
+                        "prefixo": "DARKPLANNER", "site": "app.darkplanner.com.br"}]
+PROVEDOR_DA_API = {p["api"]: p["id"] for p in PROVEDORES_NARRACAO}
+
+
+def ficha_narracao(provedor):
+    """O provedor de TTS pelo id, ou o padrão se for um nome que não conhecemos."""
+    fichas = {p["id"]: p for p in PROVEDORES_NARRACAO}
+    return fichas.get(provedor) or fichas[PROVEDOR_NARRACAO_PADRAO]
 
 
 def provedor_narracao(canal):

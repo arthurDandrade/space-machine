@@ -19,6 +19,7 @@ import time
 import uuid
 from pathlib import Path
 
+from . import configuracao
 from . import motor_claude as motor
 from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
@@ -27,7 +28,7 @@ from .estado import conferir_pendentes, previas as previas_do_bloco
 from .sistema import FORMATO_PADRAO, ambiente_motor, arquivo_formato, ficha_formato
 
 ETAPAS = ["narracao", "transcrever", "storyboard", "buscar", "escolher", "editar", "entregar"]
-NOMES_NARRACAO = {"fishaudio": "Fish Audio", "elevenlabs": "ElevenLabs"}
+NOMES_NARRACAO = {p["id"]: p["nome"] for p in configuracao.PROVEDORES_NARRACAO}
 
 
 def _aprovado(qa):

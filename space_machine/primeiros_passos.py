@@ -77,13 +77,10 @@ def checar():
         video = env.get("PIXABAY_API_KEY") or env.get("PEXELS_API_KEY")
         out.append(_item(video, f"{c['nome']}: banco de vídeo (Pixabay ou Pexels)", "ok" if video else "sem chave",
                          f"Chave grátis em pixabay.com/api/docs ou pexels.com/api → APIs › {c['nome']}."))
-        prov = configuracao.provedor_narracao(c)
-        onze = prov == "elevenlabs"
-        nome_prov, site = ("ElevenLabs", "elevenlabs.io") if onze else ("Fish Audio", "fish.audio")
-        pref = "ELEVENLABS" if onze else "FISH"
-        tts = env.get(f"{pref}_API_KEY") and env.get(f"{pref}_VOICE_ID")
-        out.append(_item(tts, f"{c['nome']}: narração ({nome_prov})", "ok" if tts else "falta chave ou voz",
-                         f"Chave e id da voz em {site} → Chaves › {c['nome']}. (Ou grave a narração e ponha "
+        prov = configuracao.ficha_narracao(configuracao.provedor_narracao(c))
+        tts = env.get(f"{prov['prefixo']}_API_KEY") and env.get(f"{prov['prefixo']}_VOICE_ID")
+        out.append(_item(tts, f"{c['nome']}: narração ({prov['nome']})", "ok" if tts else "falta chave ou voz",
+                         f"Chave e id da voz em {prov['site']} → Chaves › {c['nome']}. (Ou grave a narração e ponha "
                          "narracao.mp3 em cada bloco.)"))
     return out
 

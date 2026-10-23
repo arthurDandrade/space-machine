@@ -1,4 +1,4 @@
-"""Gera a narração de um bloco pela API de TTS do provedor que o canal usa (Fish Audio ou ElevenLabs).
+"""Gera a narração de um bloco pela API de TTS do provedor que o canal usa (Fish Audio, ElevenLabs ou Dark Planner).
 
 Uso:
   gerar_narracao.py --vozes [BUSCA]              lista vozes (minhas + busca por nome)
@@ -8,7 +8,7 @@ Uso:
       lê <bloco>/roteiro.txt (ignora linhas que começam com '#' e as marcações
       de cena, linhas inteiras entre colchetes como [VISUAL: ...])
       e grava <bloco>/narracao.mp3.
-  --provedor fishaudio|elevenlabs   usa outro provedor só nesta chamada
+  --provedor fishaudio|elevenlabs|darkplanner   usa outro provedor só nesta chamada
 
 Quem narra o canal: canal.json["narracao"]["provedor"] (painel › canal › Chaves). Sem o campo, Fish Audio.
 Chaves e voz ficam no .env do canal (painel › Chaves):
@@ -17,8 +17,12 @@ Chaves e voz ficam no .env do canal (painel › Chaves):
                que NÃO serve), ELEVENLABS_VOICE_ID, ELEVENLABS_MODEL (padrão eleven_v4, o de melhor
                qualidade; até 10.000 caracteres por chamada — um bloco nosso tem ~1.700),
                ELEVENLABS_FORMAT (padrão mp3_44100_128; mp3_44100_192 pede o plano Creator ou acima)
+  Dark Planner DARKPLANNER_API_KEY (começa com "dpk_"), DARKPLANNER_VOICE_ID (o id da voz em --vozes).
+               Não tem modelo para escolher: a voz já diz tudo. Gera em fila (manda o texto, espera o job
+               ficar pronto e baixa o MP3), aceita speed de 0.5 a 1.5 e pede assinatura Pro ou Plus.
 Docs: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
       https://elevenlabs.io/docs/api-reference/text-to-speech/convert
+      https://app.darkplanner.com.br/api-docs
 """
 import argparse
 import json
@@ -54,7 +58,7 @@ def recado(corpo):
         return txt[:300]
     d = d.get("detail", d) if isinstance(d, dict) else d
     if isinstance(d, dict):
-        return str(d.get("message") or d.get("msg") or d)[:300]
+        return str(d.get("message") or d.get("msg") or d.get("error") or d)[:300]
     return str(d)[:300]
 
 
@@ -173,11 +177,93 @@ def onze_uso():
                                   "next_character_count_reset_unix")}
 
 
+# ---------------- Dark Planner ----------------
+# Gera em fila: POST /generate devolve um job_id, /status diz quando ficou pronto e /download dá a URL do MP3.
+# As três legendas .srt que ele também faz ficam de fora: a transcrição do bloco é do whisper-cli.
+DARK = "https://app.darkplanner.com.br/api/v1/audio"
+DARK_ESPERA = 5        # as consultas aceitam no máximo 1 por segundo
+DARK_LIMITE = 30 * 60  # desiste depois disso e manda ver o painel do Dark Planner
+
+
+def dark_chave():
+    chave = config("DARKPLANNER_API_KEY")
+    if not chave:
+        sys.exit("Sem chave: defina DARKPLANNER_API_KEY no .env do canal (painel › Chaves)")
+    return {"X-API-Key": chave}
+
+
+def dark_estado(job):
+    return json.loads(pedir(f"{DARK}/status/{urllib.parse.quote(job)}", headers=dark_chave()))
+
+
+def dark_esperar(job):
+    """Pergunta o status até o job ficar pronto. Devolve quando terminar; sai com o motivo se falhar."""
+    fim = time.time() + DARK_LIMITE
+    visto = None
+    while time.time() < fim:
+        r = dark_estado(job)
+        estado = r.get("status")
+        if estado == "completed":
+            return
+        if estado in ("failed", "blocked", "not_found"):
+            motivo = r.get("error_message") or estado
+            if estado == "blocked":
+                motivo = f"a moderação da voz barrou o texto ({motivo})"
+            sys.exit(f"O Dark Planner não gerou o áudio: {motivo}")
+        if estado != visto:
+            print(f"job {job}: {estado}…")
+            visto = estado
+        time.sleep(DARK_ESPERA)
+    sys.exit(f"O job {job} não ficou pronto em {DARK_LIMITE // 60} min "
+             f"(veja em app.darkplanner.com.br e, se tiver saído, rode de novo)")
+
+
+def dark_baixar(job):
+    r = json.loads(pedir(f"{DARK}/download/{urllib.parse.quote(job)}", headers=dark_chave()))
+    url = r.get("audio_url")
+    if not url:
+        sys.exit(f"O Dark Planner não devolveu a URL do áudio: {str(r)[:300]}")
+    return pedir(urllib.parse.urljoin(DARK + "/", url), timeout=600)
+
+
+def dark_gerar(texto, voz, speed, modelo):
+    if modelo:
+        print("O Dark Planner não escolhe modelo: ignorando --modelo.")
+    print(f"gerando {len(texto)} caracteres (Dark Planner, voz {voz})…")
+    r = json.loads(pedir(DARK + "/generate", {"text": texto, "voice_id": voz, "speed": speed},
+                         headers=dark_chave(), timeout=120))
+    job = r.get("job_id")
+    if not job:
+        sys.exit(f"O Dark Planner não devolveu job_id: {str(r)[:300]}")
+    dark_esperar(job)
+    return dark_baixar(job), {"job_id": job}
+
+
+def dark_vozes(busca):
+    vozes = json.loads(pedir(DARK + "/voices", headers=dark_chave())).get("voices") or []
+    if busca:
+        b = busca.lower()
+        vozes = [v for v in vozes if b in f"{v.get('name', '')} {v.get('slug', '')}".lower()]
+    print(f"== vozes ({len(vozes)})")
+    for v in vozes:
+        print(f"{v.get('id')}\t{v.get('name')}\t{v.get('gender', '')}")
+
+
+def dark_modelos():
+    print("O Dark Planner não tem modelo para escolher: a voz já define o motor. Veja as vozes com --vozes.")
+
+
+def dark_uso():
+    return json.loads(pedir(DARK + "/usage", headers=dark_chave()))
+
+
 PROVEDORES = {
     "fishaudio": {"nome": "Fish Audio", "voz_env": "FISH_VOICE_ID",
                   "gerar": fish_gerar, "vozes": fish_vozes, "uso": fish_uso, "modelos": fish_modelos},
     "elevenlabs": {"nome": "ElevenLabs", "voz_env": "ELEVENLABS_VOICE_ID",
                    "gerar": onze_gerar, "vozes": onze_vozes, "uso": onze_uso, "modelos": onze_modelos},
+    "darkplanner": {"nome": "Dark Planner", "voz_env": "DARKPLANNER_VOICE_ID",
+                    "gerar": dark_gerar, "vozes": dark_vozes, "uso": dark_uso, "modelos": dark_modelos},
 }
 
 

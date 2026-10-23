@@ -134,12 +134,13 @@ def referencias():
 
 
 # Narração: qual serviço de TTS este canal usa (canal.json["narracao"]["provedor"]). Canal de antes de
-# 2026-10-22 não tem o campo e continua no Fish Audio, o único que havia.
+# 2026-10-22 não tem o campo e continua no Fish Audio, o único que havia. Quem conhece a lista toda é
+# gerar_narracao.py (motor) e configuracao.PROVEDORES_NARRACAO (painel).
 PROVEDOR_NARRACAO_PADRAO = "fishaudio"
 
 
 def narracao():
-    """canal.json["narracao"]: {"provedor": "fishaudio"|"elevenlabs"}."""
+    """canal.json["narracao"]: {"provedor": "fishaudio"|"elevenlabs"|"darkplanner"}."""
     n = canal_json().get("narracao") or {}
     return {"provedor": n.get("provedor") or PROVEDOR_NARRACAO_PADRAO, **n}
 
