@@ -82,6 +82,7 @@ export interface Veio {
   origem: "voce" | "claude";
   ativo: number;
   criado: string;
+  ultimo: string | null;
 }
 
 export interface FiltrosMina {
@@ -147,6 +148,8 @@ export interface EstadoMina {
   automatico: boolean;
   tem_chave: boolean;
   custo_busca: number;
+  por_garimpo: number;
+  proximos: string[];
   canais: { slug: string; nome: string; tema: string }[];
 }
 

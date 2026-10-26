@@ -58,7 +58,10 @@ _trava_automatico = threading.Lock()
 def _db():
     con = _banco()
     con.execute("""create table if not exists veios (
-        id integer primary key, termo text unique, canal text, origem text, ativo int, criado text)""")
+        id integer primary key, termo text unique, canal text, origem text, ativo int, criado text,
+        ultimo text)""")
+    if "ultimo" not in {c[1] for c in con.execute("pragma table_info(veios)")}:
+        con.execute("alter table veios add column ultimo text")      # veios de antes do rodízio
     con.execute("""create table if not exists canais_minerados (
         id integer primary key, canal_id text unique, url text, nome text, handle text, descricao text,
         pais text, logo text, inscritos int, videos int, vistas int, nasceu text, idade_dias int,
@@ -131,15 +134,19 @@ def salvar_automatico(ligado):
 
 # ---------------- veios (os termos de busca) ----------------
 def _ler_veio(lin):
-    return dict(zip(["id", "termo", "canal", "origem", "ativo", "criado"], lin))
+    return dict(zip(["id", "termo", "canal", "origem", "ativo", "criado", "ultimo"], lin))
 
 
-def veios(so_ativos=False):
+SELECT_VEIO = "select id, termo, canal, origem, ativo, criado, ultimo from veios"
+
+
+def veios(so_ativos=False, por_rodizio=False):
+    """Os veios. por_rodizio: na ordem em que o garimpo vai pegá-los — quem nunca foi buscado primeiro,
+    depois o que está há mais tempo sem ir. É assim que 20 veios cabem num garimpo de 12 sem nenhum ficar de fora."""
     con = _db()
-    sql = "select id, termo, canal, origem, ativo, criado from veios"
-    if so_ativos:
-        sql += " where ativo=1"
-    out = [_ler_veio(l) for l in con.execute(sql + " order by ativo desc, termo")]
+    sql = SELECT_VEIO + (" where ativo=1" if so_ativos else "")
+    ordem = " order by ultimo is not null, ultimo, id" if por_rodizio else " order by ativo desc, termo"
+    out = [_ler_veio(l) for l in con.execute(sql + ordem)]
     con.close()
     return out
 
@@ -253,8 +260,9 @@ def garimpar(termos=None, filtros_pedidos=None):
     if not ch:
         raise ValueError("Falta a chave da API do YouTube. Cole-a em Chaves › YouTube para o garimpo funcionar.")
     f = {**filtros(), **(filtros_pedidos or {})}
+    do_rodizio = veios(so_ativos=True, por_rodizio=True)[:MAX_VEIOS_POR_GARIMPO] if termos is None else []
     lista = [re.sub(r"\s+", " ", str(t)).strip() for t in
-             (termos if termos is not None else [v["termo"] for v in veios(so_ativos=True)])]
+             (termos if termos is not None else [v["termo"] for v in do_rodizio])]
     lista = [t for t in lista if len(t) >= 2][:MAX_VEIOS_POR_GARIMPO]
     if not lista:
         raise ValueError("Cadastre pelo menos um veio (um termo de busca) e deixe-o ligado antes de garimpar.")
@@ -302,6 +310,12 @@ def garimpar(termos=None, filtros_pedidos=None):
     finally:
         if gasto:
             _gastar(gasto)
+        if do_rodizio:
+            con = _db()      # quem foi buscado vai para o fim da fila do rodízio
+            con.executemany("update veios set ultimo=datetime('now','localtime') where id=?",
+                            [(v["id"],) for v in do_rodizio])
+            con.commit()
+            con.close()
 
     con = _db()
     fora = {l[0] for l in con.execute("select canal_id from canais_minerados where situacao!='novo'")}
@@ -484,4 +498,6 @@ def estado():
     return {"itens": lista("novo"), "contas": contas(), "veios": veios(), "filtros": filtros(),
             "padroes": FILTROS, "cota": cota(), "ultimo": ultimo_garimpo(), "automatico": automatico(),
             "tem_chave": bool(chave()), "custo_busca": CUSTO["search"],
+            "por_garimpo": MAX_VEIOS_POR_GARIMPO,
+            "proximos": [v["termo"] for v in veios(so_ativos=True, por_rodizio=True)[:MAX_VEIOS_POR_GARIMPO]],
             "canais": [{"slug": s, "nome": c["nome"], "tema": c["tema"]} for s, c in canais().items()]}

@@ -104,6 +104,7 @@ function CartaoMinerado({ c, aba }: { c: CanalMinerado; aba: Aba }) {
 }
 
 function Veios({ d }: { d: EstadoMina }) {
+  const proximos = new Set(d.proximos);
   const t = useT();
   const qc = useQueryClient();
   const [termo, setTermo] = useState("");
@@ -128,7 +129,10 @@ function Veios({ d }: { d: EstadoMina }) {
     <div className="veios">
       <div className="chips">
         {d.veios.map((v) => (
-          <span key={v.id} className={`veio ${v.ativo ? "on" : ""}`} title={v.origem === "claude" ? t("app.mina.veio_do_claude") : ""}>
+          <span key={v.id} className={`veio ${v.ativo ? "on" : ""} ${proximos.has(v.termo) ? "proximo" : ""}`}
+                title={[v.origem === "claude" ? t("app.mina.veio_do_claude") : "",
+                        v.ultimo ? t("app.mina.veio_ultimo", { quando: v.ultimo }) : t("app.mina.veio_nunca")]
+                        .filter(Boolean).join(" · ")}>
             <button className="lig" title={t(v.ativo ? "app.mina.veio_desligar" : "app.mina.veio_ligar")}
                     onClick={() => alternar.mutate(v)}><Power size={12} /></button>
             {v.termo}
@@ -137,6 +141,9 @@ function Veios({ d }: { d: EstadoMina }) {
         ))}
         {d.veios.length === 0 && <p className="sub">{t("app.mina.veios_vazio")}</p>}
       </div>
+      {d.proximos.length < d.veios.filter((v) => v.ativo).length && (
+        <p className="sub dica">{t("app.mina.rodizio", { n: d.por_garimpo, total: d.veios.filter((v) => v.ativo).length })}</p>
+      )}
 
       <div className="linha-veio">
         <form onSubmit={(e) => { e.preventDefault(); guardar.mutate(termo); }}>
