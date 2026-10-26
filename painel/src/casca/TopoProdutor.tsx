@@ -1,11 +1,12 @@
-// Moldura do nível do produtor (fora de um canal): barra de cima com a marca, as três áreas — Início, Modelagem
-// e Configurações — e, à direita, busca, situação da instalação, avisos e tema. As Configurações têm barra
+// Moldura do nível do produtor (fora de um canal): barra de cima com a marca, as quatro áreas — Início,
+// Mineração, Modelagem e Configurações — e, à direita, busca, situação da instalação, avisos e tema. As Configurações têm barra
 // lateral própria, agrupada por assunto, e cada painel abre com título e uma linha dizendo para que serve.
 import { ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowDownToLine, ChartPie, CircleAlert, CircleCheck, LayoutGrid, ListChecks, Settings, Target, Trash2, Tv,
+  ArrowDownToLine, ChartPie, CircleAlert, CircleCheck, LayoutGrid, ListChecks, Pickaxe, Settings, Target, Trash2,
+  Tv,
 } from "lucide-react";
 import { Canais, pegar } from "../api";
 import { useSistema, useT } from "../textos";
@@ -22,9 +23,10 @@ export function Marca() {
   );
 }
 
-// as três áreas do produtor; dentro do canal a navegação é outra (CascaCanal)
+// as áreas do produtor; dentro do canal a navegação é outra (CascaCanal)
 const AREAS: { para: string; rot: string; icone: typeof LayoutGrid; fim?: boolean }[] = [
   { para: "/", rot: "app.produtor.nav_inicio", icone: LayoutGrid, fim: true },
+  { para: "/mineracao", rot: "app.produtor.nav_mina", icone: Pickaxe },
   { para: "/modelagem", rot: "app.produtor.nav_modelagem", icone: Target },
   { para: "/config", rot: "app.produtor.nav_config", icone: Settings },
 ];

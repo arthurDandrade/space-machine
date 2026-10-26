@@ -9,6 +9,7 @@ import { AprendizadosTela, ChavesTela, IdentidadeTela, ModelosTela, RegrasTela }
 import { AtualizarTela, CanaisConfigTela, ConsumoTela, LimpezaTela, PassosTela } from "./telas/Produtor";
 import { BlocoTela } from "./telas/Bloco";
 import { EscolhaCanais } from "./telas/EscolhaCanais";
+import { Mineracao } from "./telas/Mineracao";
 import { Modelagem } from "./telas/Modelagem";
 import { EsperandoCanal, VideosCanal } from "./telas/ListasCanal";
 import { CalendarioTela, IdeiasTela, NovoVideoTela, QuadroTela } from "./telas/Planejamento";
@@ -52,6 +53,7 @@ export const rotas = createBrowserRouter(
       errorElement: <Erro />,
       children: [
         { path: "/", element: <EscolhaCanais /> },
+        { path: "/mineracao", element: <Mineracao /> },
         { path: "/modelagem", element: <Modelagem /> },
         {
           path: "/config",

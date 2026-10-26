@@ -74,6 +74,82 @@ export interface CanaisModelo {
   tem_chave: boolean;
 }
 
+// ---- mineração de canais (space_machine/mineracao.py) ----
+export interface Veio {
+  id: number;
+  termo: string;
+  canal: string;
+  origem: "voce" | "claude";
+  ativo: number;
+  criado: string;
+}
+
+export interface FiltrosMina {
+  dias: number;
+  idade_max_meses: number;
+  inscritos_min: number;
+  inscritos_max: number;
+  vistas_min: number;
+  surto_min: number;
+  pais: string;
+  idioma: string;
+  por_veio: number;
+}
+
+export interface CanalMinerado {
+  id: number;
+  canal_id: string;
+  url: string;
+  nome: string;
+  handle: string;
+  descricao: string;
+  pais: string;
+  inscritos: number;
+  videos: number;
+  vistas: number;
+  nasceu: string;
+  idade_dias: number;
+  meses: number;
+  surto: number;
+  vistas_dia: number;
+  nota: number;
+  video_titulo: string;
+  video_url: string;
+  video_vistas: number;
+  video_quando: string;
+  de_veio: string;
+  situacao: "novo" | "descartado" | "modelo";
+  notas: string;
+  achado: string;
+  atualizado: string;
+  tem_logo: boolean;
+}
+
+export interface Garimpo {
+  quando: string;
+  veios: number;
+  olhados: number;
+  aprovados: number;
+  novos: number;
+  cota: number;
+  erro: string;
+}
+
+export interface EstadoMina {
+  itens: CanalMinerado[];
+  situacao: string;
+  contas: { novo: number; descartado: number; modelo: number };
+  veios: Veio[];
+  filtros: FiltrosMina;
+  padroes: FiltrosMina;
+  cota: { usada: number; limite: number; sobra: number; dia: string };
+  ultimo: Garimpo | null;
+  automatico: boolean;
+  tem_chave: boolean;
+  custo_busca: number;
+  canais: { slug: string; nome: string; tema: string }[];
+}
+
 export interface Fila {
   ativa: boolean;
   status: string;
@@ -309,6 +385,8 @@ export const enviar = <T = { ok: boolean },>(url: string, corpo?: unknown) =>
 export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${canal}/marca/${qual}`;
 // logo guardado de um canal que você quer modelar (cache/modelos/ nos dados)
 export const urlLogoModelo = (id: number) => `/api/modelar/${id}/logo`;
+// logo guardado de um canal garimpado (cache/mineracao/ nos dados)
+export const urlLogoMinerado = (id: number) => `/api/mineracao/${id}/logo`;
 // v: versão da capa do vídeo (muda quando a thumbnail muda), para o navegador não mostrar a antiga do cache
 export const urlCapa = (canal: string, video: string, nn?: string, v?: number) => {
   const q = [nn ? `nn=${nn}` : "", v ? `v=${v}` : ""].filter(Boolean).join("&");

@@ -18,8 +18,8 @@ from urllib.parse import quote
 from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, modelar,
-               primeiros_passos, reels, textos)
+from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, mineracao,
+               modelar, primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, formatos, ler_json
@@ -1041,6 +1041,98 @@ def excluir_a_modelar(ref_id: int):
 def logo_a_modelar(ref_id: int):
     try:
         f = modelar.arquivo_logo(ref_id)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    if not f:
+        raise HTTPException(404, "esse canal não tem logo guardado")
+    return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+# ---------------- mineração de canais ----------------
+@api.get("/mineracao")
+def mineracao_estado(situacao: str = "novo"):
+    """A tela inteira num pedido. Aproveita para disparar o garimpo do dia, se estiver ligado e já estiver na hora."""
+    mineracao.garimpar_atras_das_cortinas()
+    return {**mineracao.estado(), "itens": mineracao.lista(situacao), "situacao": situacao}
+
+
+@api.post("/mineracao/garimpar")
+def mineracao_garimpar(termos: list = Body(None, embed=True), filtros: dict = Body(None, embed=True)):
+    """Garimpa agora. Sem termos, vale a lista de veios ligados."""
+    try:
+        return {"ok": True, "resumo": mineracao.garimpar(termos, filtros)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@api.post("/mineracao/filtros")
+def mineracao_filtros(filtros: dict = Body({}, embed=True), automatico: bool = Body(None, embed=True)):
+    if automatico is not None:
+        mineracao.salvar_automatico(automatico)
+    return {"ok": True, "filtros": mineracao.salvar_filtros(filtros), "automatico": mineracao.automatico()}
+
+
+@api.get("/mineracao/veios")
+def mineracao_veios():
+    return {"veios": mineracao.veios()}
+
+
+@api.post("/mineracao/veios")
+def mineracao_novo_veio(termo: str = Body(..., embed=True), canal: str = Body("", embed=True)):
+    try:
+        return {"ok": True, "veio": mineracao.salvar_veio(termo, canal)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@api.post("/mineracao/veios/sugerir")
+def mineracao_sugerir_veios(canal: str = Body(..., embed=True)):
+    """O Claude tira do tema do canal os termos de busca (nada aqui fala com o YouTube)."""
+    try:
+        return {"ok": True, "termos": mineracao.sugerir_veios(canal)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
+
+
+@api.post("/mineracao/veios/{ref_id}")
+def mineracao_alternar_veio(ref_id: int, ativo: bool = Body(..., embed=True)):
+    mineracao.alternar_veio(ref_id, ativo)
+    return {"ok": True}
+
+
+@api.post("/mineracao/veios/{ref_id}/excluir")
+def mineracao_excluir_veio(ref_id: int):
+    mineracao.remover_veio(ref_id)
+    return {"ok": True}
+
+
+@api.post("/mineracao/{ref_id}/{acao}")
+def mineracao_acao(ref_id: int, acao: str, notas: str = Body("", embed=True)):
+    """descartar · voltar · modelar (vai para a Modelagem) · notas · excluir."""
+    try:
+        if acao == "descartar":
+            mineracao.descartar(ref_id)
+        elif acao == "voltar":
+            mineracao.voltar(ref_id)
+        elif acao == "modelar":
+            return {"ok": True, "item": mineracao.promover(ref_id)}
+        elif acao == "notas":
+            mineracao.salvar_notas(ref_id, notas)
+        elif acao == "excluir":
+            mineracao.remover(ref_id)
+        else:
+            raise HTTPException(404, "essa ação não existe")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@api.get("/mineracao/{ref_id}/logo")
+def mineracao_logo(ref_id: int):
+    try:
+        f = mineracao.arquivo_logo(ref_id)
     except ValueError as e:
         raise HTTPException(404, str(e))
     if not f:

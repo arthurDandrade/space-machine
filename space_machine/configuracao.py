@@ -428,6 +428,8 @@ ETAPAS_CLAUDE = [
     ("qa", "Corrigir QA", "Quando o QA reprova, corrige o cenas.json uma vez antes de parar."),
     ("descricao", "Descrição do YouTube", "Botão Gerar da publicação: escreve o resumo e o convite para se inscrever "
      "(os capítulos com minutagem saem das durações dos blocos, sem o Claude)."),
+    ("termos_mineracao", "Termos de garimpo", "Botão Sugerir da Mineração: tira do tema deste canal os termos de "
+     "busca para garimpar canais parecidos no YouTube."),
 ]
 
 

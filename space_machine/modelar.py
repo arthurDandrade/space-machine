@@ -99,8 +99,9 @@ def _do_youtube(chave, tipo, valor):
     raise ValueError("Não achei esse canal no YouTube.")
 
 
-def _guardar_logo(canal_id, url):
+def _guardar_logo(canal_id, url, pasta=None):
     """Baixa o logo que veio na resposta da API para o cache. Sem logo, o card mostra as iniciais."""
+    pasta = pasta or CACHE
     if not url:
         return ""
     try:
@@ -109,8 +110,8 @@ def _guardar_logo(canal_id, url):
             return ""
     except requests.RequestException:
         return ""
-    CACHE.mkdir(parents=True, exist_ok=True)
-    arq = CACHE / f"{canal_id}.jpg"
+    pasta.mkdir(parents=True, exist_ok=True)
+    arq = pasta / f"{canal_id}.jpg"
     arq.write_bytes(r.content)
     return arq.name
 
