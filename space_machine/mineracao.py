@@ -1,48 +1,56 @@
-"""Mineração de canais: garimpa no YouTube canais novos que estão estourando, para você ver o que dá certo.
+"""Mineração: garimpa no YouTube os vídeos que estouraram num nicho, para você ver o que está dando certo.
 
-Fica em <dados>/space_machine.sqlite (tabelas veios, canais_minerados, garimpos, cota_youtube) e os logos em
-<dados>/cache/mineracao/. O canal que te interessar vai para a Modelagem com um clique (modelar.py).
+Você escreve o nicho ("arquitetura", "NFL"); o Claude transforma isso em termos de busca uma vez só e o garimpo
+devolve uma grade de VÍDEOS — thumbnail, título, views e o multiplicador (quantas vezes o vídeo passou da
+audiência do próprio canal). O canal que te interessar vai para a Modelagem com um clique (modelar.py).
+
+Fica em <dados>/space_machine.sqlite (nichos, videos_minerados, garimpos, cota_youtube); thumbnails e logos em
+<dados>/cache/mineracao/.
 
 Como garimpa, pela API oficial do YouTube (chave YOUTUBE_API_KEY em <dados>/.env, no painel em Chaves › YouTube):
-  1. search.list  de cada veio (termo de busca), order=viewCount, só vídeos dos últimos N dias → 100 unidades
-  2. videos.list   em lotes de 50, para as views de verdade e o canal de cada vídeo          → 1 unidade
-  3. channels.list em lotes de 50, para inscritos, total de vídeos e a data de nascimento    → 1 unidade
-Um garimpo de 5 veios custa ~510 das 10.000 unidades por dia da chave: dá uns 19 garimpos por dia.
+  1. search.list  de cada termo do nicho, order=viewCount, só vídeos dos últimos N dias → 100 unidades
+  2. videos.list   em lotes de 50, para as views de verdade e o canal de cada vídeo     → 1 unidade
+  3. channels.list em lotes de 50, para inscritos, total de vídeos e a data de nascimento → 1 unidade
+Um nicho de 8 termos custa ~810 das 10.000 unidades por dia da chave: dá uns 12 garimpos por dia.
 
 A regra de 2026-10-11 continua valendo para a PRODUÇÃO inteira: nenhum script da produção toca no YouTube. Isto
 aqui é pesquisa de canal pela API com chave, no botão do painel (ou um garimpo por dia, se você deixar ligado):
-nada abre página, raspa busca nem baixa mídia — só o JSON da API e o logo que ela mesma devolve. A decisão de
-ampliar a exceção do modelar.py para cá é de 2026-10-26 e está escrita no CLAUDE.md.
+nada abre página nem raspa busca — só o JSON da API e as imagens (thumbnail e logo) que ela mesma devolve. A
+decisão de ampliar a exceção do modelar.py para cá é de 2026-10-26 e está escrita no CLAUDE.md.
 """
 import datetime as dt
 import json
 import math
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
 
 from . import modelar, motor_claude
-from .modelar import _campos, _chamar, _guardar_logo, chave
+from .modelar import _campos, _chamar, chave
 from .motor_claude import _banco, canais
 from .sistema import DADOS, config, salvar_config
 
 CACHE = DADOS / "cache" / "mineracao"
+THUMBS = CACHE / "thumbs"
 
 # o que cada chamada da API tira da cota de 10.000 unidades por dia
 CUSTO = {"search": 100, "videos": 1, "channels": 1}
 COTA_DIA = 10000
-MAX_VEIOS_POR_GARIMPO = 12          # 12 veios = 1.200 unidades, um sexto da cota do dia
+TERMOS_POR_NICHO = 8            # 8 termos = 800 unidades por garimpo de um nicho
 
-# o que é "canal novo estourando". O painel manda os seus; estes são os padrões de fábrica.
+# o que é "vídeo que estourou num canal novo". O painel manda os seus; estes são os padrões de fábrica.
 FILTROS = {
     "dias": 90,                 # só vídeos publicados nos últimos N dias
     "idade_max_meses": 18,      # o canal nasceu no máximo há isso (0 = sem limite)
     "inscritos_min": 1000,      # abaixo disso é canal parado, não canal estourando
     "inscritos_max": 500000,    # acima disso já é canal grande (0 = sem limite)
-    "vistas_min": 50000,        # o vídeo achado fez pelo menos isso de views
+    "vistas_min": 50000,        # o vídeo fez pelo menos isso de views
     "surto_min": 1.0,           # views do vídeo ÷ inscritos do canal
     "pais": "",                 # regionCode da busca (vazio = sem filtro)
     "idioma": "",               # relevanceLanguage da busca
-    "por_veio": 50,             # quantos vídeos trazer de cada veio (50 é o máximo da API)
+    "por_termo": 50,            # quantos vídeos trazer de cada termo (50 é o máximo da API)
 }
 
 # referências da nota (ver _nota): o que vale a parte cheia de cada pedaço
@@ -57,20 +65,22 @@ _trava_automatico = threading.Lock()
 
 def _db():
     con = _banco()
-    con.execute("""create table if not exists veios (
-        id integer primary key, termo text unique, canal text, origem text, ativo int, criado text,
-        ultimo text)""")
-    if "ultimo" not in {c[1] for c in con.execute("pragma table_info(veios)")}:
-        con.execute("alter table veios add column ultimo text")      # veios de antes do rodízio
-    con.execute("""create table if not exists canais_minerados (
-        id integer primary key, canal_id text unique, url text, nome text, handle text, descricao text,
-        pais text, logo text, inscritos int, videos int, vistas int, nasceu text, idade_dias int,
-        surto real, vistas_dia real, nota real, video_titulo text, video_url text, video_vistas int,
-        video_quando text, de_veio text, situacao text, notas text, achado text, atualizado text)""")
+    con.execute("""create table if not exists nichos (
+        id integer primary key, nome text unique, termos text, criado text, ultimo text)""")
+    con.execute("""create table if not exists videos_minerados (
+        id integer primary key, video_id text unique, titulo text, thumb text, vistas int, publicado text,
+        canal_id text, canal_nome text, canal_handle text, canal_url text, canal_logo text, canal_pais text,
+        inscritos int, canal_videos int, canal_vistas int, nasceu text, idade_dias int,
+        surto real, vistas_dia real, nota real, nicho text, termo text, situacao text, notas text,
+        achado text, atualizado text)""")
     con.execute("""create table if not exists garimpos (
         id integer primary key, quando text, veios int, olhados int, aprovados int, novos int, cota int,
         erro text)""")
     con.execute("""create table if not exists cota_youtube (dia text primary key, unidades int)""")
+    # a 1ª Mineração (manhã de 2026-10-26) guardava CANAIS achados por "veios" que você cadastrava; virou grade
+    # de vídeos por nicho no mesmo dia. As duas tabelas de lá não são lidas por ninguém: um garimpo refaz tudo.
+    con.execute("drop table if exists canais_minerados")
+    con.execute("drop table if exists veios")
     return con
 
 
@@ -117,7 +127,7 @@ def salvar_filtros(novos):
             limpos[k] = max(0.0, round(float(v or 0), 2))
         else:
             limpos[k] = max(0, int(v or 0))
-    limpos["por_veio"] = min(50, limpos.get("por_veio") or FILTROS["por_veio"])
+    limpos["por_termo"] = min(50, limpos.get("por_termo") or FILTROS["por_termo"])
     limpos["dias"] = min(365, max(1, limpos.get("dias") or FILTROS["dias"]))
     salvar_config({"mineracao": {"filtros": limpos}})
     return filtros()
@@ -132,75 +142,80 @@ def salvar_automatico(ligado):
     return automatico()
 
 
-# ---------------- veios (os termos de busca) ----------------
-def _ler_veio(lin):
-    return dict(zip(["id", "termo", "canal", "origem", "ativo", "criado", "ultimo"], lin))
+# ---------------- nichos ----------------
+def _ler_nicho(lin):
+    d = dict(zip(["id", "nome", "termos", "criado", "ultimo"], lin))
+    d["termos"] = json.loads(d["termos"] or "[]")
+    return d
 
 
-SELECT_VEIO = "select id, termo, canal, origem, ativo, criado, ultimo from veios"
-
-
-def veios(so_ativos=False, por_rodizio=False):
-    """Os veios. por_rodizio: na ordem em que o garimpo vai pegá-los — quem nunca foi buscado primeiro,
-    depois o que está há mais tempo sem ir. É assim que 20 veios cabem num garimpo de 12 sem nenhum ficar de fora."""
+def nichos(por_rodizio=False):
+    """Os nichos. por_rodizio: na ordem em que o garimpo automático pega — quem nunca foi, depois o mais antigo."""
     con = _db()
-    sql = SELECT_VEIO + (" where ativo=1" if so_ativos else "")
-    ordem = " order by ultimo is not null, ultimo, id" if por_rodizio else " order by ativo desc, termo"
-    out = [_ler_veio(l) for l in con.execute(sql + ordem)]
+    ordem = " order by ultimo is not null, ultimo, id" if por_rodizio else " order by nome"
+    out = [_ler_nicho(l) for l in con.execute("select id, nome, termos, criado, ultimo from nichos" + ordem)]
     con.close()
     return out
 
 
-def salvar_veio(termo, canal="", origem="voce"):
-    """Guarda um termo de busca. Termo repetido não duplica: só volta a ficar ativo."""
-    termo = re.sub(r"\s+", " ", (termo or "")).strip()[:120]
-    if len(termo) < 2:
-        raise ValueError("Escreva o termo de busca (ex.: “history explained”).")
+def um_nicho(nome):
     con = _db()
-    con.execute("""insert into veios (termo, canal, origem, ativo, criado)
-                   values (?,?,?,1,datetime('now','localtime'))
-                   on conflict(termo) do update set ativo=1, canal=excluded.canal""",
-                (termo, canal or "", origem if origem in ("voce", "claude") else "voce"))
-    con.commit()
+    lin = con.execute("select id, nome, termos, criado, ultimo from nichos where nome=?", (nome,)).fetchone()
     con.close()
-    return [v for v in veios() if v["termo"] == termo][0]
+    if not lin:
+        raise ValueError("esse nicho não está na lista")
+    return _ler_nicho(lin)
 
 
-def alternar_veio(ref_id, ativo):
-    con = _db()
-    con.execute("update veios set ativo=? where id=?", (1 if ativo else 0, ref_id))
-    con.commit()
-    con.close()
-
-
-def remover_veio(ref_id):
-    con = _db()
-    con.execute("delete from veios where id=?", (ref_id,))
-    con.commit()
-    con.close()
-
-
-def sugerir_veios(slug):
-    """Termos de busca que o Claude tira do tema, do idioma e do formato DESTE canal (nada vai à rede do YouTube)."""
-    c = canais().get(slug)
-    if not c:
-        raise ValueError("esse canal não existe")
-    sistema = ("Você ajuda a garimpar canais do YouTube parecidos com o canal descrito. Responda só o JSON pedido, "
-               "com termos de busca curtos (2 a 5 palavras) no IDIOMA do canal, do jeito que o público digitaria "
-               "na busca do YouTube. Misture o tema com a cara do formato e com temas vizinhos do mesmo público. "
-               "Nada de nome de canal, de hashtag nem de aspas.")
-    texto = json.dumps({"canal": c["nome"], "tema": c["tema"], "idioma": c["idioma"], "formato": c["formato"],
-                        "quantos": 10}, ensure_ascii=False)
+def _termos_do_claude(nicho, idioma=""):
+    """O Claude transforma o nicho em termos de busca. É o que tira de você a tarefa de cadastrar termo."""
+    sistema = ("Você ajuda a garimpar vídeos do YouTube de um nicho. Responda só o JSON pedido, com termos de "
+               "busca curtos (2 a 5 palavras) do jeito que o público digitaria na busca do YouTube. Cubra o "
+               "nicho por ângulos diferentes (explicação, história, bastidor, erro comum, comparação), sem "
+               "repetir a mesma ideia. Nada de nome de canal, de hashtag nem de aspas.")
+    texto = json.dumps({"nicho": nicho, "idioma": idioma or "o idioma mais usado nesse nicho no YouTube",
+                        "quantos": TERMOS_POR_NICHO}, ensure_ascii=False)
     schema = {"type": "object", "properties": {"termos": {"type": "array", "items": {"type": "string"}}},
               "required": ["termos"]}
-    r = motor_claude.chamar("termos_mineracao", sistema, texto, schema=schema, ctx={"canal": slug}, canal=c)
-    termos, vistos = [], {v["termo"].lower() for v in veios()}
-    for t in (r.get("termos") or [])[:14]:
+    r = motor_claude.chamar("termos_mineracao", sistema, texto, schema=schema)
+    vistos, out = set(), []
+    for t in (r.get("termos") or []):
         t = re.sub(r"\s+", " ", str(t)).strip().strip('"#')[:120]
         if len(t) >= 2 and t.lower() not in vistos:
             vistos.add(t.lower())
-            termos.append(t)
-    return termos
+            out.append(t)
+    if not out:
+        raise ValueError("O Claude não devolveu termo nenhum para esse nicho. Tente escrever de outro jeito.")
+    return out[:TERMOS_POR_NICHO]
+
+
+def salvar_nicho(nome, termos=None):
+    """Guarda o nicho. Sem termos, o Claude escreve os dele na hora (uma vez só: depois ficam guardados)."""
+    nome = re.sub(r"\s+", " ", (nome or "")).strip()[:80]
+    if len(nome) < 2:
+        raise ValueError("Escreva o nicho (ex.: “arquitetura”, “NFL”, “história da aviação”).")
+    termos = [t for t in (termos or []) if len(str(t).strip()) >= 2] or _termos_do_claude(nome, filtros()["idioma"])
+    con = _db()
+    con.execute("""insert into nichos (nome, termos, criado) values (?,?,datetime('now','localtime'))
+                   on conflict(nome) do update set termos=excluded.termos""",
+                (nome, json.dumps(termos, ensure_ascii=False)))
+    con.commit()
+    con.close()
+    return um_nicho(nome)
+
+
+def refazer_termos(nome):
+    """Pede ao Claude outros termos para um nicho que já existe (quando os achados vieram ruins)."""
+    um_nicho(nome)
+    return salvar_nicho(nome, _termos_do_claude(nome, filtros()["idioma"]))
+
+
+def remover_nicho(nome):
+    """Tira o nicho da lista. Os achados dele continuam onde estão."""
+    con = _db()
+    con.execute("delete from nichos where nome=?", (nome,))
+    con.commit()
+    con.close()
 
 
 # ---------------- a nota ----------------
@@ -241,6 +256,46 @@ def _passa(c, idade_dias, vistas_video, f):
     return _surto(vistas_video, c["inscritos"]) >= f["surto_min"]
 
 
+# ---------------- imagens (thumbnail do vídeo e logo do canal) ----------------
+def _melhor(thumbs):
+    for q in ("maxres", "standard", "high", "medium", "default"):
+        if (thumbs.get(q) or {}).get("url"):
+            return thumbs[q]["url"]
+    return ""
+
+
+def _baixar(url, destino):
+    """Guarda a imagem que a própria resposta da API apontou. Sem ela, o card mostra um retângulo vazio."""
+    if not url or destino.exists():
+        return destino.name if destino.exists() else ""
+    try:
+        r = requests.get(url, timeout=20)
+        if not r.ok or not r.headers.get("Content-Type", "").startswith("image/"):
+            return ""
+    except requests.RequestException:
+        return ""
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_bytes(r.content)
+    return destino.name
+
+
+def _baixar_tudo(linhas):
+    """As imagens de uma vez, em paralelo: uma grade de 100 vídeos levaria minutos uma a uma.
+
+    O logo é por CANAL, não por vídeo: baixar o mesmo arquivo em duas threads deixaria um jpg pela metade.
+    """
+    logos = {l["canal_id"]: l["_logo_url"] for l in linhas}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        thumbs = dict(zip([l["video_id"] for l in linhas], pool.map(
+            lambda l: _baixar(l["_thumb_url"], THUMBS / f"{l['video_id']}.jpg"), linhas)))
+        feitos = dict(zip(logos, pool.map(lambda cid: _baixar(logos[cid], CACHE / f"{cid}.jpg"), logos)))
+    for l in linhas:
+        l["thumb"] = thumbs.get(l["video_id"], "")
+        l["canal_logo"] = feitos.get(l["canal_id"], "")
+        l.pop("_thumb_url"), l.pop("_logo_url")
+    return linhas
+
+
 # ---------------- o garimpo ----------------
 def _lotes(itens, n):
     itens = list(itens)
@@ -251,28 +306,24 @@ def _agora_utc(dias):
     return (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=dias)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def garimpar(termos=None, filtros_pedidos=None):
-    """Um garimpo: busca, filtra, pontua e guarda. Devolve o resumo (quantos olhou, aprovou e quanto custou).
-
-    termos: lista de termos só desta vez; sem ela, valem os veios ativos. Canal já descartado por você não volta.
-    """
+def garimpar(nicho=None, filtros_pedidos=None):
+    """Garimpa um nicho e devolve o resumo. Sem nicho, vale o que está há mais tempo sem ser garimpado."""
     ch = chave()
     if not ch:
         raise ValueError("Falta a chave da API do YouTube. Cole-a em Chaves › YouTube para o garimpo funcionar.")
+    lista_nichos = nichos(por_rodizio=True)
+    if not lista_nichos:
+        raise ValueError("Escreva um nicho antes de garimpar (ex.: “arquitetura”).")
+    n = um_nicho(nicho) if nicho else lista_nichos[0]
     f = {**filtros(), **(filtros_pedidos or {})}
-    do_rodizio = veios(so_ativos=True, por_rodizio=True)[:MAX_VEIOS_POR_GARIMPO] if termos is None else []
-    lista = [re.sub(r"\s+", " ", str(t)).strip() for t in
-             (termos if termos is not None else [v["termo"] for v in do_rodizio])]
-    lista = [t for t in lista if len(t) >= 2][:MAX_VEIOS_POR_GARIMPO]
-    if not lista:
-        raise ValueError("Cadastre pelo menos um veio (um termo de busca) e deixe-o ligado antes de garimpar.")
+    termos = n["termos"][:TERMOS_POR_NICHO]
 
     gasto, erro = 0, ""
     try:
-        ids, de_veio = [], {}
-        for termo in lista:
+        ids, de_termo = [], {}
+        for termo in termos:
             p = dict(part="snippet", type="video", order="viewCount", q=termo,
-                     maxResults=min(50, f["por_veio"]), publishedAfter=_agora_utc(f["dias"]))
+                     maxResults=min(50, f["por_termo"]), publishedAfter=_agora_utc(f["dias"]))
             if f["pais"]:
                 p["regionCode"] = f["pais"]
             if f["idioma"]:
@@ -281,8 +332,8 @@ def garimpar(termos=None, filtros_pedidos=None):
             gasto += CUSTO["search"]
             for it in achados:
                 vid = (it.get("id") or {}).get("videoId")
-                if vid and vid not in de_veio:
-                    de_veio[vid] = termo
+                if vid and vid not in de_termo:
+                    de_termo[vid] = termo
                     ids.append(vid)
 
         videos = {}
@@ -291,80 +342,74 @@ def garimpar(termos=None, filtros_pedidos=None):
                 videos[v["id"]] = v
             gasto += CUSTO["videos"]
 
-        # um canal pode aparecer em vários vídeos: vale o que fez mais views
-        melhor = {}
-        for vid, v in videos.items():
-            cid = (v.get("snippet") or {}).get("channelId")
-            vistas = int((v.get("statistics") or {}).get("viewCount") or 0)
-            if cid and (cid not in melhor or vistas > melhor[cid][1]):
-                melhor[cid] = (vid, vistas)
-
+        canais_ids = {(v.get("snippet") or {}).get("channelId") for v in videos.values()} - {None}
         brutos = {}
-        for lote in _lotes(melhor, 50):
+        for lote in _lotes(canais_ids, 50):
             for c in _chamar(ch, "channels", part="snippet,statistics", id=",".join(lote)).get("items") or []:
                 brutos[c["id"]] = c
             gasto += CUSTO["channels"]
     except ValueError as e:
-        erro = str(e)
-        brutos, melhor, videos, de_veio = {}, {}, {}, {}
+        erro, videos, brutos, de_termo = str(e), {}, {}, {}
     finally:
         if gasto:
             _gastar(gasto)
-        if do_rodizio:
-            con = _db()      # quem foi buscado vai para o fim da fila do rodízio
-            con.executemany("update veios set ultimo=datetime('now','localtime') where id=?",
-                            [(v["id"],) for v in do_rodizio])
-            con.commit()
-            con.close()
+        con = _db()
+        con.execute("update nichos set ultimo=datetime('now','localtime') where nome=?", (n["nome"],))
+        con.commit()
+        con.close()
 
     con = _db()
-    fora = {l[0] for l in con.execute("select canal_id from canais_minerados where situacao!='novo'")}
-    ja = {l[0] for l in con.execute("select canal_id from canais_minerados")}
-    aprovados, novos = 0, 0
-    for cid, bruto in brutos.items():
-        if cid in fora:
+    fora = {l[0] for l in con.execute("select distinct canal_id from videos_minerados where situacao='descartado'")}
+    ja = {l[0] for l in con.execute("select video_id from videos_minerados")}
+    linhas = []
+    for vid, v in videos.items():
+        sn = v.get("snippet") or {}
+        cid = sn.get("channelId")
+        bruto = brutos.get(cid)
+        if not bruto or cid in fora:
             continue
         c = _campos(bruto)
+        vistas = int((v.get("statistics") or {}).get("viewCount") or 0)
         nasceu = ((bruto.get("snippet") or {}).get("publishedAt") or "")[:10]
         idade = _dias_desde(nasceu)
-        vid, vistas_video = melhor[cid]
-        if not _passa(c, idade, vistas_video, f):
+        if not _passa(c, idade, vistas, f):
             continue
-        sn = videos[vid].get("snippet") or {}
-        surto = _surto(vistas_video, c["inscritos"])
+        surto = _surto(vistas, c["inscritos"])
         vistas_dia = round(c["vistas"] / max(idade or 1, 1), 1)
-        linha = {
-            **{k: v for k, v in c.items() if k != "_logo_url"},
-            "logo": _guardar_logo(cid, c["_logo_url"], CACHE),
+        linhas.append({
+            "video_id": vid, "titulo": (sn.get("title") or "")[:300], "vistas": vistas,
+            "publicado": (sn.get("publishedAt") or "")[:10], "canal_id": cid, "canal_nome": c["nome"],
+            "canal_handle": c["handle"], "canal_url": c["url"], "canal_pais": c["pais"],
+            "inscritos": c["inscritos"], "canal_videos": c["videos"], "canal_vistas": c["vistas"],
             "nasceu": nasceu, "idade_dias": idade or 0, "surto": surto, "vistas_dia": vistas_dia,
-            "nota": _nota(surto, vistas_dia, idade), "video_titulo": (sn.get("title") or "")[:300],
-            "video_url": f"https://www.youtube.com/watch?v={vid}", "video_vistas": vistas_video,
-            "video_quando": (sn.get("publishedAt") or "")[:10], "de_veio": de_veio.get(vid, ""),
-        }
-        con.execute("""insert into canais_minerados (canal_id, url, nome, handle, descricao, pais, logo, inscritos,
-                       videos, vistas, nasceu, idade_dias, surto, vistas_dia, nota, video_titulo, video_url,
-                       video_vistas, video_quando, de_veio, situacao, notas, achado, atualizado)
-                       values (:canal_id,:url,:nome,:handle,:descricao,:pais,:logo,:inscritos,:videos,:vistas,
-                       :nasceu,:idade_dias,:surto,:vistas_dia,:nota,:video_titulo,:video_url,:video_vistas,
-                       :video_quando,:de_veio,'novo','',datetime('now','localtime'),datetime('now','localtime'))
-                       on conflict(canal_id) do update set nome=excluded.nome, handle=excluded.handle,
-                       url=excluded.url, descricao=excluded.descricao, logo=excluded.logo,
-                       inscritos=excluded.inscritos, videos=excluded.videos, vistas=excluded.vistas,
-                       idade_dias=excluded.idade_dias, surto=excluded.surto, vistas_dia=excluded.vistas_dia,
-                       nota=excluded.nota, video_titulo=excluded.video_titulo, video_url=excluded.video_url,
-                       video_vistas=excluded.video_vistas, video_quando=excluded.video_quando,
-                       de_veio=excluded.de_veio, atualizado=excluded.atualizado""", linha)
-        aprovados += 1
-        novos += cid not in ja
+            "nota": _nota(surto, vistas_dia, idade), "nicho": n["nome"], "termo": de_termo.get(vid, ""),
+            "_thumb_url": _melhor(sn.get("thumbnails") or {}), "_logo_url": c["_logo_url"],
+        })
+    _baixar_tudo(linhas)
+    for l in linhas:
+        con.execute("""insert into videos_minerados (video_id, titulo, thumb, vistas, publicado, canal_id,
+                       canal_nome, canal_handle, canal_url, canal_logo, canal_pais, inscritos, canal_videos,
+                       canal_vistas, nasceu, idade_dias, surto, vistas_dia, nota, nicho, termo, situacao, notas,
+                       achado, atualizado)
+                       values (:video_id,:titulo,:thumb,:vistas,:publicado,:canal_id,:canal_nome,:canal_handle,
+                       :canal_url,:canal_logo,:canal_pais,:inscritos,:canal_videos,:canal_vistas,:nasceu,
+                       :idade_dias,:surto,:vistas_dia,:nota,:nicho,:termo,'novo','',
+                       datetime('now','localtime'),datetime('now','localtime'))
+                       on conflict(video_id) do update set titulo=excluded.titulo, thumb=excluded.thumb,
+                       vistas=excluded.vistas, canal_nome=excluded.canal_nome, canal_logo=excluded.canal_logo,
+                       inscritos=excluded.inscritos, canal_videos=excluded.canal_videos,
+                       canal_vistas=excluded.canal_vistas, idade_dias=excluded.idade_dias, surto=excluded.surto,
+                       vistas_dia=excluded.vistas_dia, nota=excluded.nota, atualizado=excluded.atualizado""", l)
+    novos = sum(1 for l in linhas if l["video_id"] not in ja)
     con.execute("""insert into garimpos (quando, veios, olhados, aprovados, novos, cota, erro)
                    values (datetime('now','localtime'),?,?,?,?,?,?)""",
-                (len(lista), len(brutos), aprovados, novos, gasto, erro))
+                (len(termos), len(videos), len(linhas), novos, gasto, erro))
     con.commit()
     con.close()
-    if erro and not aprovados:
+    if erro and not linhas:
         raise ValueError(erro)
-    return {"veios": len(lista), "olhados": len(brutos), "aprovados": aprovados, "novos": novos,
-            "cota": gasto, "erro": erro}
+    return {"nicho": n["nome"], "termos": len(termos), "olhados": len(videos), "aprovados": len(linhas),
+            "novos": novos, "cota": gasto, "erro": erro}
 
 
 def ultimo_garimpo():
@@ -374,12 +419,12 @@ def ultimo_garimpo():
     con.close()
     if not lin:
         return None
-    return dict(zip(["quando", "veios", "olhados", "aprovados", "novos", "cota", "erro"], lin))
+    return dict(zip(["quando", "termos", "olhados", "aprovados", "novos", "cota", "erro"], lin))
 
 
 def garimpar_atras_das_cortinas():
-    """O garimpo do dia: se o último foi há mais de 20 h e há veios ligados, roda numa thread (ninguém espera)."""
-    if not automatico() or not chave() or not veios(so_ativos=True):
+    """O garimpo do dia: se o último foi há mais de 20 h e existe nicho, roda numa thread (ninguém espera)."""
+    if not automatico() or not chave() or not nichos():
         return
     u = ultimo_garimpo()
     if u and u["quando"]:
@@ -389,7 +434,7 @@ def garimpar_atras_das_cortinas():
             passou = VALIDADE_AUTOMATICO + 1
         if passou < VALIDADE_AUTOMATICO:
             return
-    if cota()["sobra"] < CUSTO["search"] * len(veios(so_ativos=True)):
+    if cota()["sobra"] < CUSTO["search"] * TERMOS_POR_NICHO:
         return
     if not _trava_automatico.acquire(blocking=False):
         return
@@ -405,32 +450,45 @@ def garimpar_atras_das_cortinas():
     threading.Thread(target=rodar, daemon=True).start()
 
 
-# ---------------- a lista do painel ----------------
-NOMES = ["id", "canal_id", "url", "nome", "handle", "descricao", "pais", "logo", "inscritos", "videos", "vistas",
-         "nasceu", "idade_dias", "surto", "vistas_dia", "nota", "video_titulo", "video_url", "video_vistas",
-         "video_quando", "de_veio", "situacao", "notas", "achado", "atualizado"]
-SELECT = f"select {', '.join(NOMES)} from canais_minerados"
+# ---------------- a grade do painel ----------------
+NOMES = ["id", "video_id", "titulo", "thumb", "vistas", "publicado", "canal_id", "canal_nome", "canal_handle",
+         "canal_url", "canal_logo", "canal_pais", "inscritos", "canal_videos", "canal_vistas", "nasceu",
+         "idade_dias", "surto", "vistas_dia", "nota", "nicho", "termo", "situacao", "notas", "achado",
+         "atualizado"]
+SELECT = f"select {', '.join(NOMES)} from videos_minerados"
+ORDENS = {"nota": "nota desc, vistas desc", "surto": "surto desc, vistas desc",
+          "vistas": "vistas desc", "novo": "publicado desc, vistas desc"}
 
 
 def _ler(lin):
     d = dict(zip(NOMES, lin))
-    d["tem_logo"] = bool(d["logo"]) and (CACHE / d["logo"]).exists()
+    d["tem_thumb"] = bool(d["thumb"]) and (THUMBS / d["thumb"]).exists()
+    d["tem_logo"] = bool(d["canal_logo"]) and (CACHE / d["canal_logo"]).exists()
     d["meses"] = round((d["idade_dias"] or 0) / 30.4, 1)
+    d["video_url"] = f"https://www.youtube.com/watch?v={d['video_id']}"
     return d
 
 
-def lista(situacao="novo"):
+def lista(situacao="novo", nicho="", ordem="nota"):
     con = _db()
-    sql = f"{SELECT} where situacao=?" if situacao in SITUACOES else SELECT
-    args = (situacao,) if situacao in SITUACOES else ()
-    out = [_ler(l) for l in con.execute(sql + " order by nota desc, video_vistas desc", args)]
+    onde, args = ["situacao=?"], [situacao if situacao in SITUACOES else "novo"]
+    if nicho:
+        onde.append("nicho=?")
+        args.append(nicho)
+    out = [_ler(l) for l in con.execute(
+        f"{SELECT} where {' and '.join(onde)} order by {ORDENS.get(ordem, ORDENS['nota'])}", args)]
     con.close()
     return out
 
 
-def contas():
+def contas(nicho=""):
     con = _db()
-    c = dict(con.execute("select situacao, count(*) from canais_minerados group by situacao"))
+    sql = "select situacao, count(*) from videos_minerados"
+    args = ()
+    if nicho:
+        sql += " where nicho=?"
+        args = (nicho,)
+    c = dict(con.execute(sql + " group by situacao", args))
     con.close()
     return {s: c.get(s, 0) for s in SITUACOES}
 
@@ -440,64 +498,74 @@ def um(ref_id):
     lin = con.execute(f"{SELECT} where id=?", (ref_id,)).fetchone()
     con.close()
     if not lin:
-        raise ValueError("esse canal não está na mineração")
+        raise ValueError("esse vídeo não está na mineração")
     return _ler(lin)
 
 
-def _situacao(ref_id, situacao):
-    um(ref_id)
+def descartar(ref_id):
+    """Descarta o CANAL inteiro: os outros vídeos dele somem junto e ele não volta em garimpo nenhum."""
+    v = um(ref_id)
     con = _db()
-    con.execute("update canais_minerados set situacao=? where id=?", (situacao, ref_id))
+    con.execute("update videos_minerados set situacao='descartado' where canal_id=?", (v["canal_id"],))
     con.commit()
     con.close()
 
 
-def descartar(ref_id):
-    """Sai da lista e não volta em garimpo nenhum (é assim que a lista fica limpa com o tempo)."""
-    _situacao(ref_id, "descartado")
-
-
 def voltar(ref_id):
-    _situacao(ref_id, "novo")
+    v = um(ref_id)
+    con = _db()
+    con.execute("update videos_minerados set situacao='novo' where canal_id=? and situacao='descartado'",
+                (v["canal_id"],))
+    con.commit()
+    con.close()
 
 
 def promover(ref_id):
-    """Manda o canal para a Modelagem (modelar.py) e marca aqui que ele já virou modelo."""
-    c = um(ref_id)
-    item = modelar.adicionar(c["url"])
-    _situacao(ref_id, "modelo")
+    """Manda o canal do vídeo para a Modelagem (modelar.py) e marca aqui que ele já virou modelo."""
+    v = um(ref_id)
+    item = modelar.adicionar(v["canal_url"])
+    con = _db()
+    con.execute("update videos_minerados set situacao='modelo' where canal_id=? and situacao='novo'",
+                (v["canal_id"],))
+    con.commit()
+    con.close()
     return item
 
 
 def salvar_notas(ref_id, notas):
     um(ref_id)
     con = _db()
-    con.execute("update canais_minerados set notas=? where id=?", ((notas or "").strip()[:2000], ref_id))
+    con.execute("update videos_minerados set notas=? where id=?", ((notas or "").strip()[:2000], ref_id))
     con.commit()
     con.close()
 
 
 def remover(ref_id):
-    c = um(ref_id)
+    v = um(ref_id)
     con = _db()
-    con.execute("delete from canais_minerados where id=?", (ref_id,))
+    con.execute("delete from videos_minerados where id=?", (ref_id,))
     con.commit()
     con.close()
-    if c["logo"]:
-        (CACHE / c["logo"]).unlink(missing_ok=True)
+    if v["thumb"]:
+        (THUMBS / v["thumb"]).unlink(missing_ok=True)
 
 
-def arquivo_logo(ref_id):
-    c = um(ref_id)
-    arq = CACHE / c["logo"] if c["logo"] else None
+def arquivo_thumb(ref_id):
+    v = um(ref_id)
+    arq = THUMBS / v["thumb"] if v["thumb"] else None
     return arq if arq and arq.exists() else None
 
 
-def estado():
+def arquivo_logo(ref_id):
+    v = um(ref_id)
+    arq = CACHE / v["canal_logo"] if v["canal_logo"] else None
+    return arq if arq and arq.exists() else None
+
+
+def estado(situacao="novo", nicho="", ordem="nota"):
     """Tudo o que a tela da Mineração precisa num pedido só."""
-    return {"itens": lista("novo"), "contas": contas(), "veios": veios(), "filtros": filtros(),
-            "padroes": FILTROS, "cota": cota(), "ultimo": ultimo_garimpo(), "automatico": automatico(),
-            "tem_chave": bool(chave()), "custo_busca": CUSTO["search"],
-            "por_garimpo": MAX_VEIOS_POR_GARIMPO,
-            "proximos": [v["termo"] for v in veios(so_ativos=True, por_rodizio=True)[:MAX_VEIOS_POR_GARIMPO]],
+    return {"itens": lista(situacao, nicho, ordem), "situacao": situacao, "nicho": nicho, "ordem": ordem,
+            "contas": contas(nicho), "nichos": nichos(), "filtros": filtros(), "padroes": FILTROS,
+            "cota": cota(), "ultimo": ultimo_garimpo(), "automatico": automatico(), "tem_chave": bool(chave()),
+            "custo_nicho": CUSTO["search"] * TERMOS_POR_NICHO, "ordens": list(ORDENS),
             "canais": [{"slug": s, "nome": c["nome"], "tema": c["tema"]} for s, c in canais().items()]}

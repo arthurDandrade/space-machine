@@ -1,184 +1,150 @@
-// Mineração: área própria do produtor. Garimpa no YouTube canais novos que estouraram a própria audiência
-// (space_machine/mineracao.py, pela API oficial) e manda para a Modelagem os que você quiser estudar.
-// Nada é aberto nem baixado: o link do card é um link comum, que só vai ao YouTube quando VOCÊ clica.
+// Mineração: área própria do produtor. Você escreve o nicho, o Claude monta as buscas e o garimpo devolve uma
+// grade dos VÍDEOS que estouraram (space_machine/mineracao.py, pela API oficial do YouTube). O canal que te
+// interessar vai para a Modelagem num clique. Nada abre nem baixa vídeo: os links são links comuns, que só vão
+// ao YouTube quando VOCÊ clica; a thumbnail é a imagem que a própria API devolveu, guardada no cache.
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ExternalLink, KeyRound, Pickaxe, Plus, Power, Sparkles, Target, Trash2, Undo2, X,
+  ExternalLink, KeyRound, Pickaxe, Play, RefreshCw, Sparkles, Target, Trash2, Undo2, X,
 } from "lucide-react";
 import {
-  CanalMinerado, EstadoMina, FiltrosMina, Veio, enviar, pegar, urlLogoMinerado,
+  EstadoMina, FiltrosMina, Nicho, VideoMinerado, enviar, pegar, urlLogoMinerado, urlThumbMinerada,
 } from "../api";
 import { CabecaTela, TopoProdutor } from "../casca/TopoProdutor";
 import { compacto, useT } from "../textos";
 
 type Aba = "novo" | "descartado" | "modelo";
-
 const CHAVE = ["mineracao"];
 
-function Logo({ c }: { c: CanalMinerado }) {
-  const [falhou, setFalhou] = useState(false);
-  if (!c.tem_logo || falhou) return <div className="logo-modelo vazio">{c.nome.slice(0, 1).toUpperCase()}</div>;
-  return <div className="logo-modelo"><img src={urlLogoMinerado(c.id)} alt="" onError={() => setFalhou(true)} /></div>;
-}
-
-/** Nota 0–100: metade é o surto, 30% o ritmo do canal, 20% ser jovem (ver _nota em mineracao.py). */
-function Nota({ n }: { n: number }) {
+function Thumb({ v }: { v: VideoMinerado }) {
   const t = useT();
-  const faixa = n >= 70 ? "alta" : n >= 45 ? "media" : "baixa";
-  return <div className={`nota-mina ${faixa}`}><b>{Math.round(n)}</b><span>{t("app.mina.nota")}</span></div>;
+  const [falhou, setFalhou] = useState(false);
+  return (
+    <a className="thumb-mina" href={v.video_url} target="_blank" rel="noreferrer noopener" title={t("app.mina.abrir_video")}>
+      {v.tem_thumb && !falhou
+        ? <img src={urlThumbMinerada(v.id)} alt="" loading="lazy" onError={() => setFalhou(true)} />
+        : <span className="sem"><Play size={22} /></span>}
+      <span className="x-vezes" title={t("app.mina.nota_de", { n: Math.round(v.nota), vistas: compacto(v.vistas_dia), termo: v.termo })}>
+        {v.surto >= 10 ? Math.round(v.surto) : v.surto}x
+      </span>
+      <span className="views">{compacto(v.vistas)}</span>
+    </a>
+  );
 }
 
-function CartaoMinerado({ c, aba }: { c: CanalMinerado; aba: Aba }) {
+function CartaoVideoMinerado({ v, aba }: { v: VideoMinerado; aba: Aba }) {
   const t = useT();
   const qc = useQueryClient();
-  const [notas, setNotas] = useState(c.notas);
+  const [notas, setNotas] = useState(v.notas);
+  const [logoRuim, setLogoRuim] = useState(false);
   const recarregar = () => qc.invalidateQueries({ queryKey: CHAVE });
-  const salvarNotas = useMutation({ mutationFn: (texto: string) => enviar(`/api/mineracao/${c.id}/notas`, { notas: texto }) });
-  const modelar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${c.id}/modelar`), onSettled: recarregar });
-  const descartar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${c.id}/descartar`), onSettled: recarregar });
-  const voltar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${c.id}/voltar`), onSettled: recarregar });
-  const excluir = useMutation({ mutationFn: () => enviar(`/api/mineracao/${c.id}/excluir`), onSettled: recarregar });
+  const salvarNotas = useMutation({ mutationFn: (texto: string) => enviar(`/api/mineracao/${v.id}/notas`, { notas: texto }) });
+  const modelar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${v.id}/modelar`), onSettled: recarregar });
+  const descartar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${v.id}/descartar`), onSettled: recarregar });
+  const voltar = useMutation({ mutationFn: () => enviar(`/api/mineracao/${v.id}/voltar`), onSettled: recarregar });
+  const excluir = useMutation({ mutationFn: () => enviar(`/api/mineracao/${v.id}/excluir`), onSettled: recarregar });
   // guarda sozinho um instante depois de você parar de escrever
   useEffect(() => {
-    if (notas === c.notas) return;
+    if (notas === v.notas) return;
     const id = setTimeout(() => salvarNotas.mutate(notas), 800);
     return () => clearTimeout(id);
-  }, [notas, c.notas]);
+  }, [notas, v.notas]);
 
   return (
-    <div className="modelo minerado">
-      <div className="topo">
-        <Logo c={c} />
-        <div className="t">
-          <b>{c.nome}</b>
-          <span className="sub">{[c.handle && `@${c.handle}`, c.pais, c.meses ? t("app.mina.meses", { n: c.meses }) : ""].filter(Boolean).join(" · ")}</span>
-        </div>
-        <Nota n={c.nota} />
-      </div>
-      <div className="nums quatro">
-        <div className="num"><b>{c.surto}x</b><span>{t("app.mina.surto")}</span></div>
-        <div className="num"><b>{compacto(c.inscritos)}</b><span>{t("app.mina.inscritos")}</span></div>
-        <div className="num"><b>{compacto(c.vistas_dia)}</b><span>{t("app.mina.vistas_dia")}</span></div>
-        <div className="num"><b>{compacto(c.videos)}</b><span>{t("app.modelar.videos")}</span></div>
-      </div>
-      <a className="estourou" href={c.video_url} target="_blank" rel="noreferrer noopener">
-        <span className="rot">{t("app.mina.estourou")}</span>
-        <b>{c.video_titulo}</b>
-        <span className="sub">{t("app.mina.estourou_sub", { vistas: compacto(c.video_vistas), quando: c.video_quando, veio: c.de_veio })}</span>
-      </a>
-      <textarea className="notas" rows={2} value={notas} placeholder={t("app.mina.notas_dica")}
-                onChange={(e) => setNotas(e.target.value)} />
-      {modelar.isError && <p className="erro">{modelar.error.message}</p>}
-      <div className="acoes">
-        <a className="bt pequeno" href={c.url} target="_blank" rel="noreferrer noopener">
-          <ExternalLink size={14} />{t("app.mina.abrir")}
+    <div className="achado">
+      <Thumb v={v} />
+      <div className="corpo">
+        <a className="titulo" href={v.video_url} target="_blank" rel="noreferrer noopener">{v.titulo}</a>
+        <a className="dono" href={v.canal_url} target="_blank" rel="noreferrer noopener" title={t("app.mina.abrir_canal")}>
+          {v.tem_logo && !logoRuim
+            ? <img src={urlLogoMinerado(v.id)} alt="" loading="lazy" onError={() => setLogoRuim(true)} />
+            : <span className="ini">{v.canal_nome.slice(0, 1).toUpperCase()}</span>}
+          <span className="t">
+            <b>{v.canal_nome}</b>
+            <span className="sub">{t("app.mina.canal_sub", { inscritos: compacto(v.inscritos), meses: String(v.meses).replace(".", ",") })}</span>
+          </span>
         </a>
-        {aba === "novo" && (
-          <>
-            <button className="bt pequeno primario" disabled={modelar.isPending} onClick={() => modelar.mutate()}>
-              <Target size={14} />{t(modelar.isPending ? "app.mina.modelando" : "app.mina.modelar")}
-            </button>
-            <button className="bt pequeno so-icone" title={t("app.mina.descartar_dica")}
-                    disabled={descartar.isPending} onClick={() => descartar.mutate()}>
-              <X size={15} />
-            </button>
-          </>
-        )}
-        {aba !== "novo" && (
-          <>
-            {aba === "descartado" && (
-              <button className="bt pequeno" disabled={voltar.isPending} onClick={() => voltar.mutate()}>
-                <Undo2 size={14} />{t("app.mina.voltar")}
+        <textarea className="notas" rows={1} value={notas} placeholder={t("app.mina.notas_dica")}
+                  onChange={(e) => setNotas(e.target.value)} />
+        {modelar.isError && <p className="erro">{modelar.error.message}</p>}
+        <div className="acoes">
+          {aba === "novo" ? (
+            <>
+              <button className="bt pequeno primario" disabled={modelar.isPending} onClick={() => modelar.mutate()}>
+                <Target size={14} />{t(modelar.isPending ? "app.mina.modelando" : "app.mina.modelar")}
               </button>
-            )}
-            <button className="bt pequeno so-icone" title={t("app.mina.excluir")}
-                    disabled={excluir.isPending} onClick={() => excluir.mutate()}>
-              <Trash2 size={14} />
-            </button>
-          </>
-        )}
+              <a className="bt pequeno so-icone" href={v.canal_url} target="_blank" rel="noreferrer noopener"
+                 title={t("app.mina.abrir_canal")}><ExternalLink size={14} /></a>
+              <button className="bt pequeno so-icone fim" title={t("app.mina.descartar")}
+                      disabled={descartar.isPending} onClick={() => descartar.mutate()}><X size={15} /></button>
+            </>
+          ) : (
+            <>
+              {aba === "descartado" && (
+                <button className="bt pequeno" disabled={voltar.isPending} onClick={() => voltar.mutate()}>
+                  <Undo2 size={14} />{t("app.mina.voltar")}
+                </button>
+              )}
+              <a className="bt pequeno so-icone" href={v.canal_url} target="_blank" rel="noreferrer noopener"
+                 title={t("app.mina.abrir_canal")}><ExternalLink size={14} /></a>
+              <button className="bt pequeno so-icone fim" title={t("app.mina.excluir")}
+                      disabled={excluir.isPending} onClick={() => excluir.mutate()}><Trash2 size={14} /></button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Veios({ d }: { d: EstadoMina }) {
-  const proximos = new Set(d.proximos);
+function Nichos({ d, escolhido, escolher }: { d: EstadoMina; escolhido: string; escolher: (n: string) => void }) {
   const t = useT();
   const qc = useQueryClient();
-  const [termo, setTermo] = useState("");
-  const [canal, setCanal] = useState(d.canais[0]?.slug ?? "");
-  const [sugeridos, setSugeridos] = useState<string[] | null>(null);
+  const [nome, setNome] = useState("");
   const recarregar = () => qc.invalidateQueries({ queryKey: CHAVE });
-  const guardar = useMutation({
-    mutationFn: (texto: string) => enviar("/api/mineracao/veios", { termo: texto }),
-    onSuccess: (_r, texto) => { setTermo(""); setSugeridos((s) => s && s.filter((x) => x !== texto)); recarregar(); },
+  const criar = useMutation({
+    mutationFn: () => enviar<{ nicho: Nicho }>("/api/mineracao/nichos", { nome }),
+    onSuccess: (r) => { setNome(""); escolher(r.nicho.nome); recarregar(); },
   });
-  const alternar = useMutation({
-    mutationFn: (v: Veio) => enviar(`/api/mineracao/veios/${v.id}`, { ativo: !v.ativo }),
-    onSettled: recarregar,
-  });
-  const apagar = useMutation({ mutationFn: (v: Veio) => enviar(`/api/mineracao/veios/${v.id}/excluir`), onSettled: recarregar });
-  const sugerir = useMutation({
-    mutationFn: () => enviar<{ termos: string[] }>("/api/mineracao/veios/sugerir", { canal }),
-    onSuccess: (r) => setSugeridos(r.termos),
+  const refazer = useMutation({ mutationFn: (n: string) => enviar("/api/mineracao/nichos/refazer", { nome: n }), onSettled: recarregar });
+  const apagar = useMutation({
+    mutationFn: (n: string) => enviar("/api/mineracao/nichos/excluir", { nome: n }),
+    onSuccess: (_r, n) => { if (n === escolhido) escolher(""); recarregar(); },
   });
 
   return (
-    <div className="veios">
-      <div className="chips">
-        {d.veios.map((v) => (
-          <span key={v.id} className={`veio ${v.ativo ? "on" : ""} ${proximos.has(v.termo) ? "proximo" : ""}`}
-                title={[v.origem === "claude" ? t("app.mina.veio_do_claude") : "",
-                        v.ultimo ? t("app.mina.veio_ultimo", { quando: v.ultimo }) : t("app.mina.veio_nunca")]
-                        .filter(Boolean).join(" · ")}>
-            <button className="lig" title={t(v.ativo ? "app.mina.veio_desligar" : "app.mina.veio_ligar")}
-                    onClick={() => alternar.mutate(v)}><Power size={12} /></button>
-            {v.termo}
-            <button className="x" title={t("app.mina.veio_excluir")} onClick={() => apagar.mutate(v)}><X size={12} /></button>
-          </span>
-        ))}
-        {d.veios.length === 0 && <p className="sub">{t("app.mina.veios_vazio")}</p>}
-      </div>
-      {d.proximos.length < d.veios.filter((v) => v.ativo).length && (
-        <p className="sub dica">{t("app.mina.rodizio", { n: d.por_garimpo, total: d.veios.filter((v) => v.ativo).length })}</p>
-      )}
-
-      <div className="linha-veio">
-        <form onSubmit={(e) => { e.preventDefault(); guardar.mutate(termo); }}>
-          <label className="campo">
-            {t("app.mina.veio_novo")}
-            <input value={termo} placeholder={t("app.mina.veio_colar")} onChange={(e) => setTermo(e.target.value)} />
-          </label>
-          <button className="bt" disabled={termo.trim().length < 2 || guardar.isPending}>
-            <Plus size={15} />{t("app.mina.veio_add")}
+    <div className="nichos">
+      {d.nichos.length > 0 && (
+        <div className="chips">
+          <button className={`nicho ${escolhido === "" ? "on" : ""}`} onClick={() => escolher("")}>
+            {t("app.mina.nicho_todos")}
           </button>
-        </form>
-        {d.canais.length > 0 && (
-          <div className="do-claude">
-            <select value={canal} onChange={(e) => setCanal(e.target.value)}>
-              {d.canais.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
-            </select>
-            <button className="bt" disabled={sugerir.isPending} onClick={() => sugerir.mutate()}>
-              <Sparkles size={15} />{t(sugerir.isPending ? "app.mina.sugerindo" : "app.mina.sugerir")}
-            </button>
-          </div>
-        )}
-      </div>
-      <p className="sub dica">{t("app.mina.sugerir_sub")}</p>
-      {guardar.isError && <p className="erro">{guardar.error.message}</p>}
-      {sugerir.isError && <p className="erro">{sugerir.error.message}</p>}
-      {sugeridos && (
-        <div className="sugeridos">
-          <p className="sub">{t("app.mina.sugeridos", { n: sugeridos.length })}</p>
-          <div className="chips">
-            {sugeridos.map((s) => (
-              <button key={s} className="veio prop" onClick={() => guardar.mutate(s)}><Plus size={12} />{s}</button>
-            ))}
-          </div>
+          {d.nichos.map((n) => (
+            <span key={n.id} className={`nicho ${escolhido === n.nome ? "on" : ""}`}
+                  title={[t("app.mina.nicho_termos", { termos: n.termos.join(" · ") }),
+                          n.ultimo ? t("app.mina.nicho_ultimo", { quando: n.ultimo }) : t("app.mina.nicho_nunca")].join("\n")}>
+              <button className="nome" onClick={() => escolher(n.nome)}>{n.nome}</button>
+              <button className="ic" title={t("app.mina.nicho_refazer")} disabled={refazer.isPending}
+                      onClick={() => refazer.mutate(n.nome)}><RefreshCw size={12} /></button>
+              <button className="ic" title={t("app.mina.nicho_excluir")} onClick={() => apagar.mutate(n.nome)}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
         </div>
       )}
+      {d.nichos.length === 0 && <p className="sub">{t("app.mina.nichos_vazio")}</p>}
+      <form onSubmit={(e) => { e.preventDefault(); criar.mutate(); }}>
+        <label className="campo">
+          {t("app.mina.nicho_novo")}
+          <input value={nome} placeholder={t("app.mina.nicho_colar")} onChange={(e) => setNome(e.target.value)} />
+        </label>
+        <button className="bt" disabled={nome.trim().length < 2 || criar.isPending}>
+          <Sparkles size={15} />{t(criar.isPending ? "app.mina.nicho_criando" : "app.mina.nicho_add")}
+        </button>
+      </form>
+      {criar.isError && <p className="erro">{criar.error.message}</p>}
+      {refazer.isError && <p className="erro">{refazer.error.message}</p>}
     </div>
   );
 }
@@ -190,7 +156,7 @@ const CAMPOS: { id: keyof FiltrosMina; rot: string; passo?: string }[] = [
   { id: "inscritos_max", rot: "app.mina.f_inscritos_max" },
   { id: "vistas_min", rot: "app.mina.f_vistas_min" },
   { id: "surto_min", rot: "app.mina.f_surto", passo: "0.1" },
-  { id: "por_veio", rot: "app.mina.f_por_veio" },
+  { id: "por_termo", rot: "app.mina.f_por_termo" },
   { id: "pais", rot: "app.mina.f_pais" },
   { id: "idioma", rot: "app.mina.f_idioma" },
 ];
@@ -211,8 +177,7 @@ function Filtros({ d }: { d: EstadoMina }) {
           <label key={c.id} className="campo">
             {t(c.rot)}
             {typeof d.padroes[c.id] === "string" ? (
-              <input value={String(f[c.id])} maxLength={5}
-                     onChange={(e) => setF({ ...f, [c.id]: e.target.value })} />
+              <input value={String(f[c.id])} maxLength={5} onChange={(e) => setF({ ...f, [c.id]: e.target.value })} />
             ) : (
               <input type="number" min={0} step={c.passo ?? "1"} value={String(f[c.id])}
                      onChange={(e) => setF({ ...f, [c.id]: Number(e.target.value) })} />
@@ -257,9 +222,15 @@ export function Mineracao() {
   const t = useT();
   const qc = useQueryClient();
   const [aba, setAba] = useState<Aba>("novo");
-  const { data } = useQuery({ queryKey: [...CHAVE, aba], queryFn: () => pegar<EstadoMina>(`/api/mineracao?situacao=${aba}`) });
+  const [nicho, setNicho] = useState("");
+  const [ordem, setOrdem] = useState("nota");
+  const { data } = useQuery({
+    queryKey: [...CHAVE, aba, nicho, ordem],
+    queryFn: () => pegar<EstadoMina>(`/api/mineracao?situacao=${aba}&nicho=${encodeURIComponent(nicho)}&ordem=${ordem}`),
+  });
   const garimpar = useMutation({
-    mutationFn: () => enviar<{ resumo: { olhados: number; aprovados: number; novos: number; cota: number } }>("/api/mineracao/garimpar"),
+    mutationFn: () => enviar<{ resumo: { nicho: string; olhados: number; aprovados: number; novos: number; cota: number } }>(
+      "/api/mineracao/garimpar", { nicho }),
     onSettled: () => qc.invalidateQueries({ queryKey: CHAVE }),
   });
   const auto = useMutation({
@@ -267,7 +238,6 @@ export function Mineracao() {
     onSettled: () => qc.invalidateQueries({ queryKey: CHAVE }),
   });
   if (!data) return <div className="nivel-produtor"><TopoProdutor /></div>;
-  const ligados = data.veios.filter((v) => v.ativo).length;
   const ABAS: { id: Aba; rot: string; n: number }[] = [
     { id: "novo", rot: "app.mina.aba_novos", n: data.contas.novo },
     { id: "descartado", rot: "app.mina.aba_descartados", n: data.contas.descartado },
@@ -284,20 +254,18 @@ export function Mineracao() {
 
         <div className="cartao garimpo">
           <header>
-            <div>
-              <b>{t("app.mina.garimpo")}</b>
-              <span className="sub">{t("app.mina.garimpo_sub", { n: data.custo_busca })}</span>
-            </div>
-            <button className="bt primario" disabled={!ligados || garimpar.isPending || !data.tem_chave}
+            <Nichos d={data} escolhido={nicho} escolher={setNicho} />
+            <button className="bt primario grande" disabled={!data.nichos.length || garimpar.isPending || !data.tem_chave}
                     onClick={() => garimpar.mutate()}>
-              <Pickaxe size={16} />{t(garimpar.isPending ? "app.mina.garimpando" : "app.mina.garimpar")}
+              <Pickaxe size={17} />
+              {t(garimpar.isPending ? "app.mina.garimpando" : nicho ? "app.mina.garimpar" : "app.mina.garimpar_vez", { nicho })}
             </button>
           </header>
-          <Veios d={data} />
           {garimpar.isError && <p className="erro">{garimpar.error.message}</p>}
           {garimpar.data && <p className="ok-mina">{t("app.mina.resumo", { ...garimpar.data.resumo })}</p>}
           <footer>
             <span title={t("app.mina.cota_sub")}>{t("app.mina.cota", { usada: data.cota.usada, limite: data.cota.limite })}</span>
+            <span>{t("app.mina.custo", { n: data.custo_nicho })}</span>
             <span>{data.ultimo
               ? t("app.mina.ultimo", { quando: data.ultimo.quando, olhados: data.ultimo.olhados, aprovados: data.ultimo.aprovados, novos: data.ultimo.novos })
               : t("app.mina.nunca")}</span>
@@ -317,10 +285,16 @@ export function Mineracao() {
               {t(a.rot)} <em>{a.n}</em>
             </button>
           ))}
+          <label className="ordenar">
+            {t("app.mina.ordem")}
+            <select value={ordem} onChange={(e) => setOrdem(e.target.value)}>
+              {data.ordens.map((o) => <option key={o} value={o}>{t(`app.mina.ordem_${o}`)}</option>)}
+            </select>
+          </label>
         </nav>
 
         {data.itens.length > 0 ? (
-          <div className="modelos garimpados">{data.itens.map((c) => <CartaoMinerado key={c.id} c={c} aba={aba} />)}</div>
+          <div className="achados">{data.itens.map((v) => <CartaoVideoMinerado key={v.id} v={v} aba={aba} />)}</div>
         ) : (
           <div className="vazio-modelar">
             <span className="ic"><Pickaxe size={22} /></span>

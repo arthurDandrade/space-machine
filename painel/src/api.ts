@@ -74,13 +74,11 @@ export interface CanaisModelo {
   tem_chave: boolean;
 }
 
-// ---- mineração de canais (space_machine/mineracao.py) ----
-export interface Veio {
+// ---- mineração: vídeos que estouraram num nicho (space_machine/mineracao.py) ----
+export interface Nicho {
   id: number;
-  termo: string;
-  canal: string;
-  origem: "voce" | "claude";
-  ativo: number;
+  nome: string;
+  termos: string[];
   criado: string;
   ultimo: string | null;
 }
@@ -94,41 +92,43 @@ export interface FiltrosMina {
   surto_min: number;
   pais: string;
   idioma: string;
-  por_veio: number;
+  por_termo: number;
 }
 
-export interface CanalMinerado {
+export interface VideoMinerado {
   id: number;
-  canal_id: string;
-  url: string;
-  nome: string;
-  handle: string;
-  descricao: string;
-  pais: string;
-  inscritos: number;
-  videos: number;
+  video_id: string;
+  video_url: string;
+  titulo: string;
   vistas: number;
+  publicado: string;
+  canal_id: string;
+  canal_nome: string;
+  canal_handle: string;
+  canal_url: string;
+  canal_pais: string;
+  inscritos: number;
+  canal_videos: number;
+  canal_vistas: number;
   nasceu: string;
   idade_dias: number;
   meses: number;
   surto: number;
   vistas_dia: number;
   nota: number;
-  video_titulo: string;
-  video_url: string;
-  video_vistas: number;
-  video_quando: string;
-  de_veio: string;
+  nicho: string;
+  termo: string;
   situacao: "novo" | "descartado" | "modelo";
   notas: string;
   achado: string;
   atualizado: string;
+  tem_thumb: boolean;
   tem_logo: boolean;
 }
 
 export interface Garimpo {
   quando: string;
-  veios: number;
+  termos: number;
   olhados: number;
   aprovados: number;
   novos: number;
@@ -137,19 +137,20 @@ export interface Garimpo {
 }
 
 export interface EstadoMina {
-  itens: CanalMinerado[];
+  itens: VideoMinerado[];
   situacao: string;
+  nicho: string;
+  ordem: string;
+  ordens: string[];
   contas: { novo: number; descartado: number; modelo: number };
-  veios: Veio[];
+  nichos: Nicho[];
   filtros: FiltrosMina;
   padroes: FiltrosMina;
   cota: { usada: number; limite: number; sobra: number; dia: string };
   ultimo: Garimpo | null;
   automatico: boolean;
   tem_chave: boolean;
-  custo_busca: number;
-  por_garimpo: number;
-  proximos: string[];
+  custo_nicho: number;
   canais: { slug: string; nome: string; tema: string }[];
 }
 
@@ -388,7 +389,8 @@ export const enviar = <T = { ok: boolean },>(url: string, corpo?: unknown) =>
 export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${canal}/marca/${qual}`;
 // logo guardado de um canal que você quer modelar (cache/modelos/ nos dados)
 export const urlLogoModelo = (id: number) => `/api/modelar/${id}/logo`;
-// logo guardado de um canal garimpado (cache/mineracao/ nos dados)
+// thumbnail do vídeo e logo do canal garimpados (cache/mineracao/ nos dados)
+export const urlThumbMinerada = (id: number) => `/api/mineracao/${id}/thumb`;
 export const urlLogoMinerado = (id: number) => `/api/mineracao/${id}/logo`;
 // v: versão da capa do vídeo (muda quando a thumbnail muda), para o navegador não mostrar a antiga do cache
 export const urlCapa = (canal: string, video: string, nn?: string, v?: number) => {

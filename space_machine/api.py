@@ -1048,19 +1048,19 @@ def logo_a_modelar(ref_id: int):
     return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
 
 
-# ---------------- mineração de canais ----------------
+# ---------------- mineração: vídeos que estouraram num nicho ----------------
 @api.get("/mineracao")
-def mineracao_estado(situacao: str = "novo"):
-    """A tela inteira num pedido. Aproveita para disparar o garimpo do dia, se estiver ligado e já estiver na hora."""
+def mineracao_estado(situacao: str = "novo", nicho: str = "", ordem: str = "nota"):
+    """A tela inteira num pedido. Aproveita para disparar o garimpo do dia, se estiver ligado e já for a hora."""
     mineracao.garimpar_atras_das_cortinas()
-    return {**mineracao.estado(), "itens": mineracao.lista(situacao), "situacao": situacao}
+    return mineracao.estado(situacao, nicho, ordem)
 
 
 @api.post("/mineracao/garimpar")
-def mineracao_garimpar(termos: list = Body(None, embed=True), filtros: dict = Body(None, embed=True)):
-    """Garimpa agora. Sem termos, vale a lista de veios ligados."""
+def mineracao_garimpar(nicho: str = Body("", embed=True), filtros: dict = Body(None, embed=True)):
+    """Garimpa um nicho (sem nicho, o que está há mais tempo sem ir)."""
     try:
-        return {"ok": True, "resumo": mineracao.garimpar(termos, filtros)}
+        return {"ok": True, "resumo": mineracao.garimpar(nicho or None, filtros)}
     except ValueError as e:
         raise HTTPException(400, str(e))
 
@@ -1072,45 +1072,41 @@ def mineracao_filtros(filtros: dict = Body({}, embed=True), automatico: bool = B
     return {"ok": True, "filtros": mineracao.salvar_filtros(filtros), "automatico": mineracao.automatico()}
 
 
-@api.get("/mineracao/veios")
-def mineracao_veios():
-    return {"veios": mineracao.veios()}
+@api.get("/mineracao/nichos")
+def mineracao_nichos():
+    return {"nichos": mineracao.nichos()}
 
 
-@api.post("/mineracao/veios")
-def mineracao_novo_veio(termo: str = Body(..., embed=True), canal: str = Body("", embed=True)):
+@api.post("/mineracao/nichos")
+def mineracao_novo_nicho(nome: str = Body(..., embed=True)):
+    """Guarda o nicho; os termos de busca saem do Claude na hora, uma vez só."""
     try:
-        return {"ok": True, "veio": mineracao.salvar_veio(termo, canal)}
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-
-@api.post("/mineracao/veios/sugerir")
-def mineracao_sugerir_veios(canal: str = Body(..., embed=True)):
-    """O Claude tira do tema do canal os termos de busca (nada aqui fala com o YouTube)."""
-    try:
-        return {"ok": True, "termos": mineracao.sugerir_veios(canal)}
+        return {"ok": True, "nicho": mineracao.salvar_nicho(nome)}
     except ValueError as e:
         raise HTTPException(400, str(e))
     except RuntimeError as e:
         raise HTTPException(503, str(e))
 
 
-@api.post("/mineracao/veios/{ref_id}")
-def mineracao_alternar_veio(ref_id: int, ativo: bool = Body(..., embed=True)):
-    mineracao.alternar_veio(ref_id, ativo)
-    return {"ok": True}
+@api.post("/mineracao/nichos/refazer")
+def mineracao_refazer_termos(nome: str = Body(..., embed=True)):
+    try:
+        return {"ok": True, "nicho": mineracao.refazer_termos(nome)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, str(e))
 
 
-@api.post("/mineracao/veios/{ref_id}/excluir")
-def mineracao_excluir_veio(ref_id: int):
-    mineracao.remover_veio(ref_id)
+@api.post("/mineracao/nichos/excluir")
+def mineracao_excluir_nicho(nome: str = Body(..., embed=True)):
+    mineracao.remover_nicho(nome)
     return {"ok": True}
 
 
 @api.post("/mineracao/{ref_id}/{acao}")
 def mineracao_acao(ref_id: int, acao: str, notas: str = Body("", embed=True)):
-    """descartar · voltar · modelar (vai para a Modelagem) · notas · excluir."""
+    """descartar (o canal inteiro) · voltar · modelar (vai para a Modelagem) · notas · excluir."""
     try:
         if acao == "descartar":
             mineracao.descartar(ref_id)
@@ -1129,15 +1125,24 @@ def mineracao_acao(ref_id: int, acao: str, notas: str = Body("", embed=True)):
     return {"ok": True}
 
 
+@api.get("/mineracao/{ref_id}/thumb")
+def mineracao_thumb(ref_id: int):
+    return _imagem_minerada(mineracao.arquivo_thumb, ref_id)
+
+
 @api.get("/mineracao/{ref_id}/logo")
 def mineracao_logo(ref_id: int):
+    return _imagem_minerada(mineracao.arquivo_logo, ref_id)
+
+
+def _imagem_minerada(de_onde, ref_id):
     try:
-        f = mineracao.arquivo_logo(ref_id)
+        f = de_onde(ref_id)
     except ValueError as e:
         raise HTTPException(404, str(e))
     if not f:
-        raise HTTPException(404, "esse canal não tem logo guardado")
-    return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+        raise HTTPException(404, "essa imagem não foi guardada")
+    return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @api.post("/config/chaves/{api_id}")
