@@ -48,6 +48,8 @@ FILTROS = {
     "inscritos_max": 500000,    # acima disso já é canal grande (0 = sem limite)
     "vistas_min": 50000,        # o vídeo fez pelo menos isso de views
     "surto_min": 1.0,           # views do vídeo ÷ inscritos do canal
+    "duracao_min_s": 180,       # vídeo mais curto que isso é short (0 = aceita short)
+    "shorts_max_pct": 30,       # canal que posta mais short do que isso fica de fora (100 = aceita qualquer um)
     "pais": "",                 # regionCode da busca (vazio = sem filtro)
     "idioma": "",               # relevanceLanguage da busca
     "por_termo": 50,            # quantos vídeos trazer de cada termo (50 é o máximo da API)
@@ -58,13 +60,21 @@ SURTO_CHEIO = 20            # o vídeo fez 20x os inscritos do canal
 VISTAS_DIA_CHEIO = 200000   # o canal faz 200 mil views por dia desde que nasceu
 JOVEM_DIAS = 550            # ~18 meses: acima disso o pedaço "jovem" é zero
 
+AMOSTRA_SHORTS = 50         # quantos uploads recentes do canal olhar para saber se ele é canal de short
+CUSTO["playlist"] = 1       # playlistItems.list, para pegar os últimos uploads de um canal
+
 SITUACOES = ("novo", "descartado", "modelo")
 VALIDADE_AUTOMATICO = 20 * 3600     # o garimpo do dia só repete depois disso
-_trava_automatico = threading.Lock()
+TRAVA_MAX_MIN = 20                  # garimpo travado há mais que isso é garimpo que morreu: a trava cai
 
 
-def _db():
-    con = _banco()
+_migrado = False
+_trava_migracao = threading.Lock()
+
+
+def _migrar(con):
+    """Cria e acerta as tabelas. Roda uma vez por processo: _db() é chamado a cada pedido do painel, e um
+    delete solto aqui apagaria achados no meio de um garimpo."""
     con.execute("""create table if not exists nichos (
         id integer primary key, nome text unique, termos text, criado text, ultimo text)""")
     con.execute("""create table if not exists videos_minerados (
@@ -72,15 +82,34 @@ def _db():
         canal_id text, canal_nome text, canal_handle text, canal_url text, canal_logo text, canal_pais text,
         inscritos int, canal_videos int, canal_vistas int, nasceu text, idade_dias int,
         surto real, vistas_dia real, nota real, nicho text, termo text, situacao text, notas text,
-        achado text, atualizado text)""")
+        achado text, atualizado text, duracao_s int, pct_shorts int)""")
     con.execute("""create table if not exists garimpos (
         id integer primary key, quando text, veios int, olhados int, aprovados int, novos int, cota int,
         erro text)""")
     con.execute("""create table if not exists cota_youtube (dia text primary key, unidades int)""")
+    con.execute("""create table if not exists travas (nome text primary key, quando text)""")
+    col = {c[1] for c in con.execute("pragma table_info(videos_minerados)")}
+    if "duracao_s" not in col:
+        con.execute("alter table videos_minerados add column duracao_s int")
+        # achados de antes do corte de shorts (2026-10-26) não têm duração: um garimpo os traz de volta, filtrados
+        con.execute("delete from videos_minerados where situacao='novo'")
+    if "pct_shorts" not in col:
+        con.execute("alter table videos_minerados add column pct_shorts int")
     # a 1ª Mineração (manhã de 2026-10-26) guardava CANAIS achados por "veios" que você cadastrava; virou grade
     # de vídeos por nicho no mesmo dia. As duas tabelas de lá não são lidas por ninguém: um garimpo refaz tudo.
     con.execute("drop table if exists canais_minerados")
     con.execute("drop table if exists veios")
+    con.commit()
+
+
+def _db():
+    global _migrado
+    con = _banco()
+    if not _migrado:
+        with _trava_migracao:
+            if not _migrado:
+                _migrar(con)
+                _migrado = True
     return con
 
 
@@ -134,7 +163,7 @@ def salvar_filtros(novos):
 
 
 def automatico():
-    return bool((config().get("mineracao") or {}).get("automatica", True))
+    return bool((config().get("mineracao") or {}).get("automatica", False))
 
 
 def salvar_automatico(ligado):
@@ -227,6 +256,44 @@ def _dias_desde(iso):
     return max(0, (dt.datetime.now(dt.timezone.utc) - nasceu).days)
 
 
+DURACAO = re.compile(r"P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
+
+
+def _segundos(iso):
+    """A duração que a API manda (ISO 8601, "PT12M30S") em segundos. O que não der para ler conta como 0."""
+    m = DURACAO.fullmatch((iso or "").strip())
+    if not m:
+        return 0
+    d, h, mi, sg = (int(x or 0) for x in m.groups())
+    return ((d * 24 + h) * 60 + mi) * 60 + sg
+
+
+def _pct_shorts(ch, uploads, limite_s):
+    """Quanto dos últimos uploads do canal é short. 2 unidades de cota por canal (playlistItems + videos).
+
+    É o que separa o canal que fez um vídeo longo bombar do canal de short que às vezes posta um longo:
+    o segundo não serve de modelo para um vídeo narrado de 10 minutos.
+    """
+    if not uploads:
+        return None, 0, 0
+    try:
+        itens = _chamar(ch, "playlistItems", part="contentDetails", playlistId=uploads,
+                        maxResults=AMOSTRA_SHORTS).get("items") or []
+        ids = [(i.get("contentDetails") or {}).get("videoId") for i in itens]
+        ids = [v for v in ids if v]
+        if not ids:
+            return None, 0, CUSTO["playlist"]
+        duracoes = [_segundos((v.get("contentDetails") or {}).get("duration"))
+                    for v in _chamar(ch, "videos", part="contentDetails", id=",".join(ids[:50])).get("items") or []]
+    except ValueError:
+        return None, 0, CUSTO["playlist"]      # cota estourada no meio: não derruba o garimpo inteiro
+    custo = CUSTO["playlist"] + CUSTO["videos"]
+    duracoes = [d for d in duracoes if d]
+    if not duracoes:
+        return None, 0, custo
+    return round(100 * sum(1 for d in duracoes if d <= limite_s) / len(duracoes)), len(duracoes), custo
+
+
 def _surto(vistas_video, inscritos):
     """Quantas vezes o vídeo passou da audiência do próprio canal. É o sinal mais forte de formato que pega."""
     return round(vistas_video / max(inscritos, 1), 2)
@@ -296,6 +363,37 @@ def _baixar_tudo(linhas):
     return linhas
 
 
+# ---------------- trava do garimpo ----------------
+def _pegar_trava():
+    """Só um garimpo por vez. O painel (garimpo automático) e a linha de comando são processos diferentes:
+    uma trava de thread não serve: os dois escrevendo juntos travam o sqlite no meio do caminho."""
+    con = _db()
+    try:
+        con.execute("begin immediate")
+        lin = con.execute("select quando from travas where nome='garimpo'").fetchone()
+        if lin:
+            try:
+                velha = (dt.datetime.now() - dt.datetime.strptime(lin[0], "%Y-%m-%d %H:%M:%S")).total_seconds()
+            except ValueError:
+                velha = TRAVA_MAX_MIN * 60 + 1
+            if velha < TRAVA_MAX_MIN * 60:
+                con.rollback()
+                return False
+        con.execute("insert into travas (nome, quando) values ('garimpo', datetime('now','localtime')) "
+                    "on conflict(nome) do update set quando=excluded.quando")
+        con.commit()
+        return True
+    finally:
+        con.close()
+
+
+def _soltar_trava():
+    con = _db()
+    con.execute("delete from travas where nome='garimpo'")
+    con.commit()
+    con.close()
+
+
 # ---------------- o garimpo ----------------
 def _lotes(itens, n):
     itens = list(itens)
@@ -317,7 +415,16 @@ def garimpar(nicho=None, filtros_pedidos=None):
     n = um_nicho(nicho) if nicho else lista_nichos[0]
     f = {**filtros(), **(filtros_pedidos or {})}
     termos = n["termos"][:TERMOS_POR_NICHO]
+    if not _pegar_trava():
+        raise ValueError("Já tem um garimpo rodando. Espere ele terminar.")
+    try:
+        return _garimpar(n, f, termos)
+    finally:
+        _soltar_trava()
 
+
+def _garimpar(n, f, termos):
+    ch = chave()
     gasto, erro = 0, ""
     try:
         ids, de_termo = [], {}
@@ -338,14 +445,14 @@ def garimpar(nicho=None, filtros_pedidos=None):
 
         videos = {}
         for lote in _lotes(ids, 50):
-            for v in _chamar(ch, "videos", part="snippet,statistics", id=",".join(lote)).get("items") or []:
+            for v in _chamar(ch, "videos", part="snippet,statistics,contentDetails", id=",".join(lote)).get("items") or []:
                 videos[v["id"]] = v
             gasto += CUSTO["videos"]
 
         canais_ids = {(v.get("snippet") or {}).get("channelId") for v in videos.values()} - {None}
         brutos = {}
         for lote in _lotes(canais_ids, 50):
-            for c in _chamar(ch, "channels", part="snippet,statistics", id=",".join(lote)).get("items") or []:
+            for c in _chamar(ch, "channels", part="snippet,statistics,contentDetails", id=",".join(lote)).get("items") or []:
                 brutos[c["id"]] = c
             gasto += CUSTO["channels"]
     except ValueError as e:
@@ -374,9 +481,13 @@ def garimpar(nicho=None, filtros_pedidos=None):
         idade = _dias_desde(nasceu)
         if not _passa(c, idade, vistas, f):
             continue
+        duracao_s = _segundos((v.get("contentDetails") or {}).get("duration"))
+        if f["duracao_min_s"] and duracao_s < f["duracao_min_s"]:
+            continue                        # short: não é o formato que você produz
         surto = _surto(vistas, c["inscritos"])
         vistas_dia = round(c["vistas"] / max(idade or 1, 1), 1)
         linhas.append({
+            "duracao_s": duracao_s, "pct_shorts": None,
             "video_id": vid, "titulo": (sn.get("title") or "")[:300], "vistas": vistas,
             "publicado": (sn.get("publishedAt") or "")[:10], "canal_id": cid, "canal_nome": c["nome"],
             "canal_handle": c["handle"], "canal_url": c["url"], "canal_pais": c["pais"],
@@ -385,21 +496,38 @@ def garimpar(nicho=None, filtros_pedidos=None):
             "nota": _nota(surto, vistas_dia, idade), "nicho": n["nome"], "termo": de_termo.get(vid, ""),
             "_thumb_url": _melhor(sn.get("thumbnails") or {}), "_logo_url": c["_logo_url"],
         })
+    # o canal que só posta short não serve de modelo, mesmo quando o vídeo achado é longo: mede e corta
+    if linhas and f["shorts_max_pct"] < 100:
+        uploads = {l["canal_id"]: (((brutos[l["canal_id"]].get("contentDetails") or {})
+                                    .get("relatedPlaylists") or {}).get("uploads") or "") for l in linhas}
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            medidas = dict(zip(uploads, pool.map(
+                lambda cid: _pct_shorts(ch, uploads[cid], f["duracao_min_s"] or 180), uploads)))
+        gasto_shorts = sum(m[2] for m in medidas.values())
+        if gasto_shorts:        # na conexão aberta: _gastar() abriria outra e travaria o banco
+            con.execute("insert into cota_youtube (dia, unidades) values (?,?) on conflict(dia) do update set "
+                        "unidades = unidades + excluded.unidades", (_dia_cota(), gasto_shorts))
+            gasto += gasto_shorts
+        for l in linhas:
+            l["pct_shorts"] = medidas[l["canal_id"]][0]
+        linhas = [l for l in linhas if l["pct_shorts"] is None or l["pct_shorts"] <= f["shorts_max_pct"]]
+
     _baixar_tudo(linhas)
     for l in linhas:
         con.execute("""insert into videos_minerados (video_id, titulo, thumb, vistas, publicado, canal_id,
                        canal_nome, canal_handle, canal_url, canal_logo, canal_pais, inscritos, canal_videos,
-                       canal_vistas, nasceu, idade_dias, surto, vistas_dia, nota, nicho, termo, situacao, notas,
-                       achado, atualizado)
+                       canal_vistas, nasceu, idade_dias, surto, vistas_dia, nota, nicho, termo, duracao_s,
+                       pct_shorts, situacao, notas, achado, atualizado)
                        values (:video_id,:titulo,:thumb,:vistas,:publicado,:canal_id,:canal_nome,:canal_handle,
                        :canal_url,:canal_logo,:canal_pais,:inscritos,:canal_videos,:canal_vistas,:nasceu,
-                       :idade_dias,:surto,:vistas_dia,:nota,:nicho,:termo,'novo','',
+                       :idade_dias,:surto,:vistas_dia,:nota,:nicho,:termo,:duracao_s,:pct_shorts,'novo','',
                        datetime('now','localtime'),datetime('now','localtime'))
                        on conflict(video_id) do update set titulo=excluded.titulo, thumb=excluded.thumb,
                        vistas=excluded.vistas, canal_nome=excluded.canal_nome, canal_logo=excluded.canal_logo,
                        inscritos=excluded.inscritos, canal_videos=excluded.canal_videos,
                        canal_vistas=excluded.canal_vistas, idade_dias=excluded.idade_dias, surto=excluded.surto,
-                       vistas_dia=excluded.vistas_dia, nota=excluded.nota, atualizado=excluded.atualizado""", l)
+                       vistas_dia=excluded.vistas_dia, nota=excluded.nota, duracao_s=excluded.duracao_s,
+                       pct_shorts=excluded.pct_shorts, atualizado=excluded.atualizado""", l)
     novos = sum(1 for l in linhas if l["video_id"] not in ja)
     con.execute("""insert into garimpos (quando, veios, olhados, aprovados, novos, cota, erro)
                    values (datetime('now','localtime'),?,?,?,?,?,?)""",
@@ -422,30 +550,46 @@ def ultimo_garimpo():
     return dict(zip(["quando", "termos", "olhados", "aprovados", "novos", "cota", "erro"], lin))
 
 
+def _ja_tentou_hoje():
+    """Marca a TENTATIVA do garimpo automático, não o garimpo que deu certo.
+
+    Marcar só o sucesso deixava o painel tentar de novo a cada pedido da tela quando um garimpo falhava no meio
+    (e cada tentativa custa 800 unidades). A marca é no sqlite, então vale para qualquer processo.
+    """
+    con = _db()
+    try:
+        con.execute("begin immediate")
+        lin = con.execute("select quando from travas where nome='automatico'").fetchone()
+        if lin:
+            try:
+                passou = (dt.datetime.now() - dt.datetime.strptime(lin[0], "%Y-%m-%d %H:%M:%S")).total_seconds()
+            except ValueError:
+                passou = VALIDADE_AUTOMATICO + 1
+            if passou < VALIDADE_AUTOMATICO:
+                con.rollback()
+                return True
+        con.execute("insert into travas (nome, quando) values ('automatico', datetime('now','localtime')) "
+                    "on conflict(nome) do update set quando=excluded.quando")
+        con.commit()
+        return False
+    finally:
+        con.close()
+
+
 def garimpar_atras_das_cortinas():
-    """O garimpo do dia: se o último foi há mais de 20 h e existe nicho, roda numa thread (ninguém espera)."""
+    """O garimpo do dia: se já passou um dia da última tentativa e existe nicho, roda numa thread (ninguém espera)."""
     if not automatico() or not chave() or not nichos():
         return
-    u = ultimo_garimpo()
-    if u and u["quando"]:
-        try:
-            passou = (dt.datetime.now() - dt.datetime.strptime(u["quando"], "%Y-%m-%d %H:%M:%S")).total_seconds()
-        except ValueError:
-            passou = VALIDADE_AUTOMATICO + 1
-        if passou < VALIDADE_AUTOMATICO:
-            return
     if cota()["sobra"] < CUSTO["search"] * TERMOS_POR_NICHO:
         return
-    if not _trava_automatico.acquire(blocking=False):
+    if _ja_tentou_hoje():
         return
 
     def rodar():
         try:
-            garimpar()
+            garimpar()      # a trava do sqlite recusa sozinha se você já estiver garimpando à mão
         except Exception:
-            pass        # garimpo automático que falha não atrapalha o painel; o erro fica no log de garimpos
-        finally:
-            _trava_automatico.release()
+            pass            # garimpo automático que falha não atrapalha o painel; o erro fica no log de garimpos
 
     threading.Thread(target=rodar, daemon=True).start()
 
@@ -453,8 +597,8 @@ def garimpar_atras_das_cortinas():
 # ---------------- a grade do painel ----------------
 NOMES = ["id", "video_id", "titulo", "thumb", "vistas", "publicado", "canal_id", "canal_nome", "canal_handle",
          "canal_url", "canal_logo", "canal_pais", "inscritos", "canal_videos", "canal_vistas", "nasceu",
-         "idade_dias", "surto", "vistas_dia", "nota", "nicho", "termo", "situacao", "notas", "achado",
-         "atualizado"]
+         "idade_dias", "surto", "vistas_dia", "nota", "nicho", "termo", "duracao_s", "pct_shorts", "situacao",
+         "notas", "achado", "atualizado"]
 SELECT = f"select {', '.join(NOMES)} from videos_minerados"
 ORDENS = {"nota": "nota desc, vistas desc", "surto": "surto desc, vistas desc",
           "vistas": "vistas desc", "novo": "publicado desc, vistas desc"}
@@ -466,6 +610,8 @@ def _ler(lin):
     d["tem_logo"] = bool(d["canal_logo"]) and (CACHE / d["canal_logo"]).exists()
     d["meses"] = round((d["idade_dias"] or 0) / 30.4, 1)
     d["video_url"] = f"https://www.youtube.com/watch?v={d['video_id']}"
+    seg = d["duracao_s"] or 0
+    d["duracao"] = f"{seg // 3600}:{seg // 60 % 60:02d}:{seg % 60:02d}" if seg >= 3600 else f"{seg // 60}:{seg % 60:02d}"
     return d
 
 

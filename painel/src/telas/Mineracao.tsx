@@ -28,6 +28,7 @@ function Thumb({ v }: { v: VideoMinerado }) {
         {v.surto >= 10 ? Math.round(v.surto) : v.surto}x
       </span>
       <span className="views">{compacto(v.vistas)}</span>
+      <span className="duracao">{v.duracao}</span>
     </a>
   );
 }
@@ -61,7 +62,10 @@ function CartaoVideoMinerado({ v, aba }: { v: VideoMinerado; aba: Aba }) {
             : <span className="ini">{v.canal_nome.slice(0, 1).toUpperCase()}</span>}
           <span className="t">
             <b>{v.canal_nome}</b>
-            <span className="sub">{t("app.mina.canal_sub", { inscritos: compacto(v.inscritos), meses: String(v.meses).replace(".", ",") })}</span>
+            <span className="sub">
+              {t("app.mina.canal_sub", { inscritos: compacto(v.inscritos), meses: String(v.meses).replace(".", ",") })}
+              {v.pct_shorts !== null && t("app.mina.canal_shorts", { n: v.pct_shorts })}
+            </span>
           </span>
         </a>
         <textarea className="notas" rows={1} value={notas} placeholder={t("app.mina.notas_dica")}
@@ -156,6 +160,8 @@ const CAMPOS: { id: keyof FiltrosMina; rot: string; passo?: string }[] = [
   { id: "inscritos_max", rot: "app.mina.f_inscritos_max" },
   { id: "vistas_min", rot: "app.mina.f_vistas_min" },
   { id: "surto_min", rot: "app.mina.f_surto", passo: "0.1" },
+  { id: "duracao_min_s", rot: "app.mina.f_duracao" },
+  { id: "shorts_max_pct", rot: "app.mina.f_shorts" },
   { id: "por_termo", rot: "app.mina.f_por_termo" },
   { id: "pais", rot: "app.mina.f_pais" },
   { id: "idioma", rot: "app.mina.f_idioma" },
@@ -266,6 +272,7 @@ export function Mineracao() {
           <footer>
             <span title={t("app.mina.cota_sub")}>{t("app.mina.cota", { usada: data.cota.usada, limite: data.cota.limite })}</span>
             <span>{t("app.mina.custo", { n: data.custo_nicho })}</span>
+            <span>{t("app.mina.sem_shorts", { s: data.filtros.duracao_min_s, p: data.filtros.shorts_max_pct })}</span>
             <span>{data.ultimo
               ? t("app.mina.ultimo", { quando: data.ultimo.quando, olhados: data.ultimo.olhados, aprovados: data.ultimo.aprovados, novos: data.ultimo.novos })
               : t("app.mina.nunca")}</span>

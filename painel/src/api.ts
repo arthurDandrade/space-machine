@@ -90,6 +90,8 @@ export interface FiltrosMina {
   inscritos_max: number;
   vistas_min: number;
   surto_min: number;
+  duracao_min_s: number;
+  shorts_max_pct: number;
   pais: string;
   idioma: string;
   por_termo: number;
@@ -118,6 +120,9 @@ export interface VideoMinerado {
   nota: number;
   nicho: string;
   termo: string;
+  duracao_s: number;
+  duracao: string;
+  pct_shorts: number | null;
   situacao: "novo" | "descartado" | "modelo";
   notas: string;
   achado: string;

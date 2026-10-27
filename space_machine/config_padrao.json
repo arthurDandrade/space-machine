@@ -37,9 +37,9 @@
  "video_final": {
   "ruido": 6
  },
- "_mineracao": "Mineração de canais: automatica = um garimpo por dia sozinho, com os veios ligados (o painel também tem o botão). filtros = o que conta como canal novo estourando; o padrão de fábrica está em mineracao.py.",
+ "_mineracao": "Mineração: automatica = um garimpo por dia sozinho, no nicho que está há mais tempo sem ir. Vem DESLIGADO: cada garimpo custa ~830 das 10.000 unidades diárias da chave do YouTube, e quem liga precisa saber disso. filtros = o que conta como vídeo que estourou; o padrão de fábrica está em mineracao.py.",
  "mineracao": {
-  "automatica": true,
+  "automatica": false,
   "filtros": {}
  },
  "_limpeza_automatica": "true = ao entregar um bloco, as prévias antigas, os candidatos baixados e o Auto-Save dele vão para o Lixo do Mac.",
