@@ -18,9 +18,9 @@ import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import caminhos  # noqa: E402
 
-ARIAL = "/System/Library/Fonts/Supplemental/Arial.ttf"
-ARIAL_B = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-IMPACT = "/System/Library/Fonts/Supplemental/Impact.ttf"
+ARIAL = caminhos.fonte_sistema("Arial.ttf")
+ARIAL_B = caminhos.fonte_sistema("Arial Bold.ttf")
+IMPACT = caminhos.fonte_sistema("Impact.ttf")
 TEXTO, AZUL, CINZA, LINHA, ZEBRA = "#191A21", "#1D2D85", "#6B7280", "#D9DDE5", "#F3F5F9"
 _id = caminhos.identidade()          # identidade do canal (canal.json do canal deste trabalho)
 if _id:

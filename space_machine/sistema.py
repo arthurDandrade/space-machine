@@ -39,6 +39,16 @@ def ficha_formato(nome):
     return _caminhos.ficha(nome)
 
 
+def fonte_sistema(nome):
+    """Caminho de uma fonte do sistema pelo nome do Mac ("Arial.ttf"), no Mac ou no Windows."""
+    return _caminhos.fonte_sistema(nome)
+
+
+def whisper_cli(configurado=""):
+    """O whisper-cli desta máquina (motor/caminhos.py decide)."""
+    return _caminhos.whisper_cli(configurado)
+
+
 def arquivo_formato(arquivo, formato=None):
     """Um arquivo da pasta do formato ("prompts/storyboard.md"), com erro claro se o formato não trouxer o seu."""
     return _caminhos.do_formato(arquivo, formato or FORMATO_PADRAO)
@@ -122,5 +132,9 @@ def canais():
 
 def ambiente_motor(c):
     """Variáveis que os scripts do motor usam para achar o canal e os dados (motor/caminhos.py)."""
+    # PYTHONUTF8: no Windows o Python lê e grava texto em cp1252 por padrão, e os prompts, o canal.json e as
+    # transcrições têm acento: com isso todo script do motor usa UTF-8, como no Mac
+    from .plataforma import CAMINHO_SISTEMA, WINDOWS
     return {**os.environ, "SM_CANAL": c["raiz"], "SM_DADOS": str(DADOS), "SM_PYTHON": sys.executable,
-            "SM_AFTER": config().get("after_app", "Adobe After Effects 2026"), "PYTHONUNBUFFERED": "1"}
+            "SM_AFTER": config().get("after_app", "Adobe After Effects 2026"), "PYTHONUNBUFFERED": "1",
+            "PYTHONUTF8": "1", **({"PATH": CAMINHO_SISTEMA} if WINDOWS else {})}

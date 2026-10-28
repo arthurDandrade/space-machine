@@ -14,9 +14,9 @@ Você cola o roteiro. O Space Machine faz o resto, bloco por bloco:
 O Claude só entra nas decisões: planejar as cenas, escolher os assets e corrigir o que o controle de qualidade reprovar.
 
 ## O que você precisa
-- **Mac** com **Adobe After Effects** (o editor).
+- **Mac** ou **Windows 10/11** com **Adobe After Effects** (o editor).
 - **Assinatura do Claude** e o **Claude Code** instalado (`npm install -g @anthropic-ai/claude-code`).
-- **Homebrew** (https://brew.sh).
+- No Mac, **Homebrew** (https://brew.sh). No Windows, o **winget** (já vem no Windows 11).
 - Chaves grátis de **Pixabay** ou **Pexels** (vídeos e fotos livres).
 - **Fish Audio** ou **ElevenLabs** para a narração — você escolhe por canal em Canal › Chaves. Também dá para gravar a sua e pôr um `narracao.mp3` em cada bloco.
 - Opcionais: Smithsonian (fotos históricas, grátis) e Serper (Google Imagens, pago, usado só como último recurso).
@@ -34,6 +34,22 @@ O instalador:
 - pergunta onde fica a **pasta de dados** (padrão `~/SpaceMachine-dados`);
 - cria o app **Space Machine** na área de trabalho (se você quiser): clicar abre o painel e, se ele não estiver ligado, liga em segundo plano. Para refazer: `./spacemachine atalho`.
 
+### No Windows
+No PowerShell, na pasta do Space Machine:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\instalar.ps1
+.\spacemachine.cmd
+```
+O PowerShell vem com a execução de scripts `.ps1` desligada: por isso o painel abre pelo `spacemachine.cmd` (ou pelo
+atalho), e o token do Claude sai com `claude.cmd setup-token` (o `claude` sozinho cai no `claude.ps1` do npm e dá
+"a execução de scripts foi desabilitada neste sistema").
+O `instalar.ps1` faz o mesmo que o `instalar.sh` pelo winget (Python 3.12, Node, ffmpeg, Git), baixa o whisper.cpp
+para Windows em `~\.cache\whisper\bin` e cria o atalho **Space Machine** na área de trabalho. Do Prompt de Comando,
+use `spacemachine` (o `spacemachine.cmd`); todos os comandos da linha de comando abaixo valem com `.\spacemachine.cmd`
+no lugar de `./spacemachine`. O que muda entre os sistemas fica em `space_machine/plataforma.py`.
+No Windows, a limpeza não usa a Lixeira do sistema: o que sai vai para `<dados>\lixo` (apague a pasta para liberar
+o espaço).
+
 O painel abre em http://localhost:8765, na escolha de canais. No topo ficam as três áreas do painel: **Início**
 (seus canais), **Modelagem** (os canais que você quer usar de modelo) e **Configurações**. Em Configurações ›
 **Primeiros passos** você vê o que ainda falta e como resolver.
@@ -47,7 +63,9 @@ No Terminal é `./spacemachine atualizar` (ou `--conferir`, só para olhar).
 Ele não atualiza por cima de trabalho seu: se tiver bloco ou fila produzindo, se você mexeu no código ou se baixou o
 ZIP em vez de clonar, o painel diz o que fazer em vez de atualizar.
 
-No After Effects, ligue: Settings › Scripting & Expressions › **Allow Scripts to Write Files and Access Network**.
+No After Effects, ligue: Settings › Scripting & Expressions › **Allow Scripts to Write Files and Access Network**
+(no Windows em português: Editar › Preferências › Scripts e expressões › **Permitir que scripts gravem arquivos e
+acessem a rede**).
 
 ## Primeiro vídeo
 O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher um, entra na produção daquele canal.

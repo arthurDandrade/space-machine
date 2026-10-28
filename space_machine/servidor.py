@@ -28,7 +28,9 @@ APP = Path(__file__).with_name("static") / "app"
 def arquivo(p: str):
     """Serve prévias, folhas, revisão — só de dentro das pastas de produção dos canais."""
     alvo = Path(p).resolve()
-    if not any(str(alvo).startswith(str(Path(c["producoes"]).resolve()) + "/") for c in canais().values()):
+    # por partes do caminho, não por texto: no Windows a barra é a outra
+    if not any(alvo.is_relative_to(Path(c["producoes"]).resolve()) and alvo != Path(c["producoes"]).resolve()
+               for c in canais().values()):
         raise HTTPException(403, "fora das pastas de produção")
     if not alvo.is_file():
         raise HTTPException(404)

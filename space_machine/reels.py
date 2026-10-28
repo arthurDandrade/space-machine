@@ -10,15 +10,14 @@ Usa a trava do After (<dados>/trava_after) como os blocos e o vídeo final. O pa
 por <vídeo>/reels/estado_NN.json.
 """
 import argparse
-import fcntl
 import json
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 from . import estado
+from . import plataforma
 from .canal import canal_do_bloco
 from .final import _after, _guardar_anterior
 from .sistema import DADOS, MOTOR, ambiente_motor, gravar_json, ler_json
@@ -70,7 +69,7 @@ def fazer(b):
         return 1
     trava = open(DADOS / "trava_after", "w")
     _marcar(b, etapa="esperando a vez no After")
-    fcntl.flock(trava, fcntl.LOCK_EX)
+    plataforma.travar(trava)
     try:
         _marcar(b, etapa="montando no After")
         r = _after(ed / f"montar_{nn}_vertical.jsx", ed / f"log_{nn}_vertical.txt", 1800)
@@ -92,7 +91,7 @@ def fazer(b):
                     fim=time.strftime("%Y-%m-%d %H:%M:%S"))
             return 1
     finally:
-        fcntl.flock(trava, fcntl.LOCK_UN)
+        plataforma.destravar(trava)
         trava.close()
     _marcar(b, status="ok", etapa="pronto", mp4=str(saida), fim=time.strftime("%Y-%m-%d %H:%M:%S"))
     return 0
@@ -105,11 +104,7 @@ def lancar(b):
     pasta.mkdir(exist_ok=True)
     cmd = [sys.executable, "-m", "space_machine", "reels", str(b)]
     _marcar(b, status="rodando", etapa="começando", erro="")
-    sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_REELS" 2>&1 & echo $!', "sh", *cmd],
-                        cwd=Path(__file__).resolve().parent.parent, capture_output=True, text=True,
-                        start_new_session=True,
-                        env={**os.environ, "PYTHONUNBUFFERED": "1", "LOG_REELS": str(pasta / f"log_reels_{nn}.txt")})
-    pid = sh.stdout.strip()
+    pid = plataforma.lancar_solto(cmd, pasta / f"log_reels_{nn}.txt", Path(__file__).resolve().parent.parent)
     (pasta / f"pid_{nn}").write_text(pid)
     return pid
 

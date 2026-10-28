@@ -245,7 +245,7 @@ def folha(video, plano, saida):
         t = e["ini"] + 0.7 * (fim - e["ini"])
         rv, rt = random.choice(refs[c])
         pares.append((f"{e['layout']} @ {t:.1f}s", frame(video, t), frame(rv, rt)))
-    fnt = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 22)
+    fnt = ImageFont.truetype(caminhos.fonte_sistema("Arial Bold.ttf"), 22)
     W, H = 640, 360
     out = Image.new("RGB", (2 * W + 30, len(pares) * (H + 34) + 40), (30, 30, 30))
     d = ImageDraw.Draw(out)

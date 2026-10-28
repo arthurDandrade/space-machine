@@ -24,7 +24,7 @@ _sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import caminhos  # noqa: E402
 
 DADOS = Path(__file__).resolve().parent.parent / "dados"
-IMPACT = "/System/Library/Fonts/Supplemental/Impact.ttf"
+IMPACT = caminhos.fonte_sistema("Impact.ttf")
 AGUA, TERRA, TERRA_FORA = "#D7E3F1", "#F8F6F1", "#ECEAE4"
 BORDA, BORDA_EST = "#A9B0BC", "#C6CBD4"
 CORES = {"azul": "#1D2D85", "laranja": "#F07D1A"}     # azul = Identidade Visual; laranja = referências

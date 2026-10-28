@@ -80,7 +80,7 @@ def gerar_mapa(proj, spec):
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"gerar_mapa falhou ({spec}): {r.stderr.strip() or r.stdout.strip()}")
-    return str(rel)
+    return rel.as_posix()       # com "/" também no Windows: o gerar_ae2 reconhece o mapa por "/mapas/"
 
 
 def gerar_tabela(proj, spec):
@@ -92,7 +92,7 @@ def gerar_tabela(proj, spec):
                         json.dumps(spec)], capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"gerar_tabela falhou: {r.stderr.strip() or r.stdout.strip()}")
-    return str(rel)
+    return rel.as_posix()
 
 
 def gerado(proj, spec):

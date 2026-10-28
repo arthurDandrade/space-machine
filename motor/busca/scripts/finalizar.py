@@ -133,7 +133,7 @@ def main():
                                     "stream=width,height", "-of", "csv=p=0", str(destino)],
                                    capture_output=True, text=True).stdout.strip().split(",")
                 w, h = int(r[0]), int(r[1])
-            base.update({"arquivo": str(destino.relative_to(proj)), "w": w, "h": h, "origem": info})
+            base.update({"arquivo": destino.relative_to(proj).as_posix(), "w": w, "h": h, "origem": info})
             manifesto.append(base)
         except Exception as e:
             log(f"[{aid}] ERRO: {e}")

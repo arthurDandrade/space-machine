@@ -24,6 +24,18 @@
       "port": 8766
     },
     {
+      "name": "space-machine-windows",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "-m",
+        "space_machine",
+        "painel"
+      ],
+      "port": 8765
+    },
+    {
       "name": "painel-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

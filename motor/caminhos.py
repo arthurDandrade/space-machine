@@ -84,6 +84,29 @@ def cache():
     return dados() / "cache"
 
 
+# Fontes do sistema que o motor usa para medir e desenhar texto (Impact dos títulos, Arial das tabelas e citações).
+# São as mesmas fontes no Mac e no Windows; só o nome do arquivo e a pasta mudam.
+_FONTES_WINDOWS = {"Impact.ttf": "impact.ttf", "Arial.ttf": "arial.ttf", "Arial Bold.ttf": "arialbd.ttf"}
+
+
+def fonte_sistema(nome):
+    """Caminho de uma fonte do sistema pelo nome do Mac ("Impact.ttf", "Arial.ttf", "Arial Bold.ttf")."""
+    if os.name == "nt":
+        return str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts" / _FONTES_WINDOWS.get(nome, nome))
+    return f"/System/Library/Fonts/Supplemental/{nome}"
+
+
+def whisper_cli(configurado=""):
+    """O whisper-cli desta máquina: o configurado em busca/config.json se existir aqui; senão o do PATH; senão o que
+    o instalar.ps1 baixa no Windows (~/.cache/whisper/bin)."""
+    import shutil
+    conf = os.path.expanduser(configurado or "")
+    if conf and Path(conf).exists():
+        return conf
+    baixado = Path.home() / ".cache" / "whisper" / "bin" / "whisper-cli.exe"
+    return shutil.which("whisper-cli") or (str(baixado) if baixado.exists() else conf or "whisper-cli")
+
+
 # Formato do vídeo: canal.json["formato"] aponta para formatos/<nome>/. Canal de antes de 2026-10-22 não tem
 # o campo e continua no explained, o único formato que havia.
 FORMATO_PADRAO = "explained"

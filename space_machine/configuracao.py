@@ -310,12 +310,15 @@ def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None,
 
 
 # ---------------- identidade e regras do canal ----------------
-FONTES_DIRS = ["/System/Library/Fonts/Supplemental", "/Library/Fonts", str(Path.home() / "Library/Fonts")]
+FONTES_DIRS = ([str(Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"),
+                str(Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "Microsoft/Windows/Fonts")]
+               if os.name == "nt" else
+               ["/System/Library/Fonts/Supplemental", "/Library/Fonts", str(Path.home() / "Library/Fonts")])
 COR = re.compile(r"#[0-9A-Fa-f]{6}")
 
 
 def fontes():
-    """Fontes instaladas no Mac que o After consegue usar nos títulos."""
+    """Fontes instaladas no computador que o After consegue usar nos títulos."""
     out = []
     for d in FONTES_DIRS:
         for f in sorted(Path(d).glob("*.tt[fc]")) + sorted(Path(d).glob("*.otf")):
@@ -442,7 +445,8 @@ def salvar_modelos(slug, modelos, esforco):
 
 
 def salvar_after_app(nome):
-    """Nome do app do After Effects em /Applications (vale para todos os canais: é a máquina)."""
+    """Nome do app do After Effects (pasta em /Applications no Mac, em Program Files\\Adobe no Windows; vale para
+    todos os canais: é a máquina)."""
     from .sistema import salvar_config
     if not re.fullmatch(r"[\w .-]+", (nome or "").strip()):
         raise ValueError("nome de app inválido")

@@ -22,6 +22,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from . import plataforma
 from .sistema import (DADOS, PACOTE, REPO as RAIZ, canais, config,  # noqa: F401  (usados por outros módulos)
                       config_canal)
 
@@ -89,7 +90,7 @@ def eh_limite(msg):
 
 def _versao_claude():
     try:
-        r = subprocess.run(["claude", "--version"], capture_output=True, text=True, env=_env(), timeout=30)
+        r = subprocess.run([plataforma.claude(), "--version"], capture_output=True, text=True, env=_env(), timeout=30)
         return (r.stdout or r.stderr).strip().split(" ")[0] or "?"
     except FileNotFoundError:
         return None
@@ -97,7 +98,7 @@ def _versao_claude():
 
 def _ping(modelo):
     """Chamada mínima (sem raciocínio, sem ferramentas). Devolve None se respondeu, ou o texto do erro."""
-    cmd = ["claude", "-p", "--model", modelo, "--system-prompt", "Responda só: ok", "--strict-mcp-config",
+    cmd = [plataforma.claude(), "-p", "--model", modelo, "--system-prompt", "Responda só: ok", "--strict-mcp-config",
            "--tools", "", "--setting-sources", "", "--no-session-persistence", "--output-format", "json", "ok"]
     env = _env()
     env["MAX_THINKING_TOKENS"] = "0"
@@ -134,7 +135,7 @@ def checar_claude(etapas, atualizar=True, canal=None):
         return
     versao = _versao_claude()
     if versao is None:
-        raise ErroClaude("o comando `claude` não foi encontrado em /opt/homebrew/bin. "
+        raise ErroClaude("o comando `claude` não foi encontrado. "
                          "Instale de novo: npm install -g @anthropic-ai/claude-code")
     try:
         cache = json.loads(CHECAGEM.read_text())
@@ -148,7 +149,7 @@ def checar_claude(etapas, atualizar=True, canal=None):
         erro = _ping(modelo)
         if erro and atualizar and ("newer is required" in erro or "claude update" in erro):
             print(f"[checagem] claude {versao} não aceita {modelo}: rodando `claude update`...", flush=True)
-            subprocess.run(["claude", "update"], capture_output=True, text=True, env=_env(), timeout=600)
+            subprocess.run([plataforma.claude(), "update"], capture_output=True, text=True, env=_env(), timeout=600)
             nova = _versao_claude()
             if nova and nova != versao:
                 print(f"[checagem] claude atualizado: {versao} → {nova}", flush=True)
@@ -179,8 +180,8 @@ def checar_claude(etapas, atualizar=True, canal=None):
 
 def _env(etapa=None):
     """Ambiente limpo: o claude filho não herda proxy/sessão de quem chamou (ex.: o app desktop)."""
-    env = {k: os.environ[k] for k in ("HOME", "USER", "LANG", "TMPDIR", "SHELL") if k in os.environ}
-    env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+    env = {k: os.environ[k] for k in plataforma.VARIAVEIS_BASE if k in os.environ}
+    env["PATH"] = plataforma.CAMINHO_SISTEMA
     # esforço low = sem raciocínio (MAX_THINKING_TOKENS=0): é o que deixa as escolhas baratas (saída de ~170
     # tokens em vez de 1,5–8,7 mil). De medium para cima, o Claude raciocina o quanto quiser.
     if etapa and config().get("esforco", {}).get(etapa, "low") == "low":
@@ -267,7 +268,16 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
     conteudo.append({"type": "text", "text": texto})
     msg = json.dumps({"type": "user", "message": {"role": "user", "content": conteudo}})
 
-    cmd = ["claude", "-p", "--model", modelo, "--system-prompt", sistema,
+    CWD.mkdir(parents=True, exist_ok=True)
+    nome = "_".join(str(x) for x in ("ultima", etapa, ctx.get("video"), ctx.get("bloco"), ctx.get("asset")) if x)
+    if plataforma.WINDOWS:
+        # a linha de comando do Windows para em 32 mil caracteres e o prompt do storyboard passa disso: vai por arquivo
+        arq_sistema = CWD / f"{nome}.sistema.md"
+        arq_sistema.write_text(sistema, encoding="utf-8")
+        opcao_sistema = ["--system-prompt-file", str(arq_sistema)]
+    else:
+        opcao_sistema = ["--system-prompt", sistema]
+    cmd = [plataforma.claude(), "-p", "--model", modelo, *opcao_sistema,
            "--strict-mcp-config", "--tools", "", "--setting-sources", "",
            "--input-format", "stream-json", "--output-format", "stream-json", "--verbose"]
     if sessao:
@@ -280,7 +290,6 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
         cmd += ["--effort", esforco]
     if schema:
         cmd += ["--json-schema", json.dumps(schema)]
-    CWD.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     try:
         # a saída vai para um arquivo enquanto chega (dados/claude_cwd/ultima_<etapa>.jsonl): dá para
@@ -288,7 +297,6 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
         # um arquivo por chamada (chamadas paralelas da mesma etapa corrompiam um arquivo comum)
         # com vídeo e bloco no nome: dois blocos no storyboard/QA ao mesmo tempo escreviam no mesmo arquivo
         # e um podia ler a resposta do outro (2026-10-11)
-        nome = "_".join(str(x) for x in ("ultima", etapa, ctx.get("video"), ctx.get("bloco"), ctx.get("asset")) if x)
         andamento, arq_erro = CWD / f"{nome}.jsonl", CWD / f"{nome}.err"
         with open(andamento, "w") as saida, open(arq_erro, "w") as erro:
             proc = subprocess.run(cmd, input=msg + "\n", stdout=saida, stderr=erro, text=True, cwd=CWD,

@@ -19,7 +19,7 @@ from fastapi import APIRouter, Body, File, Form, HTTPException, Request, UploadF
 from fastapi.responses import FileResponse, StreamingResponse
 
 from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, modelar,
-               primeiros_passos, reels, textos)
+               plataforma, primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, formatos, ler_json
@@ -38,7 +38,7 @@ def _canal(slug):
 
 def _video_dir(slug, video):
     vd = Path(_canal(slug)["producoes"]) / video
-    if "/" in video or video.startswith((".", "_")) or not vd.is_dir():
+    if "/" in video or "\\" in video or video.startswith((".", "_")) or not vd.is_dir():
         raise HTTPException(404, "vídeo não encontrado")
     return vd
 
@@ -250,7 +250,7 @@ def detalhe_video(slug: str, video: str):
 
 def _curto(vd, texto):
     """Caminho dentro do vídeo vira relativo: na linha da etapa, no painel, o caminho inteiro só cabia cortado."""
-    return texto.replace(f"{vd}/", "") if isinstance(texto, str) else texto
+    return texto.replace(f"{vd}/", "").replace(f"{vd}\\", "") if isinstance(texto, str) else texto
 
 
 @api.get("/c/{slug}/v/{video}/b/{nn}")
@@ -357,7 +357,7 @@ def apagar_prompt(slug: str, nome: str):
 @api.post("/c/{slug}/prompts-pasta")
 def abrir_pasta_prompts(slug: str):
     _canal(slug)
-    subprocess.run(["open", str(meus_prompts.pasta(slug))], check=False)
+    plataforma.abrir(meus_prompts.pasta(slug))
     return {"ok": True}
 
 
@@ -607,11 +607,11 @@ def fazer_reels(slug: str, video: str, nn: str):
 
 @api.post("/c/{slug}/v/{video}/final/abrir")
 def abrir_final(slug: str, video: str):
-    """Abre o final.aep no After (o painel roda no próprio Mac)."""
+    """Abre o final.aep no After (o painel roda no próprio computador)."""
     aep = _video_dir(slug, video) / "final" / "final.aep"
     if not aep.exists():
         raise HTTPException(404, "o projeto final ainda não foi montado")
-    subprocess.run(["open", "-a", config().get("after_app", "Adobe After Effects 2026"), str(aep)], check=False)
+    plataforma.abrir_no_after(config().get("after_app", "Adobe After Effects 2026"), aep)
     return {"ok": True}
 
 
@@ -655,11 +655,12 @@ def restaurar_video(slug: str, nome: str):
 
 @api.post("/c/{slug}/v/{video}/abrir")
 def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True), sub: str = Body("", embed=True)):
-    """Mostra a pasta do vídeo (do bloco, ou a final/ ou reels/) no Finder: o painel roda no próprio Mac."""
+    """Mostra a pasta do vídeo (do bloco, ou a final/ ou reels/) no Finder ou no Explorador: o painel roda no
+    próprio computador."""
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
     if sub in ("final", "reels") and (pasta / sub).is_dir():
         pasta = pasta / sub
-    subprocess.run(["open", str(pasta)], check=False)
+    plataforma.abrir(pasta)
     return {"ok": True}
 
 
@@ -918,7 +919,10 @@ def limpeza_automatica(ligada: bool = Body(..., embed=True)):
 
 @api.post("/limpeza/abrir-lixo")
 def abrir_lixo():
-    subprocess.run(["open", str(Path.home() / ".Trash")], check=False)
+    # no Windows a limpeza não usa a Lixeira do sistema: vai para <dados>/lixo (limpeza._destino_lixo)
+    lixo = DADOS / "lixo" if plataforma.WINDOWS else Path.home() / ".Trash"
+    lixo.mkdir(parents=True, exist_ok=True)
+    plataforma.abrir(lixo)
     return {"ok": True}
 
 

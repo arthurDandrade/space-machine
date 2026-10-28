@@ -260,7 +260,7 @@ def excluir_video(c, slug):
     """Move o vídeo inteiro para a lixeira do canal (nada é apagado; dá para restaurar)."""
     prod = Path(c["producoes"])
     vd = prod / slug
-    if not slug or slug.startswith((".", "_")) or "/" in slug or not vd.is_dir():
+    if not slug or slug.startswith((".", "_")) or "/" in slug or "\\" in slug or not vd.is_dir():
         raise ValueError("vídeo não encontrado")
     motivo = _ocupado(vd)
     if motivo:
@@ -358,7 +358,7 @@ def restaurar_video(c, nome):
     <vídeo>-restaurado. Bloco: volta para <vídeo>/blocos/NN com os MP4 que tinha entregue."""
     prod = Path(c["producoes"])
     src = prod / LIXEIRA / nome
-    if "/" in nome or nome.startswith(".") or not src.is_dir():
+    if "/" in nome or "\\" in nome or nome.startswith(".") or not src.is_dir():
         raise ValueError("não está na lixeira")
     video, nn, _ = _partes_da_lixeira(nome)
     if nn:

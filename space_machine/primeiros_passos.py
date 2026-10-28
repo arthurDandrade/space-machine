@@ -4,12 +4,12 @@ Nada aqui gasta token: o teste de verdade do Claude é o botão "Testar o Claude
 """
 import os
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
 from . import configuracao
-from .sistema import CANAIS, DADOS, MOTOR, canais, config, ler_json
+from . import plataforma
+from .sistema import CANAIS, DADOS, MOTOR, canais, config, ler_json, whisper_cli
 
 
 def _item(ok, nome, detalhe, como=""):
@@ -24,36 +24,51 @@ def _versao(cmd):
         return ""
 
 
+def _prefs_after():
+    """A pasta onde o After guarda as preferências desta pessoa (muda de sistema para sistema)."""
+    if plataforma.WINDOWS:
+        return Path(os.environ.get("APPDATA", Path.home() / "AppData/Roaming")) / "Adobe" / "After Effects"
+    return Path.home() / "Library/Preferences/Adobe/After Effects"
+
+
 def _after():
-    """(app instalado?, permissão de scripts gravarem arquivos ligada?) do After configurado em space_machine.json."""
+    """(app, instalado?, permissão de scripts gravarem arquivos ligada?) do After de space_machine.json."""
     app = config().get("after_app", "Adobe After Effects 2026")
-    instalado = Path("/Applications") / app / f"{app}.app"
-    prefs = sorted((Path.home() / "Library/Preferences/Adobe/After Effects").glob("*/Adobe After Effects * Prefs.txt"),
-                   key=lambda p: [int(x) for x in re.findall(r"\d+", p.parent.name)] or [0])
+    instalado = plataforma.after_instalado(app)
+    # o nome do arquivo é traduzido ("Adobe After Effects 26.5 Prefs.txt", "Preferências do Adobe After Effects
+    # 26.5.txt"): vale o da versão mais nova que tiver a chave
+    versoes = sorted((d for d in _prefs_after().glob("*") if d.is_dir() and re.fullmatch(r"[\d.]+", d.name)),
+                     key=lambda d: [int(x) for x in re.findall(r"\d+", d.name)])
     permitido = None
-    if prefs:
-        m = re.search(r'"Pref_SCRIPTING_FILE_NETWORK_SECURITY" = "?(\d+)', prefs[-1].read_text(errors="replace"))
-        permitido = bool(m and m.group(1).strip("0"))
-    return app, instalado.exists(), permitido
+    for arq in (sorted(versoes[-1].glob("*.txt"), key=lambda p: len(p.name)) if versoes else []):
+        m = re.search(r'"Pref_SCRIPTING_FILE_NETWORK_SECURITY" = "?(\d+)', arq.read_text(errors="replace"))
+        if m:
+            permitido = bool(m.group(1).strip("0"))
+            break
+    return app, bool(instalado), permitido
 
 
 def checar():
     """Lista de {ok, nome, detalhe, como} na ordem em que a pessoa resolve."""
     out = []
+    instalador = ".\\instalar.ps1" if plataforma.WINDOWS else "./instalar.sh"
     out.append(_item(DADOS.exists() and os.access(DADOS, os.W_OK), "Pasta de dados",
-                     str(DADOS), f"Crie a pasta {DADOS} (ou rode ./instalar.sh e escolha outra)."))
-    claude = shutil.which("claude", path="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin")
+                     str(DADOS), f"Crie a pasta {DADOS} (ou rode {instalador} e escolha outra)."))
+    claude = plataforma.achar("claude")
     out.append(_item(claude, "Claude Code (comando claude)", _versao([claude, "--version"]) if claude else "não encontrado",
                      "Instale: npm install -g @anthropic-ai/claude-code (precisa de uma assinatura do Claude)."))
     token = configuracao.ler_env(DADOS / ".env").get("CLAUDE_CODE_OAUTH_TOKEN")
     out.append(_item(token, "Token da assinatura do Claude", "configurado" if token else "faltando",
-                     "No Terminal: claude setup-token. Cole o token em APIs › Claude."))
-    for prog, como in (("ffmpeg", "brew install ffmpeg"), ("ffprobe", "vem junto com o ffmpeg: brew install ffmpeg")):
-        p = shutil.which(prog, path="/opt/homebrew/bin:/usr/local/bin:/usr/bin")
-        out.append(_item(p, prog, p or "não encontrado", como))
+                     # no PowerShell o claude.ps1 do npm cai na política de execução de scripts; o .cmd não
+                     ("No PowerShell: claude.cmd setup-token" if plataforma.WINDOWS else "No Terminal: claude setup-token")
+                     + ". Cole o token em APIs › Claude."))
+    for prog in ("ffmpeg", "ffprobe"):
+        p = plataforma.achar(prog)
+        out.append(_item(p, prog, p or "não encontrado", plataforma.COMO_INSTALAR[prog]))
     cfg_busca = ler_json(MOTOR / "busca" / "config.json", {}) or {}
-    whisper = cfg_busca.get("whisper_cli", "/opt/homebrew/bin/whisper-cli")
-    out.append(_item(Path(whisper).exists(), "Transcrição (whisper-cli)", whisper, "brew install whisper-cpp"))
+    whisper = whisper_cli(cfg_busca.get("whisper_cli"))
+    out.append(_item(Path(whisper).exists(), "Transcrição (whisper-cli)", whisper,
+                     plataforma.COMO_INSTALAR["whisper-cli"]))
     modelos = {Path(cfg_busca.get("whisper_modelo", "~/.cache/whisper/ggml-small.en.bin")).expanduser()}
     for c in canais().values():
         m = (ler_json(Path(c["raiz"]) / "canal.json", {}) or {}).get("busca", {}).get("whisper_modelo")
@@ -61,14 +76,19 @@ def checar():
             modelos.add(Path(m).expanduser())
     for m in sorted(modelos):
         out.append(_item(m.exists(), f"Modelo de transcrição {m.name}", str(m),
-                         f"./instalar.sh baixa (ou: curl -L -o {m} https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{m.name})"))
+                         f"{instalador} baixa (ou: curl -L -o {m} https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{m.name})"))
     app, instalado, permitido = _after()
-    out.append(_item(instalado, "After Effects", app if instalado else f"{app} não encontrado em /Applications",
+    onde = "Program Files\\Adobe" if plataforma.WINDOWS else "/Applications"
+    out.append(_item(instalado, "After Effects", app if instalado else f"{app} não encontrado em {onde}",
                      "Instale o After Effects. Se for outra versão, troque o nome do app aqui embaixo."))
     if instalado:
         out.append(_item(permitido, "After Effects: scripts podem gravar arquivos",
                          "ligado" if permitido else "desligado ou nunca aberto",
-                         "No After: Settings › Scripting & Expressions › marque \"Allow Scripts to Write Files and Access Network\"."))
+                         ("No After: Editar › Preferências › Scripts e expressões › marque \"Permitir que scripts gravem "
+                          "arquivos e acessem a rede\" (em inglês: Edit › Preferences › Scripting & Expressions › "
+                          "\"Allow Scripts to Write Files and Access Network\")." if plataforma.WINDOWS else
+                          "No After: Settings › Scripting & Expressions › marque \"Allow Scripts to Write Files and "
+                          "Access Network\".")))
     lista = canais()
     out.append(_item(lista, "Pelo menos um canal", ", ".join(c["nome"] for c in lista.values()) or "nenhum",
                      "Crie em Canais › Novo canal."))

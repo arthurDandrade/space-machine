@@ -12,7 +12,7 @@ from pathlib import Path
 
 proj, origem, n, destino = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), sys.argv[4]
 cand = proj / "_work" / "candidatos"
-p_origem = Path(origem) if "/" in origem else cand / origem
+p_origem = Path(origem) if ("/" in origem or "\\" in origem) else cand / origem
 src = json.loads((p_origem / "candidatos.json").read_text())
 c = dict(next(x for x in src["candidatos"] if x["n"] == n))
 p_dest = cand / destino / "candidatos.json"

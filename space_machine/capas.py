@@ -16,6 +16,7 @@ import threading
 from pathlib import Path
 
 from . import estado
+from . import plataforma
 from .sistema import DADOS
 
 CACHE = DADOS / "cache" / "capas"
@@ -27,7 +28,7 @@ _trava_geral = threading.Lock()
 
 
 def _ffmpeg():
-    return shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
+    return plataforma.achar("ffmpeg") or "ffmpeg"
 
 
 def _numero(f):

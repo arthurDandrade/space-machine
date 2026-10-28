@@ -74,7 +74,9 @@
         }
         var tex = comp.layers.addSolid([0.5, 0.5, 0.5], "Textura papel", W, H, 1, DADOS.dur);
         var fn = tex.property("ADBE Effect Parade").addProperty("ADBE Fractal Noise");
-        fn.property("Contrast").setValue(260); fn.property("Brightness").setValue(-10);
+        // nome em inglês ou, no After em outro idioma (Contraste, Brilho...), o matchName, que é igual em todos
+        (fn.property("Contrast") || fn.property("ADBE Fractal Noise-0004")).setValue(260);
+        (fn.property("Brightness") || fn.property("ADBE Fractal Noise-0005")).setValue(-10);
         fn.property("ADBE Fractal Noise-0010").setValue(18);
         tex.blendingMode = BlendingMode.SOFT_LIGHT; tex.opacity.setValue(14);
         var vin = comp.layers.addSolid(DADOS.cor_sombra, "Vinheta", W, H, 1, DADOS.dur);

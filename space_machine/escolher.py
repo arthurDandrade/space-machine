@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from . import motor_claude as motor
 from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
+from .sistema import fonte_sistema
 
 TIPOS_IMAGEM = ("foto", "historica", "recorte", "logo", "mapa", "bandeira")
 MARGEM_VIDEO = 1.0          # finalizar.py baixa duração + video_margem_s (1 s)
@@ -604,7 +605,7 @@ class Bloco:
         out = Image.new("RGB", (cel[0] * 2 + 360, len(difs) * (cel[1] + rot)), (235, 235, 235))
         d = ImageDraw.Draw(out)
         try:
-            fonte = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 18)
+            fonte = ImageFont.truetype(fonte_sistema("Arial.ttf"), 18)
         except OSError:
             fonte = ImageFont.load_default()
         idx = {a["id"]: a for _, _, a in self.assets()}

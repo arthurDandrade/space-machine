@@ -9,17 +9,18 @@ O Claude só entra no storyboard (sessão curta com voltas de correção), na es
 correção automática do QA (uma vez). Exceções param o bloco com o motivo em <bloco>/_estudio/estado.json.
 """
 import argparse
-import fcntl
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
 
 from . import motor_claude as motor
+from . import plataforma
 from .canal import canal_do_bloco, contexto, gravar_json, ler_json, rodar_script
 from .escolher import Bloco as BlocoEscolha
 from . import limpeza
@@ -37,11 +38,7 @@ def _aprovado(qa):
 
 
 def _vivo(pid):
-    try:
-        os.kill(int(pid), 0)
-        return True
-    except (ValueError, ProcessLookupError, PermissionError):
-        return False
+    return plataforma.vivo(pid)
 
 
 class Parada(Exception):
@@ -313,23 +310,27 @@ class Rodada:
         return int(re.search(r"_v(\d+)\.mp4$", pv[-1].name).group(1)) + 1 if pv else 1
 
     def _editar_uma(self):
-        # um bloco por vez no After em todo o Mac (o After só roda um script de cada vez e trava com dois)
+        # um bloco por vez no computador inteiro (o After só roda um script de cada vez e trava com dois)
         trava = open(motor.DADOS / "trava_after", "w")
         self.marcar("editar", "rodando", "esperando a vez no After")
-        fcntl.flock(trava, fcntl.LOCK_EX)
+        plataforma.travar(trava)
         try:
             self.marcar("editar", "rodando", "montando e renderizando no After")
             return self._editar_uma_travado()
         finally:
-            fcntl.flock(trava, fcntl.LOCK_UN)
+            plataforma.destravar(trava)
             trava.close()
 
     def _editar_uma_travado(self):
         v = self._versao()
-        sh = Path(self.c["editor"]) / "editar_bloco.sh"
+        editor = Path(self.c["editor"])
+        # o .sh é do Mac; no Windows (e onde o .sh não existir) roda o mesmo passo a passo em Python
+        sh = editor / "editar_bloco.sh"
+        cmd = ([str(sh), str(self.p), self.nn, str(v)] if not plataforma.WINDOWS and sh.exists()
+               else [sys.executable, str(editor / "editar_bloco.py"), str(self.p), self.nn, str(v)])
         with open(self.log("editar"), "a") as f:
             ini_log = f.tell()
-            r = subprocess.run([str(sh), str(self.p), self.nn, str(v)], cwd=self.c["raiz"], stdout=f,
+            r = subprocess.run(cmd, cwd=self.c["raiz"], stdout=f,
                                stderr=subprocess.STDOUT, timeout=3 * 3600, env=ambiente_motor(self.c))
         previa = self.p / "edicao" / f"previa_bloco_{self.nn}_v{v}.mp4"
         if not previa.exists():
@@ -432,7 +433,7 @@ class Rodada:
         meu = str(os.getpid())
         if pid.exists():
             outro = pid.read_text().strip()
-            if outro != meu and _vivo(outro):
+            if outro not in plataforma.meus_pids() and _vivo(outro):
                 # duas rodadas no mesmo bloco brigam pelo cenas.json e pela pasta _baixando da busca
                 print(f"[{self.nn}] já tem uma rodada neste bloco (pid {outro}): não vou rodar outra junto.")
                 return False

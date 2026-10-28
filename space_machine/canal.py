@@ -8,7 +8,8 @@ from .sistema import ambiente_motor, canais, gravar_json, ler_json  # noqa: F401
 def canal_do_bloco(bloco):
     bloco = Path(bloco).resolve()
     for slug, c in canais().items():
-        if str(bloco).startswith(str(Path(c["producoes"]).resolve()) + "/"):
+        prod = Path(c["producoes"]).resolve()
+        if bloco != prod and bloco.is_relative_to(prod):     # não por texto: no Windows a barra é a outra
             return slug, c
     raise SystemExit(f"{bloco} não está na pasta de produções de nenhum canal (<dados>/canais/<canal>/producoes)")
 

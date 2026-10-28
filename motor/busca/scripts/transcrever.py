@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from comum import config, gravar_json, log
+from comum import caminhos, config, gravar_json, log
 
 EXT_AUDIO = (".wav", ".mp3", ".m4a", ".aac", ".flac", ".ogg", ".aiff", ".aif")
 
@@ -48,7 +48,7 @@ def main():
                         "-ar", "16000", "-ac", "1", str(wav)], check=True)
         saida = Path(tmp) / "w"
         log(f"Transcrevendo {audio.name} (pode levar alguns minutos)...")
-        subprocess.run([cfg["whisper_cli"], "-m", os.path.expanduser(cfg["whisper_modelo"]),
+        subprocess.run([caminhos.whisper_cli(cfg.get("whisper_cli")), "-m", os.path.expanduser(cfg["whisper_modelo"]),
                         "-f", str(wav), "-ml", "1", "-sow", "-osrt", "-of", str(saida),
                         "-t", str(os.cpu_count() or 4)],
                        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

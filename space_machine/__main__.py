@@ -12,10 +12,17 @@
   python -m space_machine limpar [--cache] [--aplicar]  manda para o Lixo o que o sistema gerou e não serve mais
   python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
 """
+import os
+import subprocess
 import sys
 
 
 def main():
+    if os.name == "nt" and not sys.flags.utf8_mode:
+        # no Windows o Python lê e grava texto em cp1252, e o Space Machine é todo UTF-8 (acento nos prompts, no
+        # canal.json, nas transcrições): roda de novo em modo UTF-8, que os processos filhos herdam
+        os.environ["PYTHONUTF8"] = "1"
+        sys.exit(subprocess.call([sys.executable, "-X", "utf8", *sys.orig_argv[1:]]))
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__)
         return

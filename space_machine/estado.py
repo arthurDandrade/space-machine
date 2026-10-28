@@ -148,18 +148,16 @@ def bloco(caminho, video_dir=None):
 
 def _vivo(pid):
     import os
-    try:
-        # rodada aberta pelo painel é filha dele: quando termina vira zumbi (os.kill ainda "acha" o pid)
-        # até alguém recolher. waitpid recolhe e diz que acabou; se não for filha, segue para o kill.
-        if os.waitpid(int(pid), os.WNOHANG)[0] == int(pid):
-            return False
-    except (ChildProcessError, ValueError, OSError):
-        pass
-    try:
-        os.kill(int(pid), 0)
-        return True
-    except (ValueError, ProcessLookupError, PermissionError):
-        return False
+    from . import plataforma
+    if not plataforma.WINDOWS:     # no Windows o waitpid pede um handle, não um pid (e não há zumbi)
+        try:
+            # rodada aberta pelo painel é filha dele: quando termina vira zumbi (os.kill ainda "acha" o pid)
+            # até alguém recolher. waitpid recolhe e diz que acabou; se não for filha, segue para o kill.
+            if os.waitpid(int(pid), os.WNOHANG)[0] == int(pid):
+                return False
+        except (ChildProcessError, ValueError, OSError):
+            pass
+    return plataforma.vivo(pid)
 
 
 def blocos_do_video(video_dir):

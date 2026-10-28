@@ -174,7 +174,7 @@ COR_AZUL = _rgb("#1D2D85")       # azul royal ("NFL WORLD")
 COR_CAIXA = _rgb("#0B2479")      # caixa azul ("WORK INSIDE")
 COR_SOMBRA = _rgb("#0B1A3A")     # sombras levemente azuladas
 FONTE_MARCA = "Impact"           # condensada pesada, sempre em MAIÚSCULAS
-IMPACT_TTF = "/System/Library/Fonts/Supplemental/Impact.ttf"
+IMPACT_TTF = caminhos.fonte_sistema("Impact.ttf")
 # canal.json do canal (caminhos.canal()): cores, fonte e fundo de cada canal. Sem um campo, vale o padrão acima.
 _id = caminhos.identidade()
 if _id:
@@ -250,7 +250,7 @@ def linhas_rotulo(t):
 
 COR_CITACAO = "#1F2024"         # caixa escura (G1), perto do COR_TEXTO
 COR_GRIFO = "#2F45C0"           # grifo azul atrás das palavras (medido em v5#19; azul da marca, mais claro)
-ARIAL = "/System/Library/Fonts/Supplemental/Arial.ttf"
+ARIAL = caminhos.fonte_sistema("Arial.ttf")
 
 
 def desenhar_citacao(destino, texto, grifo="", fonte="", larg_txt=860, k=2):

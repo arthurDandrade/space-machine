@@ -13,16 +13,14 @@ fecha o projeto que estiver aberto sem salvar. O final.aep (e o MP4) de uma mont
 <vídeo>/final/estado.json.
 """
 import argparse
-import fcntl
 import json
-import os
 import re
-import subprocess
 import sys
 import time
 from pathlib import Path
 
 from . import estado
+from . import plataforma
 from .sistema import DADOS, MOTOR, config, gravar_json, ler_json
 
 MONTAR = r"""
@@ -120,17 +118,11 @@ def _marcar(vd, **campos):
 
 
 def _after(script, log, espera_s):
-    """Roda um .jsx no After e espera o log que ele escreve (o osascript pode estourar o tempo antes)."""
+    """Roda um .jsx no After e espera o log que ele escreve (quem pede não recebe resposta útil do After)."""
     app = config().get("after_app", "Adobe After Effects 2026")
     Path(log).unlink(missing_ok=True)
-    subprocess.run(["osascript", "-e", f"with timeout of {espera_s} seconds",
-                    "-e", f'tell application "{app}" to DoScriptFile "{script}"', "-e", "end timeout"],
-                   capture_output=True, timeout=espera_s + 60)
-    for _ in range(espera_s // 3):
-        if Path(log).exists():
-            return Path(log).read_text(errors="replace").strip()
-        time.sleep(3)
-    return ""
+    plataforma.rodar_jsx(app, script, espera_s)
+    return plataforma.esperar_log(log, espera_s)
 
 
 def _guardar_anterior(arq):
@@ -164,7 +156,7 @@ def montar(vd, render=False):
            "ruido": float((config().get("video_final") or {}).get("ruido", 6))}
     (fim_dir / "montar_final.jsx").write_text(f"var CFG = {json.dumps(cfg, ensure_ascii=False)};\n{MONTAR}")
     trava = open(DADOS / "trava_after", "w")
-    fcntl.flock(trava, fcntl.LOCK_EX)
+    plataforma.travar(trava)
     try:
         _guardar_anterior(aep)
         _marcar(vd, etapa=f"juntando {len(blocos)} blocos no After")
@@ -189,7 +181,7 @@ def montar(vd, render=False):
                 return 1
             _marcar(vd, mp4=str(mp4))
     finally:
-        fcntl.flock(trava, fcntl.LOCK_UN)
+        plataforma.destravar(trava)
         trava.close()
     _marcar(vd, status="ok", etapa="pronto", fim=time.strftime("%Y-%m-%d %H:%M:%S"))
     return 0
@@ -202,10 +194,7 @@ def lancar(vd, render=False):
     log = vd / "final" / "log_final.txt"
     cmd = [sys.executable, "-m", "space_machine", "final", str(vd)] + (["--render"] if render else [])
     _marcar(vd, status="rodando", etapa="começando", render=render, erro="")
-    sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_FINAL" 2>&1 & echo $!', "sh", *cmd],
-                        cwd=Path(__file__).resolve().parent.parent, capture_output=True, text=True,
-                        start_new_session=True, env={**os.environ, "PYTHONUNBUFFERED": "1", "LOG_FINAL": str(log)})
-    pid = sh.stdout.strip()
+    pid = plataforma.lancar_solto(cmd, log, Path(__file__).resolve().parent.parent)
     (vd / "final" / "pid").write_text(pid)
     return pid
 

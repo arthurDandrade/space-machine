@@ -148,7 +148,7 @@ def distancia_hash(a, b):
 
 
 def fonte_pil(tamanho):
-    for f in ("/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    for f in (caminhos.fonte_sistema("Arial Bold.ttf"),
               "/System/Library/Fonts/Helvetica.ttc"):
         if os.path.exists(f):
             try:

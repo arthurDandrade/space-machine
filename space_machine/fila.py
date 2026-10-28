@@ -15,13 +15,12 @@ import argparse
 import json
 import os
 import re
-import signal
-import subprocess
 import sys
 import time
 from pathlib import Path
 
 from . import estado
+from . import plataforma
 from .motor_claude import CHECAGEM, RAIZ, ErroClaude, checar_claude, config as motor_cfg, eh_limite
 
 INTERVALO_S = 15
@@ -39,7 +38,7 @@ def _retentavel(parado):
 
 
 def lancar_rodada(b, de="", ate="", obs=""):
-    """Lança `python -m space_machine rodar` SOLTO (adotado pelo launchd, stdin em /dev/null). Devolve o pid.
+    """Lança `python -m space_machine rodar` SOLTO (plataforma.lancar_solto). Devolve o pid.
 
     Filha do painel, a rodada morria quando o terminal do painel era fechado (bloco 01, 2026-10-11)."""
     from .rodar import ETAPAS
@@ -55,10 +54,7 @@ def lancar_rodada(b, de="", ate="", obs=""):
     log = b / "_estudio" / "log_rodar.txt"
     with open(log, "a") as f:
         f.write(f"\n===== {estado.quando(time.time())} · {' '.join(cmd[3:])}\n")
-    sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_RODAR" 2>&1 & echo $!', "sh", *cmd],
-                        cwd=RAIZ, capture_output=True, text=True, start_new_session=True,
-                        env={**os.environ, "PYTHONUNBUFFERED": "1", "LOG_RODAR": str(log)})
-    pid = sh.stdout.strip()
+    pid = plataforma.lancar_solto(cmd, log, RAIZ)
     (b / "_estudio" / "pid").write_text(pid)
     return pid
 
@@ -69,12 +65,9 @@ def parar_rodada(b):
     pid = b / "_estudio" / "pid"
     if not pid.exists():
         return
-    # a rodada é filha de um `sh` líder de sessão (lancar_rodada): o grupo é o do sh, não o pid dela.
-    # killpg(pid) dava ProcessLookupError calado, a rodada seguia e o painel liberava outra (2026-10-13)
-    try:
-        os.killpg(os.getpgid(int(pid.read_text().strip())), signal.SIGTERM)
-    except (ProcessLookupError, ValueError, PermissionError):
-        pass
+    # a rodada inteira, com o que ela lançou: killpg(pid) do processo errado dava ProcessLookupError calado, a
+    # rodada seguia e o painel liberava outra (2026-10-13)
+    plataforma.encerrar(pid.read_text().strip(), arvore=True)
     pid.unlink(missing_ok=True)
     arq = b / "_estudio" / "estado.json"
     try:
@@ -111,24 +104,17 @@ def lancar_fila(video_dir, maximo=3):
     (video_dir / "_estudio").mkdir(exist_ok=True)
     log = video_dir / "_estudio" / "log_fila.txt"
     cmd = [sys.executable, "-m", "space_machine", "fila", str(video_dir), "--max", str(maximo)]
-    sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_FILA" 2>&1 & echo $!', "sh", *cmd],
-                        cwd=RAIZ, capture_output=True, text=True, start_new_session=True,
-                        env={**os.environ, "PYTHONUNBUFFERED": "1", "LOG_FILA": str(log)})
-    pid = sh.stdout.strip()
-    # Mac acordado enquanto a fila existir (Mac que dorme com 1 min parado e a fila congelava);
-    # o caffeinate termina sozinho junto com a fila
+    pid = plataforma.lancar_solto(cmd, log, RAIZ)
+    # computador acordado enquanto a fila existir (Mac que dorme com 1 min parado e a fila congelava)
     if pid:
-        subprocess.run(["/bin/sh", "-c", 'caffeinate -i -s -w "$1" </dev/null >/dev/null 2>&1 &', "sh", pid])
+        plataforma.manter_acordado(pid)
     return pid
 
 
 def parar_fila(video_dir):
     f = ler_fila(video_dir)
     if f.get("ativa"):
-        try:
-            os.kill(int(f["pid"]), 15)
-        except (ProcessLookupError, ValueError, PermissionError):
-            pass
+        plataforma.encerrar(f.get("pid"))      # só a fila: os blocos que ela lançou continuam
     if f:
         f.update(status="parada", fim=time.strftime("%Y-%m-%d %H:%M:%S"),
                  motivo="parada no painel (os blocos que já rodavam continuam)")
@@ -142,9 +128,10 @@ def rodar_fila(video_dir, maximo=3):
     arq.parent.mkdir(exist_ok=True)
     meu = str(os.getpid())
     atual = ler_fila(video_dir)
-    if atual.get("ativa") and str(atual.get("pid")) != meu:
+    if atual.get("ativa") and str(atual.get("pid")) not in plataforma.meus_pids():
         print(f"já tem uma fila rodando neste vídeo (pid {atual['pid']})")
         return
+    plataforma.acordado_enquanto_roda()
     f = {"pid": meu, "status": "rodando", "max": maximo, "inicio": time.strftime("%Y-%m-%d %H:%M:%S"),
          "lancados": [], "rodando": [], "esperando": [], "parados": [], "motivo": ""}
 

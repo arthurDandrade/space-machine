@@ -20,16 +20,16 @@ import time
 from pathlib import Path
 
 from . import estado
+from . import plataforma
 from .sistema import DADOS, REPO, canais, gravar_json, ler_json
 
 CACHE = DADOS / "cache" / "atualizacao.json"
 VALIDADE = 6 * 3600           # quanto tempo a conferida vale antes de ir à rede de novo
-CAMINHO = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 SEP = "\x1f"
 
 
 def _prog(nome):
-    return shutil.which(nome, path=CAMINHO) or shutil.which(nome)
+    return plataforma.achar(nome)
 
 
 def _rodar(cmd, timeout=120, cwd=REPO):
@@ -196,7 +196,7 @@ def aplicar():
 
     for f in ("spacemachine", "instalar.sh", "motor/edicao_ae/editar_bloco.sh"):
         alvo = REPO / f
-        if alvo.exists():
+        if alvo.exists() and not plataforma.WINDOWS:
             alvo.chmod(alvo.stat().st_mode | 0o111)
     CACHE.unlink(missing_ok=True)
     return {"ok": all(p["ok"] for p in passos), "passos": passos, "de": antes, "para": depois,
