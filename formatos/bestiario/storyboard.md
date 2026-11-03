@@ -1,25 +1,33 @@
-# Regras do storyboard (formato bestiário)
+# Regras do storyboard (formato bestiário, animação 2D)
 
-Lidas pelo orquestrador (`rodar._sistema_storyboard`), junto com as regras do tema do canal. O `storyboard.py` mede as que dá. As metas são PROVISÓRIAS (2026-11-03) até o vídeo piloto ser medido.
+Lidas pelo orquestrador (`rodar._sistema_storyboard`), junto com as regras do tema do canal. O `storyboard.py` mede as que dá. Medidas de referência: 5 vídeos do Depth Theory (conhecimento/01 - Formato/Canal de Referência Depth Theory.md).
 
-## Os 7 tipos de cena e como escrever cada um no cenas.json
-- **P1 imagem plena**: `{"layout": "P1", "fala": "...", "cards": [{"gatilho": "...", "tipo": "ilustracao"|"foto"|"video", "descricao": "...", "buscas": [...]}]}`. A imagem enche a tela e anda devagar. Trocas no mesmo lugar: `"troca": [{"gatilho": "...", "tipo": ..., ...}]` (fusão de uma para a outra).
-- **P2 plena + legenda**: P1 com `"legenda": ["texto", "gatilho"]` no card: nome, número, data ou lugar, embaixo, em maiúsculas.
-- **R1 gravura no escuro**: `{"layout": "R1", "cards": [{"tipo": "gravura", ...}]}`. A gravura antiga, inteira, no meio da tela preta (o papel é invertido: traço claro sobre preto).
-- **D1 lenda × realidade**: dois cards lado a lado com `"acima": ["LEGEND", "gatilho"]` / `"acima": ["REALITY", "gatilho"]` (ou o nome de cada um). Em geral a gravura/ilustração da lenda e a foto do animal real. Gatilhos diferentes: o 2º card entra quando a fala chega nele.
-- **E1 escala**: um card `"tipo": "ilustracao"` com a criatura INTEIRA de lado e `"escala": {"tamanho_m": 40, "medida": "comprimento"|"altura", "pessoa_rotulo": "you"}`; o tamanho vai em `"rotulos": [["40 m", "forty"]]`. O editor desenha uma pessoa de 1,8 m ao lado, na proporção certa. Peça a criatura sem nada em volta ("full body, side view, isolated, nothing else in the frame").
-- **T1 frase**: `{"layout": "T1", "fala": "...", "textos": [["texto", "gatilho"]]}`. Frase curta (2–7 palavras) em serifa branca no meio. `["texto", "gatilho", "vermelho"]` para a frase em vermelho (uma por bloco, no máximo). Vários textos no mesmo estado trocam um pelo outro.
-- **Q1 citação antiga**: `"textos": [["a citação", "gatilho"], ["Olaus Magnus, 1555", "gatilho"]]`: a frase REAL de uma fonte antiga, em itálico, e a fonte embaixo em vermelho. Só citação que está no roteiro.
-- Título do capítulo (o card do começo do bloco): `"titulo": {"tipo": "ilustracao", "descricao": "...", "buscas": ["<pedido>"]}` ou `{"tipo": "gravura", ...}` ou `{"reusar": "<id>"}` para usar uma imagem que já existe. O nome vai em serifa grande sobre a imagem apagada. Cold open: `"sem_titulo": true`.
+## O visual em uma frase
+Animação 2D vetorial: um fundo desenhado (mar, noite, grade técnica ou um cenário gerado) e, por cima, a criatura recortada nadando e oscilando, com gráficos de explicação entrando na hora da palavra. Algo novo a cada 4–6 s (10–15 por minuto). Filmagem real só para o animal/lugar/caso real (~10–20% do tempo).
+
+## Os 10 tipos de cena no cenas.json
+Todo estado pode ter `"opcoes": {"fundo": "mar"|"noite"|"grade"|"escuro"}` (sem isso, continua o fundo de antes; o primeiro é o fundo padrão do formato). Para um cenário gerado, ponha no estado um card a mais com `"tipo": "ilustracao", "opcoes": {"fundo": true}` (ex.: "dark pine forest at night, empty clearing in the middle"). Dentro de `"opcoes"`, todo objeto com `"gatilho"` entra na palavra dita.
+
+- **C1 criatura em cena**: `"cards": [{"gatilho": "...", "tipo": "recorte", "elenco": "kraken", "descricao": ..., "buscas": [...], "opcoes": {"movimento": "nada"|"entra"|"sobe"|"close"|"parado", "lado": "esquerda"|"centro"|"direita", "espelhar": false, "voce": true, "sonar": true, "rotulo": {"texto": "Hunts by sound", "gatilho": "..."}, "carimbo": {"texto": "Predator", "gatilho": "..."}}, "legenda": ["frase-chave", "gatilho"]}]`. A base do formato. `movimento`: "nada" atravessa devagar para onde olha; "entra" chega de fora da tela; "sobe" sobe do fundo; "close" grande, cortado pela tela; "parado" só oscila. `voce` põe o "você" (o mergulhador/viajante) do outro lado; `sonar` abre ondas a partir dele. `legenda` = frase-chave em vermelho sublinhada embaixo ("IT KNOWS WHERE YOU ARE").
+- **E1 escala**: a criatura inteira de lado + régua que se desenha embaixo + o tamanho: `"rotulos": [["~40 M", "forty"], ["= 6 city buses", "buses"]]` (o 2º em vermelho). `"escala": {"tamanho_m": 40}` no card põe uma pessoa de 1,8 m na proporção.
+- **N1 comparação em ícones**: card `"tipo": "recorte"` com o ÍCONE (um elefante, um barco, um homem) e `"opcoes": {"quantidade": 6.5}` no estado: os ícones entram um a um (o último pela metade). `"textos": [["= 40 tonnes", "..."]]` (vermelho, em cima) e `"rotulos": [["6–7 elephants", "..."]]` (embaixo).
+- **N2 número grande**: `"textos": [["236 dB", "236"]]`, `"rotulos": [["measured underwater", "..."]]`, e opcional `"opcoes": {"barra": 0.95, "titulo": {"texto": "Loudest animal on Earth", "gatilho": "..."}}`.
+- **L1 suas opções**: `"opcoes": {"titulo": {"texto": "Your options", "gatilho": "..."}, "itens": [{"texto": "Swim away", "gatilho": "swim"}, ...], "riscar": [{"item": 1, "gatilho": "..."}], "veredito": {"texto": "...", "gatilho": "..."}}`. O "what would you actually do?": cada item entra quando é dito e é riscado quando a narração derruba.
+- **D1 documento**: papel claro um pouco torto com `"opcoes": {"fonte": {"texto": "Olaus Magnus · 1555", "gatilho": ...}, "titulo": {"texto": "A History of the Northern Peoples", "gatilho": ...}}` e, opcional, um card `"tipo": "gravura"` (a gravura antiga dentro do papel). Para fonte antiga, artigo científico, relato registrado.
+- **T1 linha do tempo**: `"opcoes": {"titulo": {...}, "pontos": [{"rotulo": "1555", "texto": "Olaus Magnus", "gatilho": "..."}, {"rotulo": "1752", "texto": "Pontoppidan", "gatilho": "...", "destaque": true}]}`. 2–4 pontos.
+- **R1 filmagem real**: card `"tipo": "video"|"foto"|"historica"`; entra como uma foto impressa torta; `"opcoes": {"cheio": true}` enche a tela. `"legenda": [...]` vira um rótulo embaixo.
+- **F1 frase**: `"textos": [["If it decided you were a problem…", "If"]]`; `["texto", "gatilho", "vermelho"]` = vermelha sublinhada ("WHAT DOES IT EAT?"). 2–8 palavras.
+- **S1 lado a lado**: dois cards com `"acima": ["Legend", "gatilho"]` / `"acima": ["Reality", "gatilho"]` (ou "You" × "Kraken").
+- Título do capítulo: `"titulo": {"tipo": "recorte", "elenco": "kraken", "descricao": ..., "buscas": [...]}`: o nome grande à esquerda e a criatura do elenco nadando à direita. Cold open: `"sem_titulo": true`.
 
 ## Regras (o `storyboard.py` confere as que dá para medir)
-1. **Cada imagem fica 3–7 s na tela** e nunca menos de 1,8 s. Troque de imagem quando a ideia muda; frase seguida do mesmo assunto continua na mesma imagem (ou numa `troca` dela).
-2. **≥ 4 tipos de cena por bloco**, cada um no máximo 4 vezes. P1 é a base; R1 e D1 dão o "documento antigo"; E1 uma vez por vídeo, no capítulo do tamanho; T1 e Q1 pontuam.
-3. **Texto solo (T1 + Q1) em 5–22% do tempo.** Texto sobre imagem só na legenda do P2 (nome, número, data, lugar).
-4. **≥ 25% das cenas evoluem** (2–3 estados: P1 → P2 com a legenda, R1 → D1 com a realidade, P1 → T1).
-5. **Ilustração no máximo 6 por bloco** (cada uma gera 3 opções pagas). Prefira gravura antiga quando ela existe (Commons tem milhares: Olaus Magnus, Gessner, Aldrovandi, bestiários medievais) e ilustração para o que a gravura não mostra: o ponto de vista em segunda pessoa ("you are on the deck and the water rises"), a escala, a cena que o roteiro descreve.
-6. **Nunca ilustração de pessoa real ou acontecimento real.** O naufrágio com nome e data, o autor da crônica, o avistamento registrado: gravura de época ou foto histórica. Pessoa genérica sem rosto pode ("a lone sailor seen from behind").
-7. **A mesma criatura em todo o vídeo**: copie a ficha da criatura (seção Gravuras e Ilustrações) igual em cada pedido de ilustração dela.
-8. **O real é foto ou vídeo**: o animal que inspirou a lenda (lula-gigante, regaleco, baleia, lobo), o mar, a floresta, o fóssil. Vídeo só do que existe aos montes em banco livre; o resto é foto.
+1. **Algo novo a cada 4–6 s**: troque de cena quando a ideia muda; gráfico (L1, N2, T1, F1, D1) conta como mudança.
+2. **≥ 5 tipos de cena por bloco**, cada um no máximo 4 vezes. C1 é a base; todo número que importa vira E1/N1/N2; toda fonte antiga vira D1 ou T1; o "what would you do" é L1.
+3. **Frase solta (F1) até 15% do tempo.** O texto vive dentro dos gráficos e nos rótulos (2–6 palavras, em inglês, curto).
+4. **Cada asset ≥ 1,8 s na tela.**
+5. **A MESMA criatura em todo o vídeo: o elenco.** Todo card da criatura principal leva `"elenco": "kraken"` (o mesmo nome em todos os blocos): a 1ª vez ela é gerada e escolhida, e dali em diante o sistema usa o MESMO arquivo, sem gerar de novo — então escreva a ficha completa (descrição, buscas) em todo card com elenco, porque você não sabe qual bloco roda primeiro. Pose diferente (de frente, boca aberta, close do olho) é outro nome de elenco ("kraken-boca-aberta"), com a mesma ficha da criatura no pedido. O "você" e os ícones repetidos (elefante, barco) também podem ser elenco.
+6. **Recorte é gerado** (criatura, ícone, objeto): pedido em inglês com "side view facing right" (o editor espelha quando ela nada para a esquerda), corpo inteiro, nada em volta. Máx. 6 pedidos novos por bloco (cada um gera 3 opções pagas).
+7. **Nunca imagem gerada de pessoa real ou de acontecimento real.** Pessoa real, retrato antigo, navio com nome: gravura ou foto histórica (R1/D1). O "você" e pessoas genéricas sem rosto podem.
+8. **O real é foto/vídeo (R1)**: o animal que inspirou a lenda, o lugar, o fóssil, o objeto de museu. Vídeo só do que existe aos montes em banco livre.
 9. **Gatilho = palavra como está na transcrição** (o Whisper erra: use a palavra errada no gatilho e o texto certo na tela).
-10. **YouTube não é fonte** (2026-10-11): nada de trecho de documentário, filme, série ou jogo. Franquia nenhuma (Harry Potter, Witcher, D&D...): só folclore, fontes antigas e ciência.
+10. **YouTube não é fonte** (2026-10-11). Franquia nenhuma (Harry Potter, Witcher, D&D...): só folclore, fontes antigas e ciência.

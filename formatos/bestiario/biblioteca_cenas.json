@@ -1,36 +1,42 @@
 {
- "_sobre": "A Biblioteca de Cenas do bestiário: 7 tipos de cena (gerar_ae.py) e o que o storyboard.py mede. Cada código está em conhecimento/02 - Cenas/Biblioteca de Cenas.md.",
+ "_sobre": "A Biblioteca de Cenas do bestiário (animação 2D, 2026-11-03): 10 tipos de cena (gerar_ae.py) e o que o storyboard.py mede. Cada código está em conhecimento/02 - Cenas/Biblioteca de Cenas.md.",
  "nomes": {
-  "P1": "imagem plena",
-  "P2": "plena + legenda",
-  "R1": "gravura no escuro",
-  "D1": "lenda × realidade",
-  "E1": "escala",
-  "T1": "frase",
-  "Q1": "citação antiga"
+  "C1": "criatura em cena",
+  "E1": "escala com régua",
+  "N1": "comparação em ícones",
+  "N2": "número grande",
+  "L1": "suas opções",
+  "D1": "documento",
+  "T1": "linha do tempo",
+  "R1": "filmagem real",
+  "F1": "frase",
+  "S1": "lado a lado"
  },
  "card_unico": [],
- "texto_solo": ["T1", "Q1"],
- "texto_do_layout": ["D1", "E1"],
- "_orientacao": "Orientação do asset por tipo de cena (compilar_cenas.py). Plena = paisagem (16:9 cheio); gravura e escala cabem inteiras; D1 é meia tela.",
+ "texto_solo": ["F1"],
+ "texto_do_layout": ["C1", "E1", "N1", "N2", "L1", "D1", "T1", "R1", "S1"],
+ "_orientacao": "Orientação do asset por tipo de cena (compilar_cenas.py). Recorte (criatura, ícone) é gerado quadrado e recortado; cenário de fundo é paisagem.",
  "orientacao": {
-  "P1": "paisagem",
-  "P2": "paisagem",
-  "R1": "qualquer",
-  "D1": "quadrado",
+  "C1": "qualquer",
   "E1": "paisagem",
+  "N1": "quadrado",
+  "N2": "qualquer",
+  "L1": "qualquer",
+  "D1": "qualquer",
   "T1": "qualquer",
-  "Q1": "qualquer"
+  "R1": "paisagem",
+  "F1": "qualquer",
+  "S1": "quadrado"
  },
- "_metas": "PROVISÓRIAS (2026-11-03): ainda sem medida das referências (o Depth Theory não pode ser baixado: regra do YouTube). Calibrar no vídeo piloto. card_unico vazio: aqui quase toda cena é uma imagem só, e é o formato. max_repeticoes: com 7 tipos, cada um pode voltar até 4 vezes no bloco.",
+ "_metas": "Medidas nos 5 vídeos do Depth Theory (2026-11-03): 10–15 mudanças visuais por minuto. Aqui: cada asset entra ~a cada 4–6 s, e os gráficos (L1, N2, T1, F1) contam como mudança sem asset. min_assets_min 6: com 1/3 das cenas sendo gráfico, dá ~10 mudanças/min. card_unico vazio e max_repeticoes 4: C1 é a base do formato e volta várias vezes.",
  "metas": {
-  "min_variacoes": 4,
+  "min_variacoes": 5,
   "max_card_unico": 1.0,
   "max_seguidos": 99,
   "min_asset_s": 1.8,
-  "min_assets_min": 9.0,
+  "min_assets_min": 6.0,
   "min_cenas_f": 0.25,
-  "texto_solo_faixa": [0.05, 0.22],
+  "texto_solo_faixa": [0.0, 0.15],
   "max_repeticoes": 4
  }
 }

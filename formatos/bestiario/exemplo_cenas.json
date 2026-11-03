@@ -1,19 +1,303 @@
-{"titulo": "Why You'd Never Want To Meet A Kraken", "itens": [{"id": "02", "nome": "How Big the Kraken Really Was",
- "titulo": {"tipo": "ilustracao", "descricao": "The kraken rising beside a small 18th-century sailing ship at night, seen from far away; the creature is a colossal squid-like monster with long arms around the hull", "buscas": ["The kraken, a colossal squid-like sea monster with a long mantle, huge round eyes and ten arms covered in hooked suckers, rising beside a small 18th-century three-masted sailing ship at night, seen from far away"]},
- "cenas": [
-  {"estados": [
-   {"layout": "R1", "fala": "In 1752 a Danish bishop wrote that the kraken was the size of a floating island.", "cards": [{"gatilho": "In", "tipo": "gravura", "descricao": "Old engraving of the kraken or a giant sea monster mistaken for an island, 16th–18th century", "buscas": ["kraken engraving", "kraken", "sea monster island"]}]},
-   {"layout": "Q1", "fala": "Its back, he said, was a mile and a half around.", "textos": [["Its back is a mile and a half around", "Its"], ["Erik Pontoppidan, 1752", "he"]]}
-  ]},
-  {"estados": [
-   {"layout": "E1", "fala": "Sailors who had seen one gave numbers that were smaller, but still terrifying: forty meters from the tip of its arms to its tail.", "cards": [{"gatilho": "Sailors", "tipo": "ilustracao", "descricao": "The kraken, full body, side view, arms stretched out, isolated on pure black, nothing else in the frame", "buscas": ["The kraken, a colossal squid-like sea monster with a long mantle, huge round eyes and ten arms covered in hooked suckers, full body seen from the side with the arms stretched out behind it, isolated, nothing else in the frame"], "escala": {"tamanho_m": 40, "medida": "comprimento", "pessoa_rotulo": "you"}}], "rotulos": [["40 m", "forty"]]}
-  ]},
-  {"estados": [
-   {"layout": "P1", "fala": "Now picture yourself on the deck, and the sea starts to boil.", "cards": [{"gatilho": "Now", "tipo": "ilustracao", "descricao": "Point of view from the deck of an old wooden ship at night: the sea in front is bubbling and two enormous arms with hooked suckers rise out of the water", "buscas": ["Point of view from the deck of an old wooden sailing ship at night: the sea ahead is boiling with bubbles and two enormous arms of the kraken, covered in hooked suckers, rise out of the water higher than the mast"]}]},
-   {"layout": "T1", "fala": "There is nowhere to go.", "textos": [["There is nowhere to go", "There", "vermelho"]]}
-  ]},
-  {"estados": [
-   {"layout": "D1", "fala": "The legend has a real animal behind it: the giant squid, which really grows to twelve meters.", "cards": [{"gatilho": "The", "tipo": "gravura", "descricao": "Old engraving of the kraken attacking a ship", "buscas": ["kraken Montfort", "kraken", "giant octopus ship"], "acima": ["Legend", "The"]}, {"gatilho": "giant", "tipo": "foto", "descricao": "Real giant squid specimen, Architeuthis, museum or on a beach", "buscas": ["Architeuthis giant squid specimen", "giant squid museum"], "acima": ["Reality", "giant"]}]},
-   {"layout": "P2", "fala": "And it is still out there, two kilometers down.", "cards": [{"gatilho": "And", "tipo": "video", "descricao": "Dark deep ocean water seen from below, light rays fading into black", "buscas": ["deep ocean dark underwater", "deep sea darkness"], "legenda": ["2 km down", "two"]}]}
-  ]}
- ]}]}
+{
+"titulo": "Why You'd Never Want To Meet A Kraken",
+"itens": [
+{
+"id": "02",
+"nome": "How Big the Kraken Really Was",
+"titulo": {
+"tipo": "recorte",
+"elenco": "kraken",
+"descricao": "The kraken, full body",
+"buscas": [
+"The kraken, a colossal squid-like sea monster with a long red mantle, huge round eyes and ten arms covered in hooked suckers, full body, side view facing right, isolated"
+]
+},
+"cenas": [
+{
+"estados": [
+{
+"layout": "D1",
+"fala": "In 1752 a Danish bishop wrote that the Kraken was the size of a floating island.",
+"opcoes": {
+"fundo": "grade",
+"fonte": {
+"texto": "Erik Pontoppidan · 1752",
+"gatilho": "Danish"
+},
+"titulo": {
+"texto": "The Natural History of Norway",
+"gatilho": "bishop"
+}
+},
+"cards": [
+{
+"gatilho": "In",
+"tipo": "gravura",
+"descricao": "Old engraving of the kraken",
+"buscas": [
+"kraken engraving",
+"kraken"
+]
+}
+]
+},
+{
+"layout": "N2",
+"fala": "Its back, he said, was a mile and a half around.",
+"textos": [
+[
+"2.4 KM",
+"mile"
+]
+],
+"rotulos": [
+[
+"around its back",
+"around"
+]
+]
+}
+]
+},
+{
+"estados": [
+{
+"layout": "E1",
+"fala": "Sailors who had seen one gave numbers that were smaller, but still terrifying.",
+"opcoes": {
+"fundo": "mar"
+},
+"cards": [
+{
+"gatilho": "Sailors",
+"tipo": "recorte",
+"elenco": "kraken",
+"descricao": "The kraken, full body",
+"buscas": [
+"The kraken, a colossal squid-like sea monster with a long red mantle, huge round eyes and ten arms covered in hooked suckers, full body, side view facing right, isolated"
+],
+"escala": {
+"tamanho_m": 40
+}
+}
+],
+"rotulos": [
+[
+"~40 M",
+"40"
+],
+[
+"tip of the arms to the tail",
+"tip"
+]
+]
+}
+]
+},
+{
+"estados": [
+{
+"layout": "C1",
+"fala": "Now picture yourself on the deck, and the sea starts to boil.",
+"cards": [
+{
+"gatilho": "Now",
+"tipo": "recorte",
+"elenco": "kraken",
+"descricao": "The kraken, full body",
+"buscas": [
+"The kraken, a colossal squid-like sea monster with a long red mantle, huge round eyes and ten arms covered in hooked suckers, full body, side view facing right, isolated"
+],
+"opcoes": {
+"movimento": "sobe",
+"lado": "direita",
+"voce": true,
+"sonar": true,
+"carimbo": {
+"texto": "Predator",
+"gatilho": "boil"
+}
+}
+}
+]
+},
+{
+"layout": "F1",
+"fala": "There is nowhere to go.",
+"textos": [
+[
+"There is nowhere to go",
+"There",
+"vermelho"
+]
+]
+}
+]
+},
+{
+"estados": [
+{
+"layout": "S1",
+"fala": "The legend has a real animal behind it: the giant squid, which really grows to 12 meters.",
+"cards": [
+{
+"gatilho": "The",
+"tipo": "recorte",
+"elenco": "kraken",
+"descricao": "The kraken, full body",
+"buscas": [
+"The kraken, a colossal squid-like sea monster with a long red mantle, huge round eyes and ten arms covered in hooked suckers, full body, side view facing right, isolated"
+],
+"acima": [
+"Legend",
+"legend"
+]
+},
+{
+"gatilho": "giant",
+"tipo": "foto",
+"descricao": "Real giant squid specimen",
+"buscas": [
+"Architeuthis giant squid specimen"
+],
+"acima": [
+"Reality",
+"giant"
+]
+}
+]
+},
+{
+"layout": "R1",
+"fala": "And it is still out there, two kilometers down.",
+"cards": [
+{
+"gatilho": "And",
+"tipo": "video",
+"descricao": "Dark deep ocean water",
+"buscas": [
+"deep ocean dark underwater"
+],
+"legenda": [
+"2 km down",
+"two"
+]
+}
+]
+}
+]
+},
+{
+"estados": [
+{
+"layout": "L1",
+"fala": "So what would you actually do?",
+"opcoes": {
+"fundo": "grade",
+"titulo": {
+"texto": "Your options",
+"gatilho": "So"
+},
+"itens": [
+{
+"texto": "Swim away",
+"gatilho": "swim"
+},
+{
+"texto": "Dive and hide",
+"gatilho": "dive"
+},
+{
+"texto": "Stay perfectly still",
+"gatilho": "stay"
+}
+],
+"riscar": [
+{
+"item": 1,
+"gatilho": "None"
+},
+{
+"item": 2,
+"gatilho": "of"
+},
+{
+"item": 3,
+"gatilho": "works"
+}
+]
+}
+}
+]
+},
+{
+"estados": [
+{
+"layout": "N1",
+"fala": "It weighs about 40 tons. That is like six and a half elephants.",
+"opcoes": {
+"quantidade": 6.5
+},
+"cards": [
+{
+"gatilho": "That",
+"tipo": "recorte",
+"elenco": "elefante",
+"descricao": "An elephant icon",
+"buscas": [
+"An African elephant, full body, side view facing right, isolated, simple"
+]
+}
+],
+"textos": [
+[
+"≈ 40 tonnes",
+"40"
+]
+],
+"rotulos": [
+[
+"6.5 elephants",
+"six"
+]
+]
+}
+]
+},
+{
+"estados": [
+{
+"layout": "T1",
+"fala": "It was first described in 1555, again in 1752, and finally caught on camera in 2004.",
+"opcoes": {
+"fundo": "noite",
+"titulo": {
+"texto": "A handful of sightings",
+"gatilho": "It"
+},
+"pontos": [
+{
+"rotulo": "1555",
+"texto": "Olaus Magnus",
+"gatilho": "1555"
+},
+{
+"rotulo": "1752",
+"texto": "Pontoppidan",
+"gatilho": "1752"
+},
+{
+"rotulo": "2004",
+"texto": "first photo alive",
+"gatilho": "2004",
+"destaque": true
+}
+]
+}
+}
+]
+}
+]
+}
+]
+}

@@ -2,28 +2,30 @@
 tags: [bestiario, assets]
 ---
 
-# Gravuras e Ilustrações
+# Ilustrações e Recortes
 
 ## Os tipos de asset do bestiário
 | Tipo | De onde vem | Para quê |
 |---|---|---|
-| `gravura` | Wikimedia Commons (depois Smithsonian/Openverse): gravura e xilogravura antigas, de domínio público | a lenda como foi desenhada: R1, D1, título |
-| `ilustracao` | **gerada** pelo Gemini (Nano Banana), 3 opções por cena, o Claude escolhe | o que a gravura não mostra: o ponto de vista em 2ª pessoa, a escala (E1), a cena do roteiro |
-| `foto` / `historica` | Commons, web, Pixabay, Openverse, Smithsonian | o animal, o lugar, o fóssil, o documento real |
-| `video` | Pexels, Pixabay (depois Commons, Archive) | o real em movimento: mar, lula, baleia, floresta, neblina |
+| `recorte` | **gerado** pelo Gemini (Nano Banana, fonte `gemini_recorte`) em fundo liso, 3 opções, o Claude escolhe, o `finalizar.py` tira o fundo (rembg) | a criatura, o "você", o ícone (elefante, barco), o objeto |
+| `ilustracao` | **gerado** (fonte `gemini`) | cenário de fundo, sem a criatura, com espaço vazio no meio (card com `"fundo": true`) |
+| `gravura` | Wikimedia Commons (depois Smithsonian/Openverse): gravura e xilogravura antigas, de domínio público | dentro do documento (D1): "como desenharam em 1555" |
+| `foto` / `historica` / `video` | Commons, web, Pixabay, Pexels, Openverse, Smithsonian, Archive | o real (R1, S1): o animal que inspirou a lenda, o lugar, o fóssil |
+
+## O elenco do vídeo (a mesma criatura do começo ao fim)
+Card com `"elenco": "kraken"`: a 1ª vez ele é gerado e escolhido como qualquer recorte; o `finalizar.py` guarda a escolhida em `<vídeo>/elenco/kraken.png`, e todo bloco compilado depois usa esse arquivo (vira `"arquivo"`, sem busca e sem custo). Dentro do mesmo bloco, os outros cards com o mesmo elenco reusam o 1º asset. Pose diferente = outro nome ("kraken-boca-aberta"). Para trocar a criatura do vídeo, apague o arquivo do elenco e refaça a busca do bloco que a gerou.
+
+## Estilo
+- `formato.json › ilustracao.estilo_recorte`: vetorial 2D chapado, formas limpas, sombra simples, luz de cima à esquerda, o assunto inteiro centralizado em fundo cinza-claro liso, sem chão, sem sombra, sem texto; nunca pessoa real.
+- `formato.json › ilustracao.estilo`: o mesmo traço para cenário largo, paleta escura (azul-petróleo, marinho, ardósia), espaço vazio no meio, sem criatura nem gente.
+- Uma imagem em `<canal>/identidade/estilo_ilustracao.png` trava o estilo do canal (vai junto em cada pedido). Um `<canal>/identidade/personagem.png` (recorte) vira o "você" de todas as cenas.
+- O pedido (`buscas` do card) diz SÓ a cena: a criatura e a pose, sempre **"full body, side view facing right, isolated"** (o editor espelha quando ela nada para a esquerda).
+
+## Custo
+~US$ 0,05 por imagem (2K), 3 por pedido → ~US$ 0,15 por recorte/cenário novo; o elenco sai uma vez por vídeo. Teto de 6 pedidos novos por bloco. Gasto em `<dados>/cache/gemini/gastos.jsonl`. No Flow (labs.google), com o plano do Arthur, o Nano Banana 2.1 sai por 0 créditos — mas só pelo navegador (não tem API).
 
 ## Gravuras (Commons, contagem de 2026-11-03)
-"sea serpent engraving" 3.749 · Gessner "Historiae animalium" 3.985 · "dragon woodcut" 1.623 · "hydra engraving" 1.015 · "griffin woodcut" 684 · "leviathan engraving" 566 · "basilisk woodcut" 88 · "kraken engraving" 59 · Aberdeen Bestiary 137 páginas · "werewolf woodcut" 18 (lobisomem quase só ilustração).
-- Busque com a criatura + `engraving` / `woodcut` / `bestiary` / o nome da obra (Olaus Magnus, Carta Marina, Gessner, Aldrovandi, Pontoppidan, Montfort, Physiologus). **Busca curta** (1–3 palavras): a do Commons exige todas as palavras, e no teste de 2026-11-03 "kraken attacking ship engraving" não achou nada, "giant octopus ship engraving Montfort" achou 1. "Olaus Magnus" traz muitos MAPAS (a Carta Marina e atlas): bom para "sea monster on an old map", ruim para a criatura sozinha.
-- O editor inverte o papel (traço preto vira claro sobre o preto) e corta a margem: papel amarelado e manchas não atrapalham. Página com muito texto atrapalha.
-
-## Ilustrações (Gemini)
-- Custo: ~US$ 0,05 por imagem (2K), 3 por cena → ~US$ 0,15 por cena ilustrada. Teto de 6 por bloco. Gasto anotado em `<dados>/cache/gemini/gastos.jsonl`.
-- O estilo é da ficha (`formato.json › ilustracao.estilo`): scratchboard branco sobre preto, sem texto, sem moldura, nunca pessoa real nem acontecimento real. Uma imagem em `<canal>/identidade/estilo_ilustracao.png` trava o estilo (vai junto em cada pedido).
-- O pedido (`descricao`/`buscas` do card) diz SÓ a cena: o que aparece, o ângulo, a escala, a luz. Sem estilo no pedido.
-- **Ficha da criatura**: no primeiro bloco, escreva uma frase que descreve a criatura (ex.: "The kraken, a colossal squid-like sea monster with a long mantle, huge round eyes and ten arms covered in hooked suckers") e repita a frase igual em TODO pedido de ilustração dela no vídeo. É o que mantém a mesma criatura de cena a cena.
-- E1 (escala): a criatura inteira de lado, isolada, nada mais no quadro.
-- Pessoa genérica sem rosto pode (um marinheiro de costas, "you" como mergulhador). Pessoa real, rosto reconhecível ou acontecimento real: não.
+"sea serpent engraving" 3.749 · Gessner 3.985 · "dragon woodcut" 1.623 · "hydra engraving" 1.015 · "griffin woodcut" 684 · "leviathan engraving" 566 · "basilisk woodcut" 88 · "kraken engraving" 59. **Busca curta** (1–3 palavras: a do Commons exige todas) — "kraken Montfort", "sea serpent Olaus Magnus". "Olaus Magnus" traz muitos MAPAS.
 
 ## Escolha
-Resumida em `prompts/escolher_imagem.md`. Na ilustração: a mais clara e sem deformação, sem letras. Na gravura: antiga de verdade (não arte digital moderna, não estátua, não brinquedo). Franquia nenhuma.
+Resumida em `prompts/escolher_imagem.md`. Recorte: inteiro, olhando para a direita, sem deformação, sem letras, fundo liso separado do assunto; com elenco, vale para o vídeo todo. Franquia nenhuma.

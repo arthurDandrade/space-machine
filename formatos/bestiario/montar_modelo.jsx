@@ -1,6 +1,8 @@
-// Bestiário: cria as layers de DADOS.layers (footage e textos) sobre fundo preto, com vinheta e grão leve.
-// Mesma base do modelo do explained (chaves, textos que cabem em max_w), mais: blend "screen" (gravura e ilustração
-// em traço claro: o preto da imagem some no fundo) e "pb" (vídeo real em preto e branco, com mais contraste).
+// Bestiário (animação 2D): cria as layers de DADOS.layers, na ordem, cada uma por cima da anterior.
+// Tipos de layer: "null", "solid" (com degradê opcional), "shape" (retângulos, elipses e linhas, com traço que se
+// desenha), "footage" (imagem/vídeo) e "text" (tamanho fixo, encolhe para caber em max_w).
+// Todos aceitam pai, posição, escala, rotação, opacidade (com chaves) e expressões (movimento contínuo: a criatura
+// oscilando, os raios de luz balançando, as partículas subindo).
 (function () {
     var LOG = [];
     function log(s) { LOG.push(s); }
@@ -16,11 +18,12 @@
     function ehEspacial(prop) {
         return prop.propertyValueType === PropertyValueType.TwoD_SPATIAL || prop.propertyValueType === PropertyValueType.ThreeD_SPATIAL;
     }
-    // keys: [[t, valor, easeArray?]]
+    // keys: [[t, valor, ease?]]; ease = [vel_entrada, influência_entrada, vel_saída, influência_saída]
     function chaves(prop, keys, linear, escala) {
         for (var i = 0; i < keys.length; i++) {
             var v = keys[i][1];
-            if (escala) v = [v, v, 100];
+            if (escala && !(v instanceof Array)) v = [v, v, 100];
+            else if (escala && v.length === 2) v = [v[0], v[1], 100];
             prop.setValueAtTime(keys[i][0], v);
         }
         var n = ehEspacial(prop) ? 1 : nDims(prop);
@@ -38,22 +41,56 @@
     }
     function sombra(L, o) {
         var ds = L.property("ADBE Effect Parade").addProperty("ADBE Drop Shadow");
-        ds.property(1).setValue(DADOS.cor_sombra || [0, 0, 0]); ds.property(2).setValue(o.op); ds.property(3).setValue(180);
+        ds.property(1).setValue([0, 0, 0]); ds.property(2).setValue(o.op); ds.property(3).setValue(o.dir || 135);
         ds.property(4).setValue(o.dist); ds.property(5).setValue(Math.min(250, o.soft));
     }
-    function elipse(W, H, rx, ry) {
-        var el = new Shape(), kx = rx * 0.5523, ky = ry * 0.5523;
-        el.vertices = [[W / 2, H / 2 - ry], [W / 2 + rx, H / 2], [W / 2, H / 2 + ry], [W / 2 - rx, H / 2]];
-        el.inTangents = [[-kx, 0], [0, -ky], [kx, 0], [0, ky]];
-        el.outTangents = [[kx, 0], [0, ky], [-kx, 0], [0, -ky]];
-        el.closed = true;
-        return el;
+    function caminho(pts, fechado) {
+        var s = new Shape();
+        s.vertices = pts; s.closed = !!fechado;
+        return s;
     }
     var cache = {}, pastaAssets;
     function importar(c) {
         if (cache[c]) return cache[c];
         var it = app.project.importFile(new ImportOptions(new File(c)));
         it.parentFolder = pastaAssets; cache[c] = it; return it;
+    }
+    function formas(L, itens, trim) {
+        var raiz = L.property("ADBE Root Vectors Group");
+        for (var i = 0; i < itens.length; i++) {
+            var it = itens[i];
+            var g = raiz.addProperty("ADBE Vector Group");
+            var v = g.property("ADBE Vectors Group");
+            if (it.t === "rect") {
+                var r = v.addProperty("ADBE Vector Shape - Rect");
+                r.property("ADBE Vector Rect Size").setValue(it.size);
+                r.property("ADBE Vector Rect Position").setValue(it.pos || [0, 0]);
+                r.property("ADBE Vector Rect Roundness").setValue(it.radius || 0);
+            } else if (it.t === "ellipse") {
+                var el = v.addProperty("ADBE Vector Shape - Ellipse");
+                el.property("ADBE Vector Ellipse Size").setValue(it.size);
+                el.property("ADBE Vector Ellipse Position").setValue(it.pos || [0, 0]);
+            } else {
+                var p = v.addProperty("ADBE Vector Shape - Group");
+                p.property("ADBE Vector Shape").setValue(caminho(it.pts, it.closed));
+            }
+            if (trim && it.trim !== false) {
+                var tr = v.addProperty("ADBE Vector Filter - Trim");
+                chaves(tr.property("ADBE Vector Trim End"), trim, false);
+            }
+            if (it.fill) {
+                var f = v.addProperty("ADBE Vector Graphic - Fill");
+                f.property("ADBE Vector Fill Color").setValue(it.fill);
+                if (it.fill_op !== undefined) f.property("ADBE Vector Fill Opacity").setValue(it.fill_op);
+            }
+            if (it.stroke) {
+                var s = v.addProperty("ADBE Vector Graphic - Stroke");
+                s.property("ADBE Vector Stroke Color").setValue(it.stroke);
+                s.property("ADBE Vector Stroke Width").setValue(it.sw || 2);
+                s.property("ADBE Vector Stroke Line Cap").setValue(2);
+                if (it.stroke_op !== undefined) s.property("ADBE Vector Stroke Opacity").setValue(it.stroke_op);
+            }
+        }
     }
 
     try {
@@ -64,8 +101,7 @@
         var W = DADOS.w, H = DADOS.h;
         var comp = app.project.items.addComp(DADOS.nome, W, H, 1, DADOS.dur, DADOS.fps);
         comp.bgColor = DADOS.cor_fundo;
-
-        var fundo = comp.layers.addSolid(DADOS.cor_fundo, "Fundo", W, H, 1, DADOS.dur);
+        comp.motionBlur = true;
         var aud = comp.layers.add(importar(DADOS.audio)); aud.name = "Narração";
         aud.startTime = -(DADOS.audio_offset || 0);
 
@@ -73,39 +109,68 @@
         for (var i = 0; i < DADOS.layers.length; i++) {
             var d = DADOS.layers[i], L;
             try {
-                if (d.kind === "footage") {
+                if (d.kind === "null") {
+                    L = comp.layers.addNull(DADOS.dur);
+                    L.enabled = false;
+                    L.anchorPoint.setValue([0, 0]);
+                } else if (d.kind === "solid") {
+                    L = comp.layers.addSolid(d.color, d.name, W, H, 1, DADOS.dur);
+                    if (d.ramp) {
+                        var rp = L.property("ADBE Effect Parade").addProperty("ADBE Ramp");
+                        rp.property(1).setValue(d.ramp[0]); rp.property(2).setValue(d.ramp[1]);
+                        rp.property(3).setValue(d.ramp[2]); rp.property(4).setValue(d.ramp[3]);
+                    }
+                } else if (d.kind === "shape") {
+                    L = comp.layers.addShape();
+                    formas(L, d.items, d.trim_keys);
+                    L.anchorPoint.setValue([0, 0]);
+                } else if (d.kind === "footage") {
                     L = comp.layers.add(importar(d.file));
                     L.startTime = d.start;
                     L.anchorPoint.setValue([d.src[0] / 2, d.src[1] / 2]);
                     if (d.timeremap) L.timeRemapEnabled = true;
-                    if (d.blend === "screen") L.blendingMode = BlendingMode.SCREEN;
-                    if (d.pb) {
-                        var fx = L.property("ADBE Effect Parade");
-                        fx.addProperty("ADBE Tint");                       // padrão: preto→preto, branco→branco, 100%
-                        var bc = fx.addProperty("ADBE Brightness & Contrast 2");
-                        bc.property(2).setValue(22);                              // só contraste: escurecer apagava o mar escuro (teste 2026-11-03)
-                    }
+                    if (d.motion_blur) L.motionBlur = true;
                 } else {
                     L = comp.layers.addText(d.text);
                     var tp = L.property("ADBE Text Properties").property("ADBE Text Document");
                     var td = tp.value;
-                    td.font = d.font || DADOS.fonte; td.fontSize = 100; td.applyFill = true; td.fillColor = d.color;
-                    td.applyStroke = false; td.justification = ParagraphJustification.CENTER_JUSTIFY; td.leading = 112;
+                    td.font = d.font; td.fontSize = d.size || 100; td.applyFill = true; td.fillColor = d.color;
+                    td.applyStroke = false; td.tracking = d.tracking || 0;
+                    td.justification = d.justify === "left" ? ParagraphJustification.LEFT_JUSTIFY :
+                        (d.justify === "right" ? ParagraphJustification.RIGHT_JUSTIFY : ParagraphJustification.CENTER_JUSTIFY);
+                    td.leading = (d.size || 100) * 1.15;
                     tp.setValue(td);
+                    var r0 = L.sourceRectAtTime(0, false);
+                    if (d.max_w && r0.width > d.max_w) {
+                        var tam = (d.size || 100) * d.max_w / r0.width;
+                        td = tp.value; td.fontSize = tam; td.leading = tam * 1.15; tp.setValue(td);
+                    }
                     var r = L.sourceRectAtTime(0, false);
-                    var tam = Math.min(d.max_size, 100 * d.max_w / r.width);
-                    td = tp.value; td.fontSize = tam; td.leading = tam * 1.12; tp.setValue(td);
-                    r = L.sourceRectAtTime(0, false);
+                    var ax = d.justify === "left" ? r.left : (d.justify === "right" ? r.left + r.width : r.left + r.width / 2);
                     var ay = d.anchor_mode === "top" ? r.top : (d.anchor_mode === "bottom" ? r.top + r.height : r.top + r.height / 2);
-                    L.anchorPoint.setValue([r.left + r.width / 2, ay]);
-                    if (d.shadow) sombra(L, d.shadow);
+                    L.anchorPoint.setValue([ax, ay]);
                 }
                 L.name = d.name;
+                if (d.blend === "screen") L.blendingMode = BlendingMode.SCREEN;
+                if (d.blend === "add") L.blendingMode = BlendingMode.ADD;
+                if (d.shadow) sombra(L, d.shadow);
+                if (d.blur) L.property("ADBE Effect Parade").addProperty("ADBE Gaussian Blur 2").property(1).setValue(d.blur);
+                if (d.parent !== null && d.parent !== undefined) L.parent = criadas[d.parent];
+                if (d.anchor) L.anchorPoint.setValue(d.anchor);
                 if (d.pos) L.position.setValue(d.pos);
                 if (d.pos_keys) chaves(L.position, d.pos_keys);
-                if (d.scale !== undefined) L.scale.setValue([d.scale, d.scale, 100]);
+                if (d.rot !== undefined) L.rotation.setValue(d.rot);
+                if (d.rot_keys) chaves(L.rotation, d.rot_keys);
+                if (d.scale !== undefined) L.scale.setValue(d.scale instanceof Array ? d.scale : [d.scale, d.scale]);
                 if (d.scale_keys) chaves(L.scale, d.scale_keys, d.linear_scale, true);
+                if (d.opacity !== undefined) L.opacity.setValue(d.opacity);
                 if (d.opacity_keys) chaves(L.opacity, d.opacity_keys, true);
+                if (d.expr) {
+                    if (d.expr.pos) L.position.expression = d.expr.pos;
+                    if (d.expr.rot) L.rotation.expression = d.expr.rot;
+                    if (d.expr.scale) L.scale.expression = d.expr.scale;
+                    if (d.expr.opacity) L.opacity.expression = d.expr.opacity;
+                }
                 L.inPoint = d["in"];
                 L.outPoint = d.out;
                 criadas[d.id] = L;
@@ -113,19 +178,7 @@
                 log("ERRO layer " + d.id + " (" + d.name + "): " + eL.toString() + " linha " + eL.line);
             }
         }
-
-        // vinheta (bordas mais escuras) e grão leve por cima de tudo; o vídeo final ainda põe o ruído dele
-        var vin = comp.layers.addSolid([0, 0, 0], "Vinheta", W, H, 1, DADOS.dur);
-        var m = vin.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
-        m.property("ADBE Mask Shape").setValue(elipse(W, H, W / 2 + 120, H / 2 + 160));
-        m.property("ADBE Mask Feather").setValue([520, 520]); m.inverted = true;
-        vin.opacity.setValue(70);
-        var grao = comp.layers.addSolid([0.5, 0.5, 0.5], "Grão", W, H, 1, DADOS.dur);
-        grao.adjustmentLayer = true;
-        var ns = grao.property("ADBE Effect Parade").addProperty("ADBE Noise");
-        ns.property(1).setValue(3); ns.property(2).setValue(0);          // 3%, sem cor (grão de filme P&B)
-        fundo.moveToEnd();
-        fundo.locked = true; vin.locked = true; grao.locked = true;
+        aud.moveToEnd();
         app.endUndoGroup();
         comp.openInViewer();
         app.project.save(new File(DADOS.salvar));

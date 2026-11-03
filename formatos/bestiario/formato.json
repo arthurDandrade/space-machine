@@ -1,13 +1,13 @@
 {
- "_sobre": "Ficha do formato bestiário (2026-11-03): uma criatura do folclore por vídeo, narrada em segunda pessoa, com gravuras antigas e ilustrações em traço claro sobre fundo preto. Modelo: o canal Depth Theory (conhecimento/01 - Formato/Canal de Referência Depth Theory.md), com o assunto trocado por criaturas de lenda.",
+ "_sobre": "Ficha do formato bestiário (2026-11-03): uma criatura do folclore por vídeo, narrada em segunda pessoa, em animação 2D vetorial com gráficos de explicação (régua, ícones, lista de opções, documento, linha do tempo), como o canal Depth Theory (medido nos 5 vídeos: conhecimento/01 - Formato/Canal de Referência Depth Theory.md), com o assunto trocado por criaturas de lenda.",
  "nome": "Bestiário (Why You'd Never Want To Meet ___)",
- "resumo": "Uma criatura do folclore por vídeo, em segunda pessoa, com gravuras antigas e ilustrações em traço claro sobre fundo preto.",
+ "resumo": "Uma criatura do folclore por vídeo, em segunda pessoa, em animação 2D vetorial com gráficos de explicação.",
  "storyboard": {
   "regras": "storyboard.md",
   "exemplo_cenas": "exemplo_cenas.json",
   "conhecimento": [
    "02 - Cenas/Biblioteca de Cenas.md",
-   "03 - Assets/Gravuras e Ilustrações.md"
+   "03 - Assets/Ilustrações e Recortes.md"
   ]
  },
  "cenas": "biblioteca_cenas.json",
@@ -17,13 +17,34 @@
  },
  "qa": {
   "medidas": "medidas_qa.json",
-  "checagens": ["tela_vazia", "layout_tempo", "origem"]
+  "checagens": [
+   "vazio_layout",
+   "layout_tempo",
+   "origem"
+  ]
  },
  "busca": {
-  "_sobre": "Tipos que só este formato usa, por cima do motor/busca/config.json (caminhos.config_busca).",
+  "_sobre": "Tipos deste formato por cima do motor/busca/config.json (caminhos.config_busca). Aqui \"recorte\" é GERADO (criatura, ícone, personagem em fundo liso; o finalizar.py tira o fundo com o rembg).",
   "fontes_por_tipo": {
-   "gravura": [["commons"], ["smithsonian", "openverse"]],
-   "ilustracao": [["gemini"]]
+   "gravura": [
+    [
+     "commons"
+    ],
+    [
+     "smithsonian",
+     "openverse"
+    ]
+   ],
+   "ilustracao": [
+    [
+     "gemini"
+    ]
+   ],
+   "recorte": [
+    [
+     "gemini_recorte"
+    ]
+   ]
   },
   "lado_menor_minimo": {
    "gravura": 500,
@@ -31,11 +52,13 @@
   }
  },
  "ilustracao": {
-  "_sobre": "Lido por motor/busca/scripts/ilustrar.py; o canal.json › ilustracao pode trocar qualquer campo. Imagem do canal em identidade/estilo_ilustracao.png trava o estilo (vai junto em cada pedido).",
+  "_sobre": "Lido por motor/busca/scripts/ilustrar.py; o canal.json › ilustracao pode trocar qualquer campo. \"estilo\" é o do cenário (tipo ilustracao, fundo cheio sem criatura); \"estilo_recorte\" o da criatura/ícone/personagem (tipo recorte). Imagem do canal em identidade/estilo_ilustracao.png trava o estilo (vai junto em cada pedido).",
   "modelo": "gemini-nano-banana-2.1",
   "tamanho": "2K",
   "por_asset": 3,
   "preco_usd": 0.0504,
-  "estilo": "Black-and-white scratchboard engraving: fine white hatching and stippling on a pure black background, like a 19th-century wood engraving printed in negative. High contrast, no grey fog, no color, no text, no letters, no watermark, no frame or border. The subject is drawn large and fully inside the frame, with empty pure black around it. Never depict a real, identifiable person or a real historical event."
- }
+  "estilo": "Flat 2D vector illustration for an animated science documentary: clean geometric shapes, smooth gradients, soft simple shading, thin or no outlines, muted dark palette (deep teal, navy, slate grey) with a few warm accents. A wide background scene with empty space in the middle and no creature or people unless the scene asks for them. No text, no letters, no logos, no watermark, no frame or border. Never depict a real, identifiable person or a real historical event.",
+  "estilo_recorte": "Flat 2D vector illustration of a single subject for an animated science documentary: clean geometric shapes, simple soft shading, gentle light from the upper left, thin or no outline. The whole subject is fully visible and centered with generous empty margin around it, on a perfectly plain flat light grey background with no shadow, no ground and no scenery. No text, no letters, no logos, no watermark. Never depict a real, identifiable person."
+ },
+ "fundo_padrao": "noite"
 }
