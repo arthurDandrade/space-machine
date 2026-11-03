@@ -21,7 +21,7 @@ from pathlib import Path
 from . import estado
 from .canal import canal_do_bloco
 from .final import _after, _guardar_anterior
-from .sistema import DADOS, MOTOR, ambiente_motor, gravar_json, ler_json
+from .sistema import DADOS, MOTOR, ambiente_motor, arquivo_formato, gravar_json, ler_json
 
 
 def _pasta(b):
@@ -56,6 +56,10 @@ def fazer(b):
     ed = b / "edicao"
     pasta = _pasta(b)
     pasta.mkdir(exist_ok=True)
+    if arquivo_formato("edicao.gerador", c.get("formato"), exigir=False).is_file():
+        # o --vertical é do gerar_ae2.py (layout do explained); formato com gerador próprio ainda não tem Reels
+        _marcar(b, status="erro", etapa="o formato deste canal ainda não faz Reels")
+        return 1
     plano = ler_json(ed / f"plano_edicao_{nn}.json")
     if not plano:
         _marcar(b, status="erro", etapa="o bloco ainda não tem plano de edição (rode até a edição antes)")

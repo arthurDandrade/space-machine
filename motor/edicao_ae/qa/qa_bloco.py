@@ -153,7 +153,32 @@ PROIBIDOS = tuple(_QA.get("termos_proibidos", []))
 PERMITIDO_SE = _QA.get("permitido_se", "")
 
 
-def checar_layout(proj, item, R):
+def checar_tela_vazia(video, plano, R, limiar=40, fps=4):
+    """Para formato de fundo escuro (bestiário), sem o detector de cards: tela quase toda preta por mais de 0,5 s
+    no meio do conteúdo é palco vazio (o fim do bloco não conta)."""
+    n = 480 * 270
+    pr = subprocess.Popen(["ffmpeg", "-v", "error", "-i", str(video), "-vf", f"fps={fps},scale=480:270",
+                           "-f", "rawvideo", "-pix_fmt", "gray", "-"], stdout=subprocess.PIPE)
+    vazios, run, k = [], [], 0
+    while True:
+        b = pr.stdout.read(n)
+        if len(b) < n:
+            break
+        t = k / fps
+        k += 1
+        if t > plano["fim"]:
+            continue
+        if float((np.frombuffer(b, np.uint8) > limiar).mean()) < 0.01:
+            run.append(t)
+            continue
+        if len(run) / fps > 0.5 and run[0] > 0.3:
+            vazios.append(f"{run[0]:.1f}–{run[-1]:.1f}s ({len(run) / fps:.1f}s)")
+        run = []
+    pr.wait()
+    R.add(vazios, "Palco vazio", "tela preta entre cenas no máximo ~0,5 s", vazios)
+
+
+def checar_layout(proj, item, R, sobre_imagem=True):
     """Com edicao/layout_<item>.json (gerado pelo gerar_ae2.py desde 2026-10-13): texto por cima de imagem
     ("since 1994" sobre o capacete) e texto que some rápido demais ("199th pick" 0,8 s, "receiver" 0,8 s)."""
     arq = proj / "edicao" / f"layout_{item}.json"
@@ -166,7 +191,7 @@ def checar_layout(proj, item, R):
     def inter(a, b):
         return max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(0, min(a[3], b[3]) - max(a[1], b[1]))
     sobre = []
-    for r in tx:
+    for r in tx if sobre_imagem else ():      # no bestiário a legenda vai por cima da imagem cheia de propósito
         b = r["box"]
         area = (b[2] - b[0]) * (b[3] - b[1])
         for c in cd:
@@ -174,8 +199,9 @@ def checar_layout(proj, item, R):
                 continue
             if min(r["out"], c["out"]) - max(r["in"], c["in"]) > 0.3 and inter(b, c["box"]) / area > 0.2:
                 sobre.append(f"{r['in']:.1f}s \"{r['txt']}\" cobre {inter(b, c['box']) / area:.0%} de {Path(str(c['id'])).name}")
-    R.add(sobre, "Texto por cima de imagem",
-          "texto solo/rótulo não pode ficar em cima de card ou recorte (nome SOBRE o card é outra coisa)", sobre)
+    if sobre_imagem:
+        R.add(sobre, "Texto por cima de imagem",
+              "texto solo/rótulo não pode ficar em cima de card ou recorte (nome SOBRE o card é outra coisa)", sobre)
     curtos = sorted(((r["out"] - r["in"], r) for r in tx if r["out"] - r["in"] < 0.7), key=lambda x: x[0])
     R.add(curtos, "Texto pouco tempo na tela", "cada texto/rótulo ≥ 0,7 s para dar para ler (o ideal é ≥ 1,0 s)",
           [f"{r['in']:.1f}s \"{r['txt']}\" {d:.2f}s" for d, r in curtos])
@@ -270,14 +296,22 @@ def main():
     plano = json.loads((ed / f"plano_edicao_{a.item}.json").read_text())
     video = Path(a.video) if a.video else max(ed.glob("previa*.mp4"), key=lambda p: p.stat().st_mtime)
     det = ed / f"_qa_{video.stem}.jsonl"
-    if not det.exists() or det.stat().st_mtime < video.stat().st_mtime:
+    detectar = "render" in (caminhos.ficha().get("qa", {}).get("checagens") or ["render"])
+    if detectar and (not det.exists() or det.stat().st_mtime < video.stat().st_mtime):
         print("Medindo a prévia (detecção a 4 fps)...", file=sys.stderr)
         subprocess.run([PY, str(AQUI / "detectar.py"), str(video), str(det), "--fps", "4"], check=True,
                        stdout=subprocess.DEVNULL)
     R = Relatorio()
-    checar_render(video, plano, det, R, ed / f"layout_{a.item}.json")
-    checar_layout(proj, a.item, R)
-    checar_origem(proj, R)
+    # o que conferir é do formato (formato.json › qa.checagens); sem a lista, tudo o que o explained confere
+    checagens = caminhos.ficha().get("qa", {}).get("checagens") or ["render", "layout", "origem"]
+    if "render" in checagens:
+        checar_render(video, plano, det, R, ed / f"layout_{a.item}.json")
+    if "tela_vazia" in checagens:
+        checar_tela_vazia(video, plano, R)
+    if "layout" in checagens or "layout_tempo" in checagens:
+        checar_layout(proj, a.item, R, sobre_imagem="layout" in checagens)
+    if "origem" in checagens:
+        checar_origem(proj, R)
     folha(video, plano, ed / f"qa_{a.item}.jpg")
     status = "❌ REPROVADO" if R.falhas else "✅ APROVADO"
     md = [f"# QA — {plano['nome']}", "", f"Prévia: `{video.name}` · **{status}** ({R.falhas} falha(s))", "",

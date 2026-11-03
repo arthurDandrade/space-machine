@@ -35,6 +35,8 @@ Formato de cenas.json:
   Sem gatilho, o gatilho são as 2 primeiras palavras do texto.
 - {"layout": "CTA", "fala": "...", "clique": "subscribe", "textos": [["Nome do canal", "Inside", "faixa"]]}:
   botão de inscrever do canal (identidade/cta_botao.png) com pop e o cursor (cta_cursor.png) clicando na palavra.
+- "titulo": {"tipo": ...} troca o tipo do asset do título (padrão "recorte"; o bestiário usa "ilustracao"/"gravura").
+- "escala": {...} num card passa direto para o plano de edição (bestiário, E1: tamanho da criatura ao lado de uma pessoa).
 - "png": true num card = recorte/logo solto (sem quadro).
 - "tabela": {...} / "grafico": {...} num card = imagem GERADA por scripts/gerar_tabela.py (dados reais + "fonte").
 - "lateral": {"asset"/busca de bandeira | "mapa": {..., "globo": true}, "gatilho": ...} = bandeira (E5/F9) ou globo (M5)
@@ -55,7 +57,11 @@ import caminhos   # motor/caminhos.py (o comum já põe no path): o formato do c
 
 # Orientação do asset por variação: é do FORMATO (formatos/<formato>/biblioteca_cenas.json). Cada código está
 # explicado em conhecimento/02 - Cenas/Biblioteca de Cenas.md do formato.
-ORIENTACAO = json.loads(caminhos.do_formato("cenas").read_text())["orientacao"]
+_BIBLIOTECA = json.loads(caminhos.do_formato("cenas").read_text())
+ORIENTACAO = _BIBLIOTECA["orientacao"]
+# tipos de cena em que o texto faz parte do desenho (no bestiário, o rótulo do D1 e o tamanho do E1): não contam
+# no limite de texto sobre imagem
+TEXTO_DO_LAYOUT = set(_BIBLIOTECA.get("texto_do_layout", []))
 
 
 def gerar_mapa(proj, spec):
@@ -206,8 +212,9 @@ def main():
         if tit.get("reusar"):
             ta = dict(antigos.get(tit["reusar"], {"id": tit["reusar"]}))
         else:
-            ta = {"id": f"{iid}-titulo", "tipo": "recorte", "papel": "titulo", "descricao": tit.get("descricao", item["nome"]),
-                  "buscas": tit.get("buscas", [item["nome"]])}
+            # o tipo do título é do formato: no explained, recorte (PNG sem fundo); no bestiário, ilustração ou gravura
+            ta = {"id": f"{iid}-titulo", "tipo": tit.get("tipo", "recorte"), "papel": "titulo",
+                  "descricao": tit.get("descricao", item["nome"]), "buscas": tit.get("buscas", [item["nome"]])}
         ta.update({"gatilho": falado.split()[0], "tempo": T(k_nome)})
         primeiro = T(lista[0]["_k"]) if lista else fim_item
         if not sem_titulo:
@@ -338,6 +345,8 @@ def main():
                     card["entra"] = c["entra"]
                 if c.get("sai"):
                     card["sai"] = c["sai"]
+                if c.get("escala"):        # bestiário (E1): tamanho da criatura ao lado de uma pessoa
+                    card["escala"] = c["escala"]
                 cards.append(card)
             if cards:
                 est["cards"] = cards
@@ -366,7 +375,7 @@ def main():
     for item in plano["itens"]:
         ed_i = ler_json(proj / "edicao" / f"plano_edicao_{item['id']}.json")
         ests = [e for c in ed_i["cenas"] for e in c["estados"]]
-        com = [e for e in ests if e.get("cards")]
+        com = [e for e in ests if e.get("cards") and e["layout"] not in TEXTO_DO_LAYOUT]
         com_txt = [e for e in com if e.get("textos") or e.get("rotulos") or
                    any(cd.get(k) for cd in e["cards"] for k in ("sobre", "legenda", "acima"))]
         if com and len(com_txt) / len(com) > 0.45:

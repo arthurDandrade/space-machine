@@ -24,6 +24,19 @@ formatos/<nome>/
   conhecimento/         as notas do formato; as que a ficha listar vão no prompt do storyboard
 ```
 
+Chaves opcionais da ficha (o `bestiario` usa todas):
+- `edicao.gerador`: o script Python que monta o `montar_NN_v2.jsx` (sem ele, o `motor/edicao_ae/gerar_ae2.py`, que é
+  do layout do explained). Formato com gerador próprio ainda não faz Reels.
+- `qa.checagens`: o que o `qa_bloco.py` confere — `render` (detector de cards sobre papel), `tela_vazia` (fundo
+  escuro: tela preta > 0,5 s), `layout` (texto por cima de imagem + texto rápido), `layout_tempo` (só texto rápido),
+  `origem`. Sem a lista: `render`, `layout`, `origem`.
+- `busca`: por cima do `motor/busca/config.json`; `fontes_por_tipo` e `lado_menor_minimo` entram tipo a tipo (dá
+  para criar tipos de asset novos, como `gravura` e `ilustracao`).
+- `ilustracao`: modelo, estilo e quantidade das imagens GERADAS pelo Gemini (`motor/busca/scripts/ilustrar.py`, fonte
+  `gemini` da busca). O canal pode trocar qualquer campo em `canal.json › ilustracao`.
+- Na `biblioteca_cenas.json`: `metas.max_repeticoes` (quantas vezes um tipo de cena volta no bloco; padrão 1) e
+  `texto_do_layout` (tipos de cena cujo texto é parte do desenho e não conta no limite de texto sobre imagem).
+
 A ficha do `explained` serve de exemplo. Os caminhos saem dela, então os nomes dos arquivos são seus:
 o que o código exige é que a chave exista. Falta um arquivo, o erro diz qual e onde ele deveria estar.
 

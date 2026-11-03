@@ -146,8 +146,12 @@ def narracao():
 
 
 def config_busca():
-    """Config do buscador: padrão do motor (motor/busca/config.json) com canal.json["busca"] por cima."""
+    """Config do buscador: padrão do motor (motor/busca/config.json), o "busca" da ficha do formato por cima e o
+    canal.json["busca"] por cima de tudo. Do formato, fontes_por_tipo e lado_menor_minimo entram tipo a tipo (o
+    bestiário acrescenta "gravura" e "ilustracao" sem apagar o rank dos outros tipos)."""
     cfg = dict(_json(MOTOR / "busca" / "config.json"))
+    for k, v in ficha().get("busca", {}).items():
+        cfg[k] = {**cfg.get(k, {}), **v} if isinstance(v, dict) and isinstance(cfg.get(k), dict) else v
     cfg.update(canal_json().get("busca", {}))
     return cfg
 

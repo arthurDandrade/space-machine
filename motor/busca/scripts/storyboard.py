@@ -28,6 +28,8 @@ _M = BIBLIOTECA["metas"]
 MIN_VARIACOES, MAX_CARD_UNICO, MAX_SEGUIDOS = _M["min_variacoes"], _M["max_card_unico"], _M["max_seguidos"]
 MIN_ASSET_S, MIN_ASSETS_MIN, MIN_CENAS_F = _M["min_asset_s"], _M["min_assets_min"], _M["min_cenas_f"]
 TEXTO_SOLO_FAIXA = tuple(_M["texto_solo_faixa"])
+# quantas vezes um tipo de cena pode aparecer no bloco: 1 no explained (60 variações); o bestiário tem 7 e repete
+MAX_REPETICOES = _M.get("max_repeticoes", 1)
 
 
 def variacao(est_plan, est_ed):
@@ -198,9 +200,9 @@ def main():
     if pilhas:
         avisos.append("pilha (C9) com os cards na mesma palavra em " + ", ".join(pilhas)
                       + ": dê um gatilho para cada card (o de trás numa palavra, o da frente numa palavra depois)")
-    repetidos = {v: n for v, n in collections.Counter(vars_).items() if n > 1}
+    repetidos = {v: n for v, n in collections.Counter(vars_).items() if n > MAX_REPETICOES}
     if repetidos:
-        avisos.append("tipo de cena repetido no bloco (cada um só uma vez; troque por outra variação da biblioteca): "
+        avisos.append(f"tipo de cena repetido no bloco (cada um no máximo {MAX_REPETICOES}x; troque por outra variação da biblioteca): "
                       + ", ".join(f"{v} {NOMES.get(v, '')} ×{n}".replace("  ", " ") for v, n in sorted(repetidos.items())))
     if not TEXTO_SOLO_FAIXA[0] <= t_texto / dur_total <= TEXTO_SOLO_FAIXA[1]:
         avisos.append(f"texto solo em {t_texto/dur_total:.0%} do tempo (meta {TEXTO_SOLO_FAIXA[0]:.0%}–{TEXTO_SOLO_FAIXA[1]:.0%})")

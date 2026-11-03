@@ -20,7 +20,9 @@ for f in $P/assets/**/*.mp4(N); do
     ffmpeg -v error -y -i $f -vf setsar=1 -c:v libx264 -crf 17 -pix_fmt yuv420p -an $f.sar.mp4 && mv $f.sar.mp4 $f
   fi
 done
-$PY gerar_ae2.py $P --item $N | tail -1 || exit 1
+# o gerador da montagem é do FORMATO do canal (formato.json › edicao.gerador); sem ele, o gerar_ae2.py do explained
+GER=$($PY -c "import sys; sys.path.insert(0, '..'); import caminhos; p = caminhos.do_formato('edicao.gerador', exigir=False); print(p if p.is_file() else 'gerar_ae2.py')" $P) || exit 1
+$PY $GER $P --item $N | tail -1 || exit 1
 rm -f $E/log_${N}_v2.txt
 osascript -e 'with timeout of 1800 seconds' -e "tell application \"$AE\" to DoScriptFile \"$E/montar_${N}_v2.jsx\"" -e 'end timeout' >/dev/null
 for i in {1..600}; do [ -f $E/log_${N}_v2.txt ] && break; sleep 3; done   # osascript estourou o tempo: espera o After

@@ -375,8 +375,9 @@ class Rodada:
         qa_md = self.p / "edicao" / f"qa_{self.nn}.md"
         # pula só se a prévia aprovada é mais nova que tudo o que entra nela (cenas, assets e o próprio editor)
         # e se ninguém pediu para editar de novo (--de editar): antes pulava e a observação dele se perdia
+        gerador = arquivo_formato("edicao.gerador", self.c.get("formato"), exigir=False)
         entradas = [self.p / "manifesto.json", self.p / "cenas.json", self.p / "plano.json",
-                    Path(self.c["editor"]) / "gerar_ae2.py"]
+                    gerador if gerador.is_file() else Path(self.c["editor"]) / "gerar_ae2.py"]
         mais_novo = max((f.stat().st_mtime for f in entradas if f.exists()), default=0)
         # já entregue e nada do conteúdo mudou depois (o editor do After mudar não refaz bloco entregue): a prévia
         # foi movida para o entregue e as outras saíram na limpeza, então não há prévia a comparar
