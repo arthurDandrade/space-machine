@@ -1,0 +1,5 @@
+{
+ "fonte": "PROVISÓRIO (2026-11-03): o QA do bestiário (formato.json › qa.checagens) não usa o detector de cards nem as medidas de tamanho do explained; este arquivo existe porque o qa_bloco.py lê a ficha. Preencher com o linha_base.py quando houver vídeos de referência do formato em <dados>/referencias/bestiario/.",
+ "altura_texto_solo_px": [90.0],
+ "altura_texto_junto_px": [50.0]
+}

@@ -1,0 +1,36 @@
+{
+ "_sobre": "A Biblioteca de Cenas do bestiário: 7 tipos de cena (gerar_ae.py) e o que o storyboard.py mede. Cada código está em conhecimento/02 - Cenas/Biblioteca de Cenas.md.",
+ "nomes": {
+  "P1": "imagem plena",
+  "P2": "plena + legenda",
+  "R1": "gravura no escuro",
+  "D1": "lenda × realidade",
+  "E1": "escala",
+  "T1": "frase",
+  "Q1": "citação antiga"
+ },
+ "card_unico": [],
+ "texto_solo": ["T1", "Q1"],
+ "texto_do_layout": ["D1", "E1"],
+ "_orientacao": "Orientação do asset por tipo de cena (compilar_cenas.py). Plena = paisagem (16:9 cheio); gravura e escala cabem inteiras; D1 é meia tela.",
+ "orientacao": {
+  "P1": "paisagem",
+  "P2": "paisagem",
+  "R1": "qualquer",
+  "D1": "quadrado",
+  "E1": "paisagem",
+  "T1": "qualquer",
+  "Q1": "qualquer"
+ },
+ "_metas": "PROVISÓRIAS (2026-11-03): ainda sem medida das referências (o Depth Theory não pode ser baixado: regra do YouTube). Calibrar no vídeo piloto. card_unico vazio: aqui quase toda cena é uma imagem só, e é o formato. max_repeticoes: com 7 tipos, cada um pode voltar até 4 vezes no bloco.",
+ "metas": {
+  "min_variacoes": 4,
+  "max_card_unico": 1.0,
+  "max_seguidos": 99,
+  "min_asset_s": 1.8,
+  "min_assets_min": 9.0,
+  "min_cenas_f": 0.25,
+  "texto_solo_faixa": [0.05, 0.22],
+  "max_repeticoes": 4
+ }
+}

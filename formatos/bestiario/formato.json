@@ -1,0 +1,41 @@
+{
+ "_sobre": "Ficha do formato bestiário (2026-11-03): uma criatura do folclore por vídeo, narrada em segunda pessoa, com gravuras antigas e ilustrações em traço claro sobre fundo preto. Modelo: o canal Depth Theory (conhecimento/01 - Formato/Canal de Referência Depth Theory.md), com o assunto trocado por criaturas de lenda.",
+ "nome": "Bestiário (Why You'd Never Want To Meet ___)",
+ "resumo": "Uma criatura do folclore por vídeo, em segunda pessoa, com gravuras antigas e ilustrações em traço claro sobre fundo preto.",
+ "storyboard": {
+  "regras": "storyboard.md",
+  "exemplo_cenas": "exemplo_cenas.json",
+  "conhecimento": [
+   "02 - Cenas/Biblioteca de Cenas.md",
+   "03 - Assets/Gravuras e Ilustrações.md"
+  ]
+ },
+ "cenas": "biblioteca_cenas.json",
+ "edicao": {
+  "gerador": "gerar_ae.py",
+  "modelo": "montar_modelo.jsx"
+ },
+ "qa": {
+  "medidas": "medidas_qa.json",
+  "checagens": ["tela_vazia", "layout_tempo", "origem"]
+ },
+ "busca": {
+  "_sobre": "Tipos que só este formato usa, por cima do motor/busca/config.json (caminhos.config_busca).",
+  "fontes_por_tipo": {
+   "gravura": [["commons"], ["smithsonian", "openverse"]],
+   "ilustracao": [["gemini"]]
+  },
+  "lado_menor_minimo": {
+   "gravura": 500,
+   "ilustracao": 700
+  }
+ },
+ "ilustracao": {
+  "_sobre": "Lido por motor/busca/scripts/ilustrar.py; o canal.json › ilustracao pode trocar qualquer campo. Imagem do canal em identidade/estilo_ilustracao.png trava o estilo (vai junto em cada pedido).",
+  "modelo": "gemini-nano-banana-2.1",
+  "tamanho": "2K",
+  "por_asset": 3,
+  "preco_usd": 0.0504,
+  "estilo": "Black-and-white scratchboard engraving: fine white hatching and stippling on a pure black background, like a 19th-century wood engraving printed in negative. High contrast, no grey fog, no color, no text, no letters, no watermark, no frame or border. The subject is drawn large and fully inside the frame, with empty pure black around it. Never depict a real, identifiable person or a real historical event."
+ }
+}
