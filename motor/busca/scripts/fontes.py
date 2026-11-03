@@ -439,12 +439,12 @@ def com_cache(nome, fn):
 
 VIDEO_LIVRES = {k: com_cache(k + "_video", f) for k, f in VIDEO_LIVRES.items()}
 
-from ilustrar import gemini  # noqa: E402  (ilustração GERADA: tipo "ilustracao" do bestiário, 2026-11-03)
+from ilustrar import gemini, gemini_recorte  # noqa: E402  (ilustração GERADA do bestiário, 2026-11-03)
 
 BUSCADORES = {
     "google": google, "google_transparente": google_transparente,
     "web": web, "web_transparente": web_transparente, "commons": commons,
     "openverse": openverse, "smithsonian": smithsonian, "pixabay": pixabay,
-    "gemini": gemini,
+    "gemini": gemini, "gemini_recorte": gemini_recorte,
 }
 BUSCADORES = {k: com_cache(k, f) for k, f in BUSCADORES.items()}

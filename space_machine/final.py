@@ -2,7 +2,8 @@
 
   python -m space_machine final <pasta do vídeo> [--render]
 
-Monta <vídeo>/final/final.aep: os blocos entregues em sequência numa comp só, com a camada de ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
+Monta <vídeo>/final/final.aep: os blocos entregues em sequência numa comp só (com a trilha do canal por baixo, se o canal
+tiver <canal>/identidade/trilha.mp3), com a camada de ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
 em 2026-10-13; 0 = sem). Com --render, renderiza <vídeo>/final/<título>.mp4.
 Desde 2026-10-16 cada bloco entra pelo projeto dele (blocos/NN/edicao/bloco_NN_v2.aep, importado inteiro): o vídeo
 final sai de um render só, sem comprimir de novo os MP4s dos blocos, e o que você ajustar no .aep de um bloco entra
@@ -63,6 +64,10 @@ MONTAR = r"""
             L.startTime = t;
             L.moveToEnd();
             t += itens[k].duration;
+        }
+        if (CFG.trilha) {           // trilha do canal por baixo do vídeo todo (já no tamanho e no volume certos)
+            var tr = comp.layers.add(p.importFile(new ImportOptions(new File(CFG.trilha))));
+            tr.name = "Trilha"; tr.startTime = 0; tr.moveToEnd();
         }
         if (CFG.ruido > 0) {
             var aj = comp.layers.addSolid([1, 1, 1], "Noise " + CFG.ruido + "%", W, H, 1, total);
@@ -133,6 +138,28 @@ def _after(script, log, espera_s):
     return ""
 
 
+def trilha(vd, fim_dir, blocos):
+    """A trilha do canal (<canal>/identidade/trilha.*), se houver: repetida até o fim do vídeo, no volume de fundo
+    (canal.json › trilha.lufs; padrão −30 LUFS, que deixa a música ~12 dB abaixo da narração, como nas referências
+    do bestiário, 2026-11-03), com 2 s de entrada e 4 s de saída. Sem arquivo, o vídeo sai só com a narração."""
+    canal = Path(vd).parent.parent
+    arq = next((f for f in sorted((canal / "identidade").glob("trilha.*"))
+                if f.suffix.lower() in (".mp3", ".wav", ".m4a", ".aac", ".aif", ".aiff")), None)
+    if not arq:
+        return None
+    total = 0.0
+    for b in blocos:          # a duração de cada bloco = a da prévia entregue (a comp do bloco tem a mesma)
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(b)],
+                           capture_output=True, text=True)
+        total += float(r.stdout.strip() or 0)
+    lufs = float(((ler_json(canal / "canal.json", {}) or {}).get("trilha") or {}).get("lufs", -30))
+    saida = fim_dir / "trilha_final.wav"
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-stream_loop", "-1", "-i", str(arq), "-t", f"{total:.2f}",
+                    "-af", f"loudnorm=I={lufs}:TP=-2:LRA=11,afade=t=in:d=2,afade=t=out:st={max(0, total - 4):.2f}:d=4",
+                    "-ar", "48000", str(saida)], check=True, timeout=1800)
+    return str(saida)
+
+
 def _guardar_anterior(arq):
     """Projeto ou MP4 de uma montagem anterior (que você pode ter editado) vai para final/anteriores/, nunca é
     sobrescrito."""
@@ -161,7 +188,7 @@ def montar(vd, render=False):
     nome_mp4 = re.sub(r'[/:"\\]', "-", titulo).strip() or vd.name
     mp4 = fim_dir / f"{nome_mp4}.mp4"
     cfg = {"blocos": fontes(vd), "comp": f"{titulo} - final", "aep": str(aep), "log": str(log),
-           "ruido": float((config().get("video_final") or {}).get("ruido", 6))}
+           "ruido": float((config().get("video_final") or {}).get("ruido", 6)), "trilha": trilha(vd, fim_dir, blocos)}
     (fim_dir / "montar_final.jsx").write_text(f"var CFG = {json.dumps(cfg, ensure_ascii=False)};\n{MONTAR}")
     trava = open(DADOS / "trava_after", "w")
     fcntl.flock(trava, fcntl.LOCK_EX)

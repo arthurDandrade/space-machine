@@ -1,7 +1,9 @@
-"""Ilustração gerada pelo Gemini (Nano Banana), para o tipo de asset "ilustracao" (formato bestiário, 2026-11-03).
+"""Ilustração gerada pelo Gemini (Nano Banana), para os tipos de asset "ilustracao" (cenário cheio) e "recorte" (criatura,
+ícone, personagem: sai em fundo liso e o finalizar.py tira o fundo) do formato bestiário (2026-11-03).
 
-Entra na busca como mais uma fonte ("gemini" no fontes.py): a consulta é o pedido da cena, o estilo vem da ficha
-do formato (formato.json › ilustracao) com o canal.json › ilustracao por cima, e cada imagem gerada é gravada no
+Entra na busca como mais uma fonte ("gemini" e "gemini_recorte" no fontes.py): a consulta é o pedido da cena, o estilo
+vem da ficha do formato (formato.json › ilustracao: "estilo" e "estilo_recorte") com o canal.json › ilustracao por cima,
+e cada imagem gerada é gravada no
 cache de imagens com uma URL "gemini://..." — o baixar_imagem() acha no cache e o resto da busca (folha de
 contato, escolha do Claude, manifesto) segue igual ao de uma foto.
 
@@ -27,7 +29,7 @@ from comum import caminhos, log, sessao
 URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
 REVISAO = "2026-05-20"
 PADRAO = {"modelo": "gemini-nano-banana-2.1", "tamanho": "2K", "por_asset": 3, "preco_usd": 0.0504,
-          "estilo": "", "referencia": ""}
+          "estilo": "", "estilo_recorte": "", "referencia": ""}
 ASPECTO = {"paisagem": "16:9", "retrato": "3:4", "quadrado": "1:1"}
 
 
@@ -58,14 +60,14 @@ def _imagens(no):
             yield from _imagens(v)
 
 
-def gerar(pedido, orientacao=None, cfg=None):
-    """Uma imagem. Devolve os bytes (JPEG) ou None."""
+def gerar(pedido, orientacao=None, cfg=None, estilo="estilo"):
+    """Uma imagem. Devolve os bytes (JPEG) ou None. `estilo` é a chave do estilo na config ("estilo_recorte")."""
     cfg = cfg or config()
     chave = caminhos.env("GEMINI_API_KEY")
     if not chave:
         log("   gemini: sem GEMINI_API_KEY (pulado)")
         return None
-    texto = f"{cfg['estilo']}\n\nScene: {pedido}".strip() if cfg.get("estilo") else pedido
+    texto = f"{cfg[estilo]}\n\nScene: {pedido}".strip() if cfg.get(estilo) else pedido
     partes = [{"type": "text", "text": texto}]
     ref = _referencia(cfg)
     if ref:
@@ -105,12 +107,12 @@ def gerar(pedido, orientacao=None, cfg=None):
     return None
 
 
-def gemini(consulta, n, orientacao=None):
+def gemini(consulta, n, orientacao=None, estilo="estilo"):
     """Fonte de busca: até `por_asset` imagens geradas para a consulta (o n da busca é alvo × 2: caro demais)."""
     cfg = config()
     out = []
     for k in range(min(n, int(cfg["por_asset"]))):
-        dados = gerar(consulta, orientacao, cfg)
+        dados = gerar(consulta, orientacao, cfg, estilo)
         if not dados:
             break
         # URL de mentira, mas única e estável: o baixar_imagem() lê do cache por sha1(url)
@@ -123,17 +125,23 @@ def gemini(consulta, n, orientacao=None):
     return out
 
 
+def gemini_recorte(consulta, n, orientacao=None):
+    """Criatura/ícone/personagem num fundo liso (o finalizar.py recorta): o estilo_recorte da ficha."""
+    return gemini(consulta, n, "quadrado" if orientacao in (None, "qualquer") else orientacao, "estilo_recorte")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("saida")
     ap.add_argument("pedido")
     ap.add_argument("--n", type=int, default=1)
     ap.add_argument("--orientacao", default="paisagem")
+    ap.add_argument("--recorte", action="store_true", help="estilo de recorte (fundo liso)")
     a = ap.parse_args()
     pasta = Path(a.saida)
     pasta.mkdir(parents=True, exist_ok=True)
     for k in range(a.n):
-        dados = gerar(a.pedido, a.orientacao)
+        dados = gerar(a.pedido, a.orientacao, estilo="estilo_recorte" if a.recorte else "estilo")
         if not dados:
             sys.exit(1)
         (pasta / f"ilustracao_{k + 1:02d}.jpg").write_bytes(dados)

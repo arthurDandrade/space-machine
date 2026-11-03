@@ -48,6 +48,11 @@ def slug(texto, maximo=40):
     return t[:maximo] or "x"
 
 
+def arquivo_elenco(proj, nome):
+    """<vídeo>/elenco/<nome>.png: a criatura/personagem do vídeo, a mesma em todos os blocos (bestiário)."""
+    return Path(proj).parent.parent / "elenco" / f"{re.sub(r'[^a-z0-9]+', '-', nome.lower()).strip('-')}.png"
+
+
 def log(*a):
     print(*a, file=sys.stderr, flush=True)
 

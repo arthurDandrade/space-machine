@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from comum import config, gravar_json, iter_assets, ler_json, log, slug
+from comum import arquivo_elenco, config, gravar_json, iter_assets, ler_json, log, slug
 
 _sessao_rembg = [None]
 
@@ -135,6 +135,13 @@ def main():
                 w, h = int(r[0]), int(r[1])
             base.update({"arquivo": str(destino.relative_to(proj)), "w": w, "h": h, "origem": info})
             manifesto.append(base)
+            if asset.get("elenco"):
+                # o elenco do vídeo (bestiário): a 1ª escolha fica para os outros blocos (compilar_cenas.elenco)
+                alvo = arquivo_elenco(proj, asset["elenco"])
+                if not alvo.exists():
+                    alvo.parent.mkdir(exist_ok=True)
+                    Image.open(destino).convert("RGBA").save(alvo)
+                    log(f"[{aid}] elenco do vídeo: {alvo.name}")
         except Exception as e:
             log(f"[{aid}] ERRO: {e}")
             faltando.append(aid)

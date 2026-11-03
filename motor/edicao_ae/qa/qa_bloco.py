@@ -178,6 +178,21 @@ def checar_tela_vazia(video, plano, R, limiar=40, fps=4):
     R.add(vazios, "Palco vazio", "tela preta entre cenas no máximo ~0,5 s", vazios)
 
 
+def checar_vazio_layout(proj, item, plano, R):
+    """Para formato com fundo desenhado (bestiário): pelo edicao/layout_<item>.json, trecho de mais de 0,5 s em que
+    nenhuma imagem, texto ou gráfico está na tela (só o fundo). O fim do bloco não conta."""
+    arq = proj / "edicao" / f"layout_{item}.json"
+    if not arq.exists():
+        return
+    faixas = sorted((r["in"], r["out"]) for r in json.loads(arq.read_text()) if r["tipo"] in ("card", "texto"))
+    vazios, ate = [], faixas[0][1] if faixas else 0
+    for a_, b_ in faixas[1:]:
+        if a_ - ate > 0.5 and a_ < plano["fim"]:
+            vazios.append(f"{ate:.1f}–{a_:.1f}s ({a_ - ate:.1f}s)")
+        ate = max(ate, b_)
+    R.add(vazios, "Palco vazio", "só o fundo na tela por no máximo ~0,5 s", vazios)
+
+
 def checar_layout(proj, item, R, sobre_imagem=True):
     """Com edicao/layout_<item>.json (gerado pelo gerar_ae2.py desde 2026-10-13): texto por cima de imagem
     ("since 1994" sobre o capacete) e texto que some rápido demais ("199th pick" 0,8 s, "receiver" 0,8 s)."""
@@ -240,6 +255,8 @@ def frames_referencia():
     vids = sorted(REFS_DIR.glob("*.mp4"))
     cat = {k: [] for k in set(CATEG.values())}
     for i, v in enumerate(vids, 1):
+        if not (EST / f"det/v{i}.jsonl").exists():     # referência sem detecção (o bestiário só tem os vídeos)
+            continue
         for f in estaveis(ler_det(EST / f"det/v{i}.jsonl")):
             cs = cards_validos(f)
             if not cs and f["textos"] and not f["recortes"]:
@@ -308,6 +325,8 @@ def main():
         checar_render(video, plano, det, R, ed / f"layout_{a.item}.json")
     if "tela_vazia" in checagens:
         checar_tela_vazia(video, plano, R)
+    if "vazio_layout" in checagens:
+        checar_vazio_layout(proj, a.item, plano, R)
     if "layout" in checagens or "layout_tempo" in checagens:
         checar_layout(proj, a.item, R, sobre_imagem="layout" in checagens)
     if "origem" in checagens:

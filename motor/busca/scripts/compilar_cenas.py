@@ -37,6 +37,9 @@ Formato de cenas.json:
   botão de inscrever do canal (identidade/cta_botao.png) com pop e o cursor (cta_cursor.png) clicando na palavra.
 - "titulo": {"tipo": ...} troca o tipo do asset do título (padrão "recorte"; o bestiário usa "ilustracao"/"gravura").
 - "escala": {...} num card passa direto para o plano de edição (bestiário, E1: tamanho da criatura ao lado de uma pessoa).
+- "opcoes": {...} no estado ou no card passa direto para o editor do formato; objetos dentro com "gatilho" ganham "t".
+- "elenco": "<nome>" num card ou no título = a criatura/personagem do VÍDEO: a 1ª vez é buscada (gerada) e o
+  finalizar.py guarda a escolhida em <vídeo>/elenco/<nome>.png; dali em diante vira "arquivo" (sem busca).
 - "png": true num card = recorte/logo solto (sem quadro).
 - "tabela": {...} / "grafico": {...} num card = imagem GERADA por scripts/gerar_tabela.py (dados reais + "fonte").
 - "lateral": {"asset"/busca de bandeira | "mapa": {..., "globo": true}, "gatilho": ...} = bandeira (E5/F9) ou globo (M5)
@@ -52,7 +55,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from comum import gravar_json, ler_json, log
+from comum import arquivo_elenco, gravar_json, ler_json, log
 import caminhos   # motor/caminhos.py (o comum já põe no path): o formato do canal
 
 # Orientação do asset por variação: é do FORMATO (formatos/<formato>/biblioteca_cenas.json). Cada código está
@@ -112,6 +115,14 @@ def gerado(proj, spec):
     return spec
 
 
+def elenco(proj, nome):
+    """O elenco do VÍDEO (bestiário): a criatura/personagem pedida com "elenco": "<nome>" é gerada uma vez e fica em
+    <vídeo>/elenco/<nome>.png (o finalizar.py guarda lá a escolhida); os blocos seguintes usam o mesmo arquivo, então a
+    criatura é a mesma no vídeo inteiro. Devolve (caminho relativo ao bloco, já existe?)."""
+    arq = arquivo_elenco(proj, nome)
+    return Path("..") / ".." / "elenco" / arq.name, arq.exists()
+
+
 def norm(p):
     return re.sub(r"[^a-z0-9]", "", p.lower())
 
@@ -168,6 +179,7 @@ def main():
     cursor = 0
     plano = {"titulo": cenas.get("titulo", proj.name), "itens": []}
     ids_novos = []
+    do_elenco = {}            # nome do elenco -> id do asset que vai gerá-lo neste bloco (os outros cards reusam)
 
     for item in cenas["itens"]:
         iid = item["id"]
@@ -209,15 +221,26 @@ def main():
               "cenas": []}
         # título
         tit = {} if sem_titulo else item.get("titulo", {})
-        if tit.get("reusar"):
+        tit_arquivo = None
+        if tit.get("elenco"):
+            rel_e, existe = elenco(proj, tit["elenco"])
+            tit_arquivo = str(rel_e) if existe else None
+        if tit_arquivo:
+            ta = {"id": f"{iid}-titulo"}
+        elif tit.get("reusar"):
             ta = dict(antigos.get(tit["reusar"], {"id": tit["reusar"]}))
         else:
             # o tipo do título é do formato: no explained, recorte (PNG sem fundo); no bestiário, ilustração ou gravura
             ta = {"id": f"{iid}-titulo", "tipo": tit.get("tipo", "recorte"), "papel": "titulo",
                   "descricao": tit.get("descricao", item["nome"]), "buscas": tit.get("buscas", [item["nome"]])}
+            if tit.get("elenco"):
+                ta["elenco"] = tit["elenco"]
+                do_elenco[tit["elenco"]] = ta["id"]
         ta.update({"gatilho": falado.split()[0], "tempo": T(k_nome)})
         primeiro = T(lista[0]["_k"]) if lista else fim_item
-        if not sem_titulo:
+        if not sem_titulo and tit_arquivo:     # a criatura do elenco já existe: o título usa o arquivo, sem busca
+            ed["titulo"] = {"texto": item["nome"], "arquivo": tit_arquivo, "t": rel(T(k_nome)), "fim": rel(primeiro - 0.05)}
+        elif not sem_titulo:
             p_item["titulo_asset"] = ta
             ed["titulo"] = {"texto": item["nome"], "asset": ta["id"], "t": rel(T(k_nome)), "fim": rel(primeiro - 0.05)}
         if not sem_titulo and primeiro - T(k_nome) < 1.0:   # nas outras produções o título fica 1–2 s; menos que isso some rápido demais
@@ -254,6 +277,12 @@ def main():
                     return {"asset": a["id"]}
                 if spec.get("arquivo"):
                     return {"arquivo": spec["arquivo"]}
+                if spec.get("elenco"):
+                    rel_e, existe = elenco(proj, spec["elenco"])
+                    if existe:
+                        return {"arquivo": str(rel_e)}
+                    if spec["elenco"] in do_elenco:       # já pedido neste bloco: o mesmo asset
+                        return {"asset": do_elenco[spec["elenco"]]}
                 while True:
                     letra = chr(ord("a") + cena_atual["_letra"])
                     cena_atual["_letra"] += 1
@@ -269,7 +298,7 @@ def main():
                 if not spec.get("id"):     # grava o id no card: recompilar não renomeia (perdia as escolhas)
                     spec["id"] = a["id"]
                     ids_novos.append(a["id"])
-                for k in ("buscas_por_fonte", "fontes", "quantidade", "lance"):
+                for k in ("buscas_por_fonte", "fontes", "quantidade", "lance", "elenco"):
                     if k in spec:
                         a[k] = spec[k]
                 if tipo == "video":
@@ -277,12 +306,29 @@ def main():
                     if a["orientacao"] == "retrato":   # vídeo vertical: shorts
                         a["buscas"] += [b + " #shorts" for b in a["buscas"][:2]]
                 cena_atual["assets"].append(a)
+                if spec.get("elenco"):
+                    do_elenco[spec["elenco"]] = a["id"]
                 return {"asset": a["id"]}
 
             def tempo(gat, local):
                 k = R.achar(gat, k0, max(k1, k0 + 1), f"{onde} {local}")
                 return T(k) if k is not None else ini
 
+            def opcoes(o, local):
+                """"opcoes" (estado ou card): passa como está para o editor do formato; todo objeto dentro dela
+                com "gatilho" ganha "t" (o tempo da palavra, relativo ao bloco). É o que o bestiário usa nas
+                cenas de gráfico (itens da lista, pontos da linha do tempo, carimbo...)."""
+                if isinstance(o, list):
+                    return [opcoes(x, local) for x in o]
+                if not isinstance(o, dict):
+                    return o
+                r = {k: opcoes(v, local) for k, v in o.items()}
+                if isinstance(o.get("gatilho"), str):
+                    r["t"] = rel(tempo(o["gatilho"], f"{local} '{o['gatilho']}'"))
+                return r
+
+            if e.get("opcoes"):
+                est["opcoes"] = opcoes(e["opcoes"], "opcoes")
             if e.get("clique"):          # CTA: palavra em que o cursor clica no botão
                 est["clique"] = rel(tempo(e["clique"], "clique"))
 
@@ -347,6 +393,8 @@ def main():
                     card["sai"] = c["sai"]
                 if c.get("escala"):        # bestiário (E1): tamanho da criatura ao lado de uma pessoa
                     card["escala"] = c["escala"]
+                if c.get("opcoes"):
+                    card["opcoes"] = opcoes(c["opcoes"], "opcoes do card")
                 cards.append(card)
             if cards:
                 est["cards"] = cards
