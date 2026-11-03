@@ -1,0 +1,144 @@
+"""Ilustração gerada pelo Gemini (Nano Banana), para o tipo de asset "ilustracao" (formato bestiário, 2026-11-03).
+
+Entra na busca como mais uma fonte ("gemini" no fontes.py): a consulta é o pedido da cena, o estilo vem da ficha
+do formato (formato.json › ilustracao) com o canal.json › ilustracao por cima, e cada imagem gerada é gravada no
+cache de imagens com uma URL "gemini://..." — o baixar_imagem() acha no cache e o resto da busca (folha de
+contato, escolha do Claude, manifesto) segue igual ao de uma foto.
+
+Chave: GEMINI_API_KEY no .env do canal (ou dos dados). Sem chave, a fonte é pulada.
+Preço (2026-11, gemini-nano-banana-2.1): ~US$ 0,05 por imagem em 2K, sem cota grátis. Cada imagem gerada vai
+para <dados>/cache/gemini/gastos.jsonl.
+
+Nunca pessoa real nem acontecimento real (regra do Space Machine): o estilo da ficha diz isso ao modelo, e o
+storyboard do formato só pede ilustração de criatura, lugar e cena de lenda.
+
+Uso à mão (teste): python ilustrar.py <pasta de saída> "<pedido>" [--n 1] [--orientacao paisagem]
+"""
+import argparse
+import base64
+import hashlib
+import json
+import sys
+import time
+from pathlib import Path
+
+from comum import caminhos, log, sessao
+
+URL = "https://generativelanguage.googleapis.com/v1beta/interactions"
+REVISAO = "2026-05-20"
+PADRAO = {"modelo": "gemini-nano-banana-2.1", "tamanho": "2K", "por_asset": 3, "preco_usd": 0.0504,
+          "estilo": "", "referencia": ""}
+ASPECTO = {"paisagem": "16:9", "retrato": "3:4", "quadrado": "1:1"}
+
+
+def config():
+    """formato.json › ilustracao, com canal.json › ilustracao por cima."""
+    return {**PADRAO, **caminhos.ficha().get("ilustracao", {}), **caminhos.canal_json().get("ilustracao", {})}
+
+
+def _referencia(cfg):
+    """Imagem que trava o estilo: a do canal (identidade/estilo_ilustracao.*) ou a do formato (ficha)."""
+    for p in sorted((caminhos.canal() / "identidade").glob("estilo_ilustracao.*")):
+        return p
+    if cfg.get("referencia"):
+        p = caminhos.formato() / cfg["referencia"]
+        return p if p.exists() else None
+    return None
+
+
+def _imagens(no):
+    """Todos os blocos {"type": "image", "data": ...} da resposta, em ordem (a última é a final)."""
+    if isinstance(no, dict):
+        if no.get("type") == "image" and no.get("data"):
+            yield no
+        for v in no.values():
+            yield from _imagens(v)
+    elif isinstance(no, list):
+        for v in no:
+            yield from _imagens(v)
+
+
+def gerar(pedido, orientacao=None, cfg=None):
+    """Uma imagem. Devolve os bytes (JPEG) ou None."""
+    cfg = cfg or config()
+    chave = caminhos.env("GEMINI_API_KEY")
+    if not chave:
+        log("   gemini: sem GEMINI_API_KEY (pulado)")
+        return None
+    texto = f"{cfg['estilo']}\n\nScene: {pedido}".strip() if cfg.get("estilo") else pedido
+    partes = [{"type": "text", "text": texto}]
+    ref = _referencia(cfg)
+    if ref:
+        partes[0]["text"] += "\n\nMatch the drawing style of the attached reference image exactly (not its subject)."
+        mime = "image/png" if ref.suffix.lower() == ".png" else "image/jpeg"
+        partes.append({"type": "image", "mime_type": mime, "data": base64.b64encode(ref.read_bytes()).decode()})
+    corpo = {"model": cfg["modelo"], "input": partes,
+             "response_format": {"type": "image", "mime_type": "image/jpeg",
+                                 "aspect_ratio": ASPECTO.get(orientacao, "16:9"), "image_size": cfg["tamanho"]}}
+    for tentativa in range(3):
+        try:
+            r = sessao.post(URL, json=corpo, timeout=(10, 180),
+                            headers={"x-goog-api-key": chave, "Api-Revision": REVISAO})
+        except Exception as e:
+            log(f"   gemini: {e} (tentativa {tentativa + 1})")
+            time.sleep(5 * (tentativa + 1))
+            continue
+        if r.status_code in (429, 500, 503):
+            log(f"   gemini: HTTP {r.status_code} (tentativa {tentativa + 1})")
+            time.sleep(15 * (tentativa + 1))
+            continue
+        if r.status_code != 200:
+            log(f"   gemini: HTTP {r.status_code}: {r.text[:300]}")
+            return None
+        imgs = list(_imagens(r.json()))
+        if not imgs:
+            # recusa (filtro de segurança) ou resposta só de texto: não adianta repetir o mesmo pedido
+            log(f"   gemini: resposta sem imagem: {r.text[:300]}")
+            return None
+        gasto = caminhos.cache() / "gemini" / "gastos.jsonl"
+        gasto.parent.mkdir(parents=True, exist_ok=True)
+        with open(gasto, "a") as f:
+            f.write(json.dumps({"quando": time.strftime("%Y-%m-%d %H:%M:%S"), "canal": caminhos.canal().name,
+                                "modelo": cfg["modelo"], "usd": cfg["preco_usd"], "pedido": pedido[:200]},
+                               ensure_ascii=False) + "\n")
+        return base64.b64decode(imgs[-1]["data"])
+    return None
+
+
+def gemini(consulta, n, orientacao=None):
+    """Fonte de busca: até `por_asset` imagens geradas para a consulta (o n da busca é alvo × 2: caro demais)."""
+    cfg = config()
+    out = []
+    for k in range(min(n, int(cfg["por_asset"]))):
+        dados = gerar(consulta, orientacao, cfg)
+        if not dados:
+            break
+        # URL de mentira, mas única e estável: o baixar_imagem() lê do cache por sha1(url)
+        url = f"gemini://{hashlib.sha1(f'{consulta}|{orientacao}|{k}|{time.time()}'.encode()).hexdigest()[:16]}.jpg"
+        cache = caminhos.cache() / "img" / hashlib.sha1(url.encode()).hexdigest()
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_bytes(dados)
+        out.append({"url": url, "fonte": "gemini", "titulo": consulta[:120], "pagina": "",
+                    "licenca": "gerada (Gemini)", "autor": cfg["modelo"], "w": 0, "h": 0})
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("saida")
+    ap.add_argument("pedido")
+    ap.add_argument("--n", type=int, default=1)
+    ap.add_argument("--orientacao", default="paisagem")
+    a = ap.parse_args()
+    pasta = Path(a.saida)
+    pasta.mkdir(parents=True, exist_ok=True)
+    for k in range(a.n):
+        dados = gerar(a.pedido, a.orientacao)
+        if not dados:
+            sys.exit(1)
+        (pasta / f"ilustracao_{k + 1:02d}.jpg").write_bytes(dados)
+        print(pasta / f"ilustracao_{k + 1:02d}.jpg")
+
+
+if __name__ == "__main__":
+    main()

@@ -62,6 +62,11 @@ APIS = [
     {"id": "smithsonian", "nome": "Smithsonian (fotos históricas)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Grátis em api.data.gov/signup. Sem a chave, o Smithsonian fica fora da busca.",
      "campos": [("SI_API_KEY", "Chave da API", True, "")]},
+    {"id": "gemini", "nome": "Gemini / Nano Banana (ilustrações geradas, pago)", "arquivo": ".env", "escopo": "canal",
+     "ajuda": "Chave em aistudio.google.com → Get API key, num projeto com faturamento ligado (imagem não tem cota "
+              "grátis; ~US$ 0,05 por imagem em 2K). Só é usada pelos formatos que pedem ilustração (o bestiário): "
+              "cada cena ilustrada gera 3 opções e o Claude escolhe uma. Nunca gera pessoa real nem acontecimento real.",
+     "campos": [("GEMINI_API_KEY", "Chave da API", True, "")]},
 ]
 
 
