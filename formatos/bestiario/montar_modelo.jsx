@@ -74,7 +74,11 @@
                 var p = v.addProperty("ADBE Vector Shape - Group");
                 p.property("ADBE Vector Shape").setValue(caminho(it.pts, it.closed));
             }
-            if (trim && it.trim !== false) {
+            if (it.arco) {           // só um trecho da elipse (o arco do sonar): início e fim em %
+                var ta = v.addProperty("ADBE Vector Filter - Trim");
+                ta.property("ADBE Vector Trim Start").setValue(it.arco[0]);
+                ta.property("ADBE Vector Trim End").setValue(it.arco[1]);
+            } else if (trim && it.trim !== false) {
                 var tr = v.addProperty("ADBE Vector Filter - Trim");
                 chaves(tr.property("ADBE Vector Trim End"), trim, false);
             }
@@ -151,6 +155,33 @@
                     L.anchorPoint.setValue([ax, ay]);
                 }
                 L.name = d.name;
+                if (d.grade) {           // a criatura dentro da água: tingida pela luz do fundo, mais escura, borda acesa
+                    var fxg = L.property("ADBE Effect Parade");
+                    var tn = fxg.addProperty("ADBE Tint");
+                    tn.property(1).setValue(d.grade.tint[0]); tn.property(2).setValue(d.grade.tint[1]);
+                    tn.property(3).setValue(d.grade.tint[2]);
+                    if (d.grade.brilho) fxg.addProperty("ADBE Brightness & Contrast 2").property(1).setValue(d.grade.brilho);
+                    if (d.grade.borda) {
+                        var bv = fxg.addProperty("ADBE Bevel Alpha");
+                        bv.property(1).setValue(d.grade.borda[0]); bv.property(2).setValue(-45);
+                        bv.property(3).setValue(d.grade.borda[1]); bv.property(4).setValue(d.grade.borda[2]);
+                    }
+                }
+                if (d.ondula) {          // o corpo ondula de leve (altura, largura da onda, velocidade)
+                    var ww = L.property("ADBE Effect Parade").addProperty("ADBE Wave Warp");
+                    ww.property(2).setValue(d.ondula[0]); ww.property(3).setValue(d.ondula[1]);
+                    ww.property(5).setValue(d.ondula[2]);      // direção: a padrão (90°), a onda corre na horizontal
+                }
+                if (d.vinheta) {         // bordas escuras: elipse invertida e esfumada
+                    var mk = L.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
+                    var rx = d.vinheta[0], ry = d.vinheta[1], kx = rx * 0.5523, ky = ry * 0.5523, el = new Shape();
+                    el.vertices = [[W / 2, H / 2 - ry], [W / 2 + rx, H / 2], [W / 2, H / 2 + ry], [W / 2 - rx, H / 2]];
+                    el.inTangents = [[-kx, 0], [0, -ky], [kx, 0], [0, ky]];
+                    el.outTangents = [[kx, 0], [0, ky], [-kx, 0], [0, -ky]];
+                    el.closed = true;
+                    mk.property("ADBE Mask Shape").setValue(el);
+                    mk.property("ADBE Mask Feather").setValue([d.vinheta[2], d.vinheta[2]]); mk.inverted = true;
+                }
                 if (d.blend === "screen") L.blendingMode = BlendingMode.SCREEN;
                 if (d.blend === "add") L.blendingMode = BlendingMode.ADD;
                 if (d.shadow) sombra(L, d.shadow);

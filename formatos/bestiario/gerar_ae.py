@@ -45,12 +45,21 @@ VERMELHO = _rgb("#E5484D")
 PAPEL = _rgb("#EFE7D6")
 TINTA = _rgb("#23262B")
 PILULA = _rgb("#0A1820")
+# Medido nos quadros do Depth Theory (2026-11-03): o mar deles é quase preto (#0B1D24 no alto, #03080A embaixo), os
+# raios de luz quase não aparecem, há partículas desfocadas grandes e vinheta. "luz" = o preto e o claro para onde a
+# criatura é tingida, para ela parecer DENTRO da água e não um adesivo por cima.
 FUNDOS = {
-    "mar": {"de": _rgb("#134555"), "ate": _rgb("#061820"), "raios": True, "particulas": True},
-    "noite": {"de": _rgb("#13213F"), "ate": _rgb("#060A16"), "estrelas": True},
-    "grade": {"de": _rgb("#0E2634"), "ate": _rgb("#0A1C27"), "grade": True},
-    "escuro": {"de": _rgb("#151B21"), "ate": _rgb("#07090B"), "particulas": True},
+    "mar": {"de": _rgb("#0E2E3A"), "ate": _rgb("#03090C"), "raios": True, "particulas": True, "bokeh": True,
+            "luz": [_rgb("#020709"), _rgb("#B7D3DA")]},
+    "noite": {"de": _rgb("#101A33"), "ate": _rgb("#04070F"), "estrelas": True, "bokeh": True,
+              "luz": [_rgb("#03050C"), _rgb("#C3CCE0")]},
+    "grade": {"de": _rgb("#0C202C"), "ate": _rgb("#071319"), "grade": True,
+              "luz": [_rgb("#03090D"), _rgb("#C9D8DE")]},
+    "escuro": {"de": _rgb("#10161B"), "ate": _rgb("#040607"), "particulas": True, "bokeh": True,
+               "luz": [_rgb("#030405"), _rgb("#CCD3D8")]},
 }
+TINGE = 34                    # % de tingimento da criatura pela luz do fundo
+CAMADAS = {"fundo": 0, "conteudo": 1, "vinheta": 2, "ui": 3}
 FONTE = "AvenirNext-Bold"
 FONTE_ROTULO = "AvenirNext-DemiBold"
 FONTE_SERIFA = "Baskerville-SemiBold"
@@ -80,11 +89,13 @@ class Montador:
         man = json.loads((proj / "manifesto.json").read_text())["assets"]
         self.manif = {m["id"]: m for m in man}
         self.rnd = random.Random(7)
+        self.luz = FUNDOS["mar"]["luz"]   # a luz do fundo atual (tinge a criatura)
 
     # ---------- base ----------
     def add(self, **kw):
         kw["id"] = len(self.layers)
         kw.setdefault("parent", None)
+        kw.setdefault("camada", "conteudo")     # fundo < conteúdo < vinheta < textos e gráficos (ordem no After)
         self.layers.append(kw)
         return kw["id"]
 
@@ -104,7 +115,7 @@ class Montador:
     def texto(self, txt, t_in, t_out, pos, tam, cor=None, fonte=FONTE, justify="center", tracking=0, max_w=1700,
               ancora="center", dy=18, nome=None):
         kw = dict(kind="text", text=txt, pos=list(pos), size=tam, color=cor or BRANCO, font=fonte, justify=justify,
-                  tracking=tracking, max_w=max_w, anchor_mode=ancora, name=nome or txt[:50])
+                  tracking=tracking, max_w=max_w, anchor_mode=ancora, name=nome or txt[:50], camada="ui")
         self.aparece(kw, t_in, t_out, dy, pos)
         w_ = min(max_w, largura(txt, tam, tracking))
         x0 = pos[0] - (0 if justify == "left" else (w_ if justify == "right" else w_ / 2))
@@ -112,7 +123,7 @@ class Montador:
         return self.add(**kw)
 
     def forma(self, itens, t_in, t_out, pos, nome, trim=None, dy=0, **extra):
-        kw = dict(kind="shape", items=itens, pos=list(pos), name=nome, **extra)
+        kw = dict(kind="shape", items=itens, pos=list(pos), name=nome, **{"camada": "ui", **extra})
         self.aparece(kw, t_in, t_out, dy, pos)
         if trim:
             kw["trim_keys"] = trim
@@ -127,12 +138,12 @@ class Montador:
                        t_in, t_out, list(pos), f"pílula {txt[:20]}", dy=18)
         return self.texto(txt, t_in, t_out, pos, tam, cor or BRANCO, FONTE_ROTULO, "center", 120, 1500)
 
-    def destaque(self, txt, t_in, t_out, pos, tam=44):
+    def destaque(self, txt, t_in, t_out, pos, tam=62):
         """Frase-chave em vermelho com sublinhado que se desenha ("IT KNOWS WHERE YOU ARE")."""
         txt = txt.upper()
         self.texto(txt, t_in, t_out, pos, tam, VERMELHO, FONTE, "center", 60, 1500)
         w_ = min(1500, largura(txt, tam, 60))
-        self.forma([{"t": "path", "pts": [[-w_ / 2, 0], [w_ / 2, 0]], "stroke": VERMELHO, "sw": 4}],
+        self.forma([{"t": "path", "pts": [[-w_ / 2, 0], [w_ / 2, 0]], "stroke": VERMELHO, "sw": 6}],
                    t_in, t_out, [pos[0], pos[1] + tam * 0.75], f"sublinhado {txt[:20]}",
                    trim=[[t_in + 0.1, 0, EASE_OUT], [t_in + 0.7, 100, EASE_IN]])
 
@@ -141,13 +152,13 @@ class Montador:
         txt = txt.upper()
         tam = 52
         w_, h_ = largura(txt, tam, 40) + 50, tam * 1.6
-        k = self.add(kind="null", name=f"carimbo {txt[:20]}", pos=list(pos), rot=-6,
+        k = self.add(kind="null", name=f"carimbo {txt[:20]}", pos=list(pos), rot=-6, camada="ui",
                      scale_keys=[[t, 135, EASE_OUT], [t + 0.16, 100, EASE_IN]], **{"in": t, "out": t_out + SAI})
         op = [[t, 0], [t + 0.08, 100], [t_out, 100], [t_out + SAI, 0]]
         self.add(kind="shape", items=[{"t": "rect", "size": [w_, h_], "radius": 6, "stroke": VERMELHO, "sw": 5}],
-                 pos=[0, 0], name="carimbo moldura", parent=k, opacity_keys=op, **{"in": t, "out": t_out + SAI})
+                 pos=[0, 0], name="carimbo moldura", parent=k, opacity_keys=op, camada="ui", **{"in": t, "out": t_out + SAI})
         self.add(kind="text", text=txt, pos=[0, 0], size=tam, color=VERMELHO, font=FONTE, justify="center", tracking=40,
-                 max_w=1200, anchor_mode="center", name=f"carimbo {txt[:20]}", parent=k, opacity_keys=op,
+                 max_w=1200, anchor_mode="center", name=f"carimbo {txt[:20]}", parent=k, opacity_keys=op, camada="ui",
                  **{"in": t, "out": t_out + SAI})
         self.reg("texto", txt, t, t_out, [pos[0] - w_ / 2, pos[1] - h_ / 2, pos[0] + w_ / 2, pos[1] + h_ / 2])
 
@@ -222,6 +233,12 @@ class Montador:
             amp = 6 if mov == "close" else 9
             kw["expr"] = {"pos": f"value + [0, {amp}*Math.sin(time*1.25 + {fase})]",
                           "rot": f"value + 1.4*Math.sin(time*0.85 + {fase})"}
+            # dentro da água: tingida pela luz do fundo, um pouco mais escura, com a borda de cima acesa; e o corpo
+            # ondula de leve (os braços/barbatanas parecem mexer)
+            if self.luz:
+                kw["grade"] = {"tint": [self.luz[0], self.luz[1], TINGE], "brilho": -10,
+                               "borda": [max(2.0, larg / 400), self.luz[1], 0.55]}
+            kw["ondula"] = [max(3.0, larg / 330), max(160.0, larg / 4.5), 0.45]
         if dur is not None and dur < fim - ini:
             kw["timeremap"] = True          # trecho curto: segura o último quadro
         kw["in"], kw["out"] = ini, fim
@@ -253,10 +270,11 @@ class Montador:
         return larg, alt
 
     def silhueta(self):
-        """O "você": o personagem do canal (identidade/personagem.png) ou uma pessoa simples em branco."""
-        pers = sorted((caminhos.canal() / "identidade").glob("personagem.*"))
-        if pers:
-            return pers[0]
+        """O "você": o do elenco do vídeo (<vídeo>/elenco/voce.png), o personagem do canal (identidade/personagem.png)
+        ou uma pessoa simples em branco."""
+        for p in [self.proj.parent.parent / "elenco" / "voce.png"] + sorted((caminhos.canal() / "identidade").glob("personagem.*")):
+            if p.exists():
+                return p
         dst = self.cache / "pessoa.png"
         if not dst.exists():
             im = Image.new("RGBA", (200, 600), (0, 0, 0, 0))
@@ -271,20 +289,49 @@ class Montador:
             im.save(dst)
         return dst
 
-    def voce(self, t_in, t_out, x, y, altura, sonar=False):
+    def voce(self, t_in, t_out, x, y, altura, olha=1, alvo=False, lanterna=False):
+        """O "você" (olha = 1 para a direita, -1 para a esquerda), com as cantoneiras vermelhas de alvo e a lanterna
+        acesa para a frente, como o mergulhador do Depth Theory."""
         arq = self.silhueta()
         sw, sh = Image.open(arq).size
+        s = altura / max(sw, sh) * 100 * (2.2 if sw > sh else 1)    # personagem deitado (mergulhador) é mais largo
+        larg = sw * s / 100
         fase = round(self.rnd.uniform(0, 6.28), 2)
         fim = t_out + SAI
-        self.add(kind="footage", file=str(arq), src=[sw, sh], start=t_in, pos=[x, y], scale=altura / sh * 100,
-                 name="você", opacity_keys=[[t_in, 0], [t_in + ENTRA, 100], [t_out, 100], [fim, 0]],
-                 expr={"pos": f"value + [0, 5*Math.sin(time*1.6 + {fase})]"}, **{"in": t_in, "out": fim})
-        if sonar:          # ondas que se abrem a partir do "você" (o eco que acha você)
-            for k in range(3):
-                self.add(kind="shape", items=[{"t": "ellipse", "size": [300, 300], "stroke": BRANCO, "sw": 3}],
-                         pos=[x, y], name=f"sonar {k + 1}", **{"in": t_in, "out": fim},
-                         expr={"scale": f"var f = (time*0.55 + {k / 3:.3f}) % 1; [f*100, f*100]",
-                               "opacity": f"var f = (time*0.55 + {k / 3:.3f}) % 1; 60*(1-f)"})
+        op = [[t_in, 0], [t_in + ENTRA, 100], [t_out, 100], [fim, 0]]
+        bob = f"value + [0, 5*Math.sin(time*1.6 + {fase})]"
+        if lanterna:     # facho de luz que sai da frente do "você"
+            x0 = x + olha * larg * 0.45
+            # 3 fachos de comprimentos diferentes, somados: forte perto do "você", sumindo longe (um só terminava
+            # num corte reto, teste de 2026-11-03)
+            fachos = [{"t": "path", "closed": True, "fill": BRANCO, "fill_op": 35,
+                       "pts": [[0, -8], [olha * L, -150 * L / 640], [olha * L, 150 * L / 640], [0, 8]]}
+                      for L in (260, 440, 640)]
+            self.add(kind="shape", name="lanterna", pos=[x0, y], blur=45, blend="add", items=fachos,
+                     opacity_keys=[[k[0], k[1] * 0.3] for k in op], expr={"pos": bob}, **{"in": t_in, "out": fim})
+        self.add(kind="footage", file=str(arq), src=[sw, sh], start=t_in, pos=[x, y],
+                 scale=[s * (1 if olha > 0 else -1), s], name="você", opacity_keys=op, expr={"pos": bob},
+                 **{"in": t_in, "out": fim})
+        if alvo:         # cantoneiras vermelhas em volta do "você" (ele foi achado)
+            m, c = max(80, larg * 0.6), 26
+            itens = [{"t": "path", "pts": [[sx * m, sy * (m - c)], [sx * m, sy * m], [sx * (m - c), sy * m]],
+                      "stroke": VERMELHO, "sw": 4} for sx in (-1, 1) for sy in (-1, 1)]
+            self.add(kind="shape", items=itens, pos=[x, y], name="alvo", camada="ui",
+                     scale_keys=[[t_in + 0.4, 140, EASE_OUT], [t_in + 0.7, 100, EASE_IN]],
+                     opacity_keys=[[t_in + 0.4, 0], [t_in + 0.5, 100], [t_out, 100], [fim, 0]],
+                     expr={"pos": bob}, **{"in": t_in + 0.4, "out": fim})
+        return larg
+
+    def sonar(self, t_in, t_out, x, y, direcao):
+        """Arcos que saem da criatura em direção ao "você" (o eco que acha você): direcao 1 = para a direita."""
+        fim = t_out + SAI
+        arco = [15, 35] if direcao > 0 else [65, 85]      # o trecho da elipse virado para o lado do "você"
+        for k in range(4):
+            self.add(kind="shape", items=[{"t": "ellipse", "size": [900, 900], "stroke": _rgb("#9FC3CC"), "sw": 3,
+                                           "arco": arco}],
+                     pos=[x, y], name=f"sonar {k + 1}", **{"in": t_in, "out": fim},
+                     expr={"scale": f"var f = (time*0.45 + {k / 4:.3f}) % 1; [10 + f*90, 10 + f*90]",
+                           "opacity": f"var f = (time*0.45 + {k / 4:.3f}) % 1; 75*Math.sin(f*Math.PI)"})
 
     # ---------- fundo ----------
     def fundo(self, tipo, t0, t1, primeiro):
@@ -293,16 +340,17 @@ class Montador:
         if isinstance(tipo, dict):       # cenário gerado (um card com "fundo": true)
             self.imagem(tipo, t0, t1, CX, CY, W, H, "cobrir", nome="fundo (cenário)", fade=not primeiro)
             self.registro[-1]["tipo"] = "fundo"      # o cenário não conta como "algo em cena" no QA
+            self.layers[-1]["camada"] = "fundo"
             return
         f = FUNDOS.get(tipo) or FUNDOS["escuro"]
         self.add(kind="solid", color=f["ate"], name=f"fundo {tipo}", ramp=[[CX, 0], f["de"], [CX, H], f["ate"]],
-                 opacity_keys=op, **{"in": ini, "out": fim})
+                 opacity_keys=op, camada="fundo", **{"in": ini, "out": fim})
         if f.get("raios"):
             itens = [{"t": "path", "closed": True, "fill": BRANCO,
                       "pts": [[x - w0 / 2, 0], [x + w0 / 2, 0], [x * 1.6 + w1 / 2, 1100], [x * 1.6 - w1 / 2, 1100]]}
                      for x, w0, w1 in [(-520, 90, 360), (-180, 60, 260), (160, 110, 420), (520, 70, 300)]]
-            self.add(kind="shape", items=itens, pos=[CX, -60], name="raios de luz", blur=40, blend="add",
-                     opacity_keys=[[k_[0], k_[1] * 0.08] for k_ in op],
+            self.add(kind="shape", items=itens, pos=[CX, -60], name="raios de luz", blur=70, blend="add", camada="fundo",
+                     opacity_keys=[[k_[0], k_[1] * 0.045] for k_ in op],
                      expr={"rot": "value + 2.2*Math.sin(time*0.22)"}, **{"in": ini, "out": fim})
         if f.get("particulas") or f.get("estrelas"):
             est = bool(f.get("estrelas"))
@@ -313,9 +361,16 @@ class Montador:
                             "pos": [self.rnd.uniform(-CX, CX), self.rnd.uniform(-CY, CY + (0 if est else 900))]})
             ex = {"opacity": "value*(0.75 + 0.25*Math.sin(time*2.1))"} if est else \
                 {"pos": "[value[0] + 12*Math.sin(time*0.3), value[1] - time*7]"}
-            self.add(kind="shape", items=pts, pos=[CX, CY], name="estrelas" if est else "partículas",
-                     opacity_keys=[[k_[0], k_[1] * (0.55 if est else 0.3)] for k_ in op], expr=ex,
+            self.add(kind="shape", items=pts, pos=[CX, CY], name="estrelas" if est else "partículas", camada="fundo",
+                     opacity_keys=[[k_[0], k_[1] * (0.55 if est else 0.35)] for k_ in op], expr=ex,
                      **{"in": ini, "out": fim})
+        if f.get("bokeh"):       # partículas grandes fora de foco: dão profundidade
+            bolas = [{"t": "ellipse", "size": [r, r], "fill": BRANCO,
+                      "pos": [self.rnd.uniform(-CX, CX), self.rnd.uniform(-CY, CY + 500)]}
+                     for r in (self.rnd.uniform(30, 95) for _ in range(16))]
+            self.add(kind="shape", items=bolas, pos=[CX, CY], name="partículas desfocadas", blur=22, camada="fundo",
+                     opacity_keys=[[k_[0], k_[1] * 0.07] for k_ in op],
+                     expr={"pos": "[value[0] + 20*Math.sin(time*0.17), value[1] - time*4]"}, **{"in": ini, "out": fim})
         if f.get("grade"):
             cor = _rgb("#1B4152")
             linhas = [{"t": "path", "pts": [[x, -CY], [x, CY]], "stroke": cor, "sw": 1.5} for x in range(-960, 961, 80)]
@@ -324,7 +379,8 @@ class Montador:
             for sx_, sy_ in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
                 x, y = sx_ * (CX - m), sy_ * (CY - m)
                 linhas.append({"t": "path", "pts": [[x, y - sy_ * c], [x, y], [x - sx_ * c, y]], "stroke": CINZA, "sw": 3})
-            self.add(kind="shape", items=linhas, pos=[CX, CY], name="grade", opacity_keys=op, **{"in": ini, "out": fim})
+            self.add(kind="shape", items=linhas, pos=[CX, CY], name="grade", opacity_keys=op, camada="fundo",
+                     **{"in": ini, "out": fim})
 
 
 # ---------- tipos de cena ----------
@@ -358,12 +414,23 @@ def cena(M, e, fim):
     if lay == "C1":                  # a criatura em cena
         c = cards[0]
         o = _opc(c)
-        cx = {"esquerda": 700, "direita": 1220}.get(o.get("lado"), CX)
         mov = o.get("movimento", "nada")
-        bw, bh = (1500, 900) if mov == "close" else (1150, 640)
+        olha = -1 if o.get("espelhar") else 1
+        # grande como nas referências: a criatura ocupa ~70% da largura; com o "você", ela fica do lado de trás e ele
+        # na frente dela; no close, sai da tela pelo lado de trás
+        padrao = (CX - olha * 260) if o.get("voce") else CX
+        cx = {"esquerda": 640, "direita": 1280}.get(o.get("lado"), padrao)
+        bw, bh = (2300, 1300) if mov == "close" else (1450, 780)
+        if mov == "close":
+            cx -= olha * 380
         larg, alt = M.imagem(c, c["t"], fim, cx, CY + 20, bw, bh, mov=mov, espelhar=bool(o.get("espelhar")))
         if o.get("voce"):
-            M.voce(max(c["t"], ini) + 0.3, fim, 260 if cx >= CX else W - 260, CY + 40, 120, sonar=bool(o.get("sonar")))
+            xv = min(W - 170, max(170, cx + olha * (larg / 2 + 330)))
+            t_v = max(c["t"], ini) + 0.3
+            M.voce(t_v, fim, xv, CY + 30, 120, olha=-olha, alvo=bool(o.get("alvo", o.get("sonar"))),
+                   lanterna=bool(o.get("lanterna", True)))
+            if o.get("sonar"):
+                M.sonar(t_v, fim, cx + olha * larg * 0.42, CY + 20, olha)
         extras_do_card(c, larg, alt, cx, CY + 20)
         for tx, t, *_ in textos[:1]:
             M.rotulo(tx, max(t, ini), fim, [CX, 150])
@@ -386,7 +453,7 @@ def cena(M, e, fim):
         if esc.get("tamanho_m"):
             base = alt if esc.get("medida") == "altura" else larg
             h_p = max(22, min(alt, base * float(esc.get("pessoa_m", 1.8)) / float(esc["tamanho_m"])))
-            M.voce(t_r, fim, x0 - 60, CY - 40 + alt / 2 - h_p / 2, h_p)
+            M.voce(t_r, fim, x0 - 60, CY - 40 + alt / 2 - h_p / 2, h_p, lanterna=False)
     elif lay == "N1":                # comparação em ícones ("6–7 elefantes")
         c = cards[0]
         q = float(op.get("quantidade", 5))
@@ -568,8 +635,19 @@ def main():
                 [162, y_topo + linhas * 110 * 1.15 + 24], "título sublinhado",
                 trim=[[t0 + 0.2, 0, EASE_OUT], [t0 + 0.8, 100, EASE_IN]])
 
+    luz_de = {}
+    atual = caminhos.ficha().get("fundo_padrao", "noite")
+    for e in estados:
+        atual = fundo_de(e, atual)
+        luz_de[id(e)] = (FUNDOS.get(atual) or {}).get("luz") if isinstance(atual, str) else None
     for i, e in enumerate(estados):
+        M.luz = luz_de[id(e)]
         cena(M, e, estados[i + 1]["ini"] if i + 1 < len(estados) else fim_bloco)
+
+    # vinheta por cima das imagens e por baixo dos textos; a ordem no After vai por camada (estável dentro dela)
+    M.add(kind="solid", color=[0, 0, 0], name="vinheta", camada="vinheta", vinheta=[W / 2 + 140, H / 2 + 200, 560],
+          opacity=62, **{"in": 0, "out": fim_bloco + 2})
+    M.layers.sort(key=lambda L: CAMADAS[L["camada"]])
 
     ultimo = max([L["out"] for L in M.layers] + [0])
     dur = round(min(max(fim_bloco, ultimo), plano["fim"] + 2), 2)
