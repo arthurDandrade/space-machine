@@ -164,7 +164,8 @@ class Montador:
                                capture_output=True, text=True)
             j = json.loads(r.stdout)
             return src, j["streams"][0]["width"], j["streams"][0]["height"], float(j["format"]["duration"])
-        dst = self.cache / f"{src.parent.name}_{src.stem}.png"
+        # a data do arquivo entra no nome: asset trocado (outra escolha, elenco novo) não usa o preparado antigo
+        dst = self.cache / f"{src.parent.name}_{src.stem}_{int(src.stat().st_mtime)}.png"
         if not dst.exists():
             im = ImageOps.exif_transpose(Image.open(src))
             if im.mode in ("RGBA", "LA", "P"):
