@@ -4,6 +4,12 @@ tags: [bestiario, edicao]
 
 # Visual do Bestiário
 
+> **Decisão pendente (2026-11-03).** Medindo os 5 vídeos do Depth Theory, o visual deles é animação 2D vetorial
+> em movimento constante, com rótulos, réguas, ícones, mapas e documentos — não a gravura parada que está abaixo.
+> O que está implementado (gravura invertida + ilustração em traço claro, zoom lento) ficou mais perto da thumbnail
+> deles do que do vídeo. Ritmo medido nas referências: 10–15 mudanças visuais/min, só 16–47% de quadro parado,
+> trilha por baixo o tempo todo (nosso bloco hoje: ~12 imagens/min, quadro sempre andando devagar, sem trilha).
+
 - **1920×1080 a 30 fps** (imagem parada que anda devagar: 60 fps só dobraria o render). O vídeo final (`final.py`) usa o fps do primeiro bloco.
 - **Fundo** #060607, vinheta preta (máscara elíptica, 70%) e grão de 3% sem cor no bloco; o vídeo final ainda põe o ruído dele.
 - **Cores**: branco de papel velho #EEEBE4 e vermelho #D7262B (só destaque: rótulos do D1, tamanho do E1, fonte da citação, uma frase T1 por bloco).
