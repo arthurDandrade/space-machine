@@ -29,10 +29,17 @@ W, H = 1920, 1080
 CX, CY = W / 2, H / 2
 FPS = 30
 FIM_BLOCO = 0.6
-ENTRA, SAI = 0.35, 0.2        # entrada (sobe e aparece) e saída (some): com 0,3 s o texto que saía ficava por cima da criatura que entrava
+# entrada e saída (medido a 10 fps no Depth Theory, 2026-11-04: texto e rótulo aparecem numa fusão de ~0,15–0,2 s no
+# lugar, sem deslizar; o nosso subia 18 px em 0,35 s e parecia modelo pronto). Saída de 0,2 s: com 0,3 s o texto que
+# saía ficava por cima da criatura que entrava
+ENTRA, SAI = 0.2, 0.2
+CHEGADA = 0.5                 # a criatura chega num zoom rápido com borrão de movimento (1:17 do cachalote)
+TROCA_CAMERA = 0.65           # a câmera troca de enquadramento rápido, não em 1,1 s
 FUSAO = 0.45                  # troca de fundo
 EASE_OUT = [0, 0.1, 0, 80]    # chave que sai suave
 EASE_IN = [0, 80, 0, 0.1]     # chave que chega suave
+SAI_RAPIDO = [0, 0.1, 0, 12]  # zoom e câmera: sai rápido...
+ASSENTA = [0, 92, 0, 0.1]     # ...e assenta devagar (o "whip" do Depth Theory)
 
 
 def _rgb(h):
@@ -103,7 +110,7 @@ class Montador:
         self.registro.append({"tipo": tipo, "txt": nome, "id": nome, "in": round(t_in, 2), "out": round(t_out, 2),
                               "box": box or [0, 0, 0, 0]})
 
-    def aparece(self, kw, t_in, t_out, dy=18, pos=None):
+    def aparece(self, kw, t_in, t_out, dy=0, pos=None):
         """Entra subindo e aparecendo em ENTRA s; some em SAI s depois de t_out."""
         pos = pos or kw.get("pos")
         kw["opacity_keys"] = [[t_in, 0], [t_in + ENTRA, 100], [t_out, 100], [t_out + SAI, 0]]
@@ -113,7 +120,7 @@ class Montador:
         return kw
 
     def texto(self, txt, t_in, t_out, pos, tam, cor=None, fonte=FONTE, justify="center", tracking=0, max_w=1700,
-              ancora="center", dy=18, nome=None):
+              ancora="center", dy=0, nome=None):
         kw = dict(kind="text", text=txt, pos=list(pos), size=tam, color=cor or BRANCO, font=fonte, justify=justify,
                   tracking=tracking, max_w=max_w, anchor_mode=ancora, name=nome or txt[:50], camada="ui")
         self.aparece(kw, t_in, t_out, dy, pos)
@@ -135,7 +142,7 @@ class Montador:
         if pilula:
             w_ = largura(txt, tam, 120) + 44
             self.forma([{"t": "rect", "size": [w_, tam * 1.9], "radius": 8, "fill": PILULA, "fill_op": 72}],
-                       t_in, t_out, list(pos), f"pílula {txt[:20]}", dy=18)
+                       t_in, t_out, list(pos), f"pílula {txt[:20]}")
         return self.texto(txt, t_in, t_out, pos, tam, cor or BRANCO, FONTE_ROTULO, "center", 120, 1500)
 
     def marcador(self, txt, t_in, t_out, icone="check", n=0):
@@ -145,8 +152,8 @@ class Montador:
         w_ = largura(txt, tam, 120) + 44 + 52
         x0, y = 120, H - 120 - n * 70
         self.forma([{"t": "rect", "size": [w_, tam * 1.9], "radius": 8, "fill": PILULA, "fill_op": 78}],
-                   t_in, t_out, [x0 + w_ / 2, y], f"marcador {txt[:20]}", dy=14)
-        self.texto(txt, t_in, t_out, [x0 + 22, y], tam, BRANCO, FONTE_ROTULO, "left", 120, 1400, dy=14)
+                   t_in, t_out, [x0 + w_ / 2, y], f"marcador {txt[:20]}")
+        self.texto(txt, t_in, t_out, [x0 + 22, y], tam, BRANCO, FONTE_ROTULO, "left", 120, 1400)
         xi = x0 + w_ - 40
         if icone == "x":
             itens = [{"t": "path", "pts": [[-10, -10], [10, 10]], "stroke": VERMELHO, "sw": 5},
@@ -233,6 +240,11 @@ class Montador:
                 kw["pos_keys"] = [[t_in, [cx, cy + entra_dy], EASE_OUT], [t_in + 0.5, [cx, cy], EASE_IN]]
         else:
             kw["scale"] = [s * sx, s]
+            if mov in ("nada", "parado") and fade:
+                # chega num zoom rápido (de 145% a 100% em 0,5 s, com borrão de movimento) em vez de uma fusão
+                kw.pop("scale")
+                kw["scale_keys"] = [[ini, [s * 1.45 * sx, s * 1.45], SAI_RAPIDO], [ini + CHEGADA, [s * sx, s], ASSENTA]]
+                kw["opacity_keys"] = [[ini, 0], [ini + 0.15, opacidade], [t_out, opacidade], [fim, 0]]
             if mov == "nada":               # atravessa devagar para onde olha
                 d = min(260, 22 * tela)
                 kw["pos_keys"] = [[ini, [cx - sx * d / 2, cy]], [fim, [cx + sx * d / 2, cy]]]
@@ -444,8 +456,23 @@ def cena(M, e, fim, extras_de=None):
                  mov="atravessa", espelhar=bool(o.get("espelhar")), silhueta=True, nome="vulto")
         M.layers[-1]["blur"] = 14
 
-    def extras_do_card(c, larg, alt, cx, cy):
+    def extras_do_card(c, larg, alt, cx, cy, olha=1, cam=None, nome_pos=None):
         o = _opc(c)
+        if o.get("circulo"):         # círculo tracejado em volta de um detalhe (o tubarão pequeno ao longe)
+            r = o["circulo"]
+            fx, fy = r.get("ponto", [0.5, 0.5])
+            fx = fx if olha > 0 else 1 - fx
+            pc = [cx - larg / 2 + fx * larg, cy - alt / 2 + fy * alt]
+            t_c = max(r.get("t", c["t"]), ini)
+            d_ = 2 * float(r.get("raio", 90))
+            M.add(kind="shape", items=[{"t": "ellipse", "size": [d_, d_], "stroke": BRANCO, "sw": 3, "tracejado": [9, 9]}],
+                  pos=[pc[0] - CX, pc[1] - CY] if cam is not None else pc, parent=cam, name="círculo", camada="ui"
+                  if cam is None else "conteudo", scale_keys=[[t_c, 135, SAI_RAPIDO], [t_c + 0.3, 100, ASSENTA]],
+                  opacity_keys=[[t_c, 0], [t_c + 0.15, 85], [fim, 85], [fim + SAI, 0]], **{"in": t_c, "out": fim + SAI})
+        if o.get("nome"):            # o nome embaixo, em maiúsculas brancas, sem pílula ("SPERM WHALE")
+            r = o["nome"]
+            M.texto(r["texto"].upper(), max(r.get("t", c["t"]), ini), fim, nome_pos or [cx, cy + alt / 2 + 60], 44,
+                    BRANCO, FONTE, tracking=90, max_w=1400)
         for n, mk in enumerate(o.get("marcadores", [])):
             M.marcador(mk["texto"], max(mk.get("t", c["t"]), ini), fim, mk.get("icone", "check"), n)
         if o.get("rotulo"):
@@ -459,7 +486,7 @@ def cena(M, e, fim, extras_de=None):
             M.destaque(tx, max(t, ini), fim, [CX, H - 130])
 
     if lay == "_C1_extras":          # estado dentro de uma câmera contínua: só o que não é a criatura
-        larg, alt, cx, olha = extras_de
+        larg, alt, cx, olha, cam = extras_de
         c = cards[0]
         o = _opc(c)
         if o.get("voce"):
@@ -470,8 +497,13 @@ def cena(M, e, fim, extras_de=None):
             if o.get("sonar"):
                 M.sonar(t_v, fim, cx + olha * larg * 0.42, CY + 20, olha)
         vulto(c, o, fim)
-        # na câmera contínua a criatura está ampliada: rótulo e carimbo vão para lugares fixos da tela
-        extras_do_card(c, 900, 600, CX + 200, CY)
+        # na câmera contínua a criatura está ampliada: rótulo e carimbo vão para lugares fixos da tela; o círculo
+        # vai preso à câmera (acompanha o detalhe quando ela anda)
+        circ = {k: v for k, v in o.items() if k == "circulo"}
+        if circ:
+            extras_do_card(dict(c, opcoes=circ, legenda=None), larg, alt, cx, CY + 20, olha=olha, cam=cam)
+        resto = dict(c, opcoes={k: v for k, v in o.items() if k != "circulo"})
+        extras_do_card(resto, 900, 600, CX + 200, CY, nome_pos=[CX, H - 210])
         for tx, t, *_ in textos[:1]:
             M.rotulo(tx, max(t, ini), fim, [CX, 150])
     elif lay == "C1":                  # a criatura em cena
@@ -507,7 +539,7 @@ def cena(M, e, fim, extras_de=None):
                    lanterna=bool(o.get("lanterna", True)))
             if o.get("sonar"):
                 M.sonar(t_v, fim, cx + olha * larg * 0.42, CY + 20, olha)
-        extras_do_card(c, larg, alt, cx, CY + 20)
+        extras_do_card(c, larg, alt, cx, CY + 20, olha=olha)
         for tx, t, *_ in textos[:1]:
             M.rotulo(tx, max(t, ini), fim, [CX, 150])
     elif lay == "E1":                # escala: a criatura, a régua que se desenha e o tamanho
@@ -630,7 +662,7 @@ def cena(M, e, fim, extras_de=None):
     elif lay == "R1":                # o real: foto/vídeo como foto impressa, ou cheio
         c = cards[0]
         o = _opc(c)
-        if o.get("cheio"):
+        if not o.get("moldura"):     # como no Depth Theory: a filmagem real enche a tela; "moldura" = foto impressa
             M.imagem(c, c["t"], fim, CX, CY, W, H, "cobrir")
         else:
             M.foto_moldura(c, c["t"], fim, CX, CY - 10, 1240, 740, rot=o.get("rot", -1.5))
@@ -709,10 +741,10 @@ def cena_continua(M, estados, fins):
             esc.append([t - 0.1, [z * 100, z * 100]])
             pos.append([t - 0.1, P])
         else:
-            esc.append([t, [anterior[0] * 100, anterior[0] * 100], EASE_OUT])
-            pos.append([t, anterior[1], EASE_OUT])
-            esc.append([t + 1.1, [z * 100, z * 100], EASE_IN])
-            pos.append([t + 1.1, P, EASE_IN])
+            esc.append([t, [anterior[0] * 100, anterior[0] * 100], SAI_RAPIDO])
+            pos.append([t, anterior[1], SAI_RAPIDO])
+            esc.append([t + TROCA_CAMERA, [z * 100, z * 100], ASSENTA])
+            pos.append([t + TROCA_CAMERA, P, ASSENTA])
         anterior = (z, P)
     deriva = 1 + min(0.04, 0.004 * (fim - estados[-1]["ini"]))   # o último enquadramento ainda anda um pouco
     esc.append([fim + SAI, [anterior[0] * 100 * deriva] * 2])
@@ -723,7 +755,7 @@ def cena_continua(M, estados, fins):
         o = _opc(c)
         sub = dict(e, layout="_C1_extras")
         sub["cards"] = [c]
-        cena(M, sub, f_, extras_de=(larg, alt, cx, olha))
+        cena(M, sub, f_, extras_de=(larg, alt, cx, olha, cam))
 
 
 def fundo_de(e, atual):

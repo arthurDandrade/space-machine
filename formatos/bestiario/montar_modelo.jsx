@@ -93,6 +93,11 @@
                 s.property("ADBE Vector Stroke Width").setValue(it.sw || 2);
                 s.property("ADBE Vector Stroke Line Cap").setValue(2);
                 if (it.stroke_op !== undefined) s.property("ADBE Vector Stroke Opacity").setValue(it.stroke_op);
+                if (it.tracejado) {      // traço tracejado: [traço, espaço] em px
+                    var ds = s.property("ADBE Vector Stroke Dashes");
+                    ds.addProperty("ADBE Vector Stroke Dash 1").setValue(it.tracejado[0]);
+                    ds.addProperty("ADBE Vector Stroke Gap 1").setValue(it.tracejado[1]);
+                }
             }
         }
     }

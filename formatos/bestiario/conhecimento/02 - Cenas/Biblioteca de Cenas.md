@@ -18,7 +18,7 @@ Tudo entra animado: elementos sobem 18 px e aparecem em 0,35 s; somem em 0,2 s; 
 | L1 | suas opções | "YOUR OPTIONS" e os itens entrando quando ditos, riscados quando derrubados, veredito vermelho | o "what would you actually do?" | "1. SWIM AWAY … 5. HOPE IT SWALLOWS YOU" |
 | D1 | documento | papel claro torto subindo: fonte em vermelho, título em serifa, a gravura antiga dentro (ou linhas de texto) | fonte antiga, artigo, relato registrado | artigo da Current Biology, "OFFICIAL COMPLAINT", capa de Moby-Dick |
 | T1 | linha do tempo | linha que se desenha e os anos entrando com a legenda; destaque em vermelho | sequência de avistamentos/datas | 1925 · 1981 · 2003 |
-| R1 | filmagem real | foto/vídeo como foto impressa torta (ou cheio), rótulo embaixo | o animal/lugar/objeto real | baleia saltando, urso na praia |
+| R1 | filmagem real | foto/vídeo em tela cheia (ou foto impressa torta com `moldura`), rótulo embaixo | o animal/lugar/objeto real | baleia saltando, urso na praia |
 | F1 | frase | 2–8 palavras em maiúsculas, branca ou vermelha sublinhada | pergunta, virada, gancho | "WHAT DOES IT EAT?", "IF IT DECIDED YOU WERE A PROBLEM…" |
 | S1 | lado a lado | divisória que se desenha, uma imagem de cada lado com o rótulo em cima | lenda × realidade, você × ela | "HUMPBACK: FILTERS / SPERM WHALE: ?" |
 

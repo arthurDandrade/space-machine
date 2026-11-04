@@ -22,6 +22,17 @@ Decidido pelo Arthur em 2026-11-03, depois de medir os vídeos: **animação 2D 
 5. **Sonar de círculos.** Agora arcos saindo da criatura na direção do "você", que ganha cantoneiras vermelhas de alvo e lanterna.
 6. **Falta:** o personagem "você" de verdade (o deles é um mergulhador desenhado que volta em todo vídeo; o nosso ainda é a silhueta branca provisória) — gerar uma vez e pôr em `<canal>/identidade/personagem.png` ou `<vídeo>/elenco/voce.png`.
 
+## Tempos medidos a 10 fps no Depth Theory (2026-11-04)
+| O quê | Deles | O nosso agora |
+|---|---|---|
+| Texto, rótulo, frase-chave | fusão de ~0,15–0,2 s no lugar, sem deslizar | fusão de 0,2 s (antes subia 18 px em 0,35 s) |
+| ✓ do marcador | entra ~0,2 s depois da pílula | 0,25 s depois, desenhando |
+| Criatura nova | chega num zoom rápido com borrão de movimento, assenta em ~0,5 s (1:17,0 → 1:17,6) | de 145% a 100% em 0,5 s, sai rápido e assenta devagar, com motion blur |
+| Câmera na mesma criatura | troca de enquadramento rápido | 0,65 s com a mesma curva (antes 1,1 s) |
+| Filmagem real | tela cheia, em cor | tela cheia por padrão (`"moldura": true` = foto impressa) |
+| Destaque de um detalhe | círculo tracejado em volta (o tubarão ao longe) | `"circulo"` no card, preso à câmera |
+| Nome da criatura | maiúsculas brancas embaixo, sem pílula ("SPERM WHALE") | `"nome"` no card |
+
 ## Controle de qualidade
 `formato.json › qa.checagens`: `vazio_layout` (só o fundo na tela por mais de 0,5 s no meio do bloco, pelo `layout_NN.json`), `layout_tempo` (texto menos de 0,7 s) e `origem`. No teste de 2026-11-03 pegou um carimbo de 0,5 s e 1,1 s de palco vazio, os dois de verdade.
 
