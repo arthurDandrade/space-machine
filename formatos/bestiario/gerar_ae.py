@@ -289,19 +289,22 @@ class Montador:
             im.save(dst)
         return dst
 
-    def voce(self, t_in, t_out, x, y, altura, olha=1, alvo=False, lanterna=False):
-        """O "você" (olha = 1 para a direita, -1 para a esquerda), com as cantoneiras vermelhas de alvo e a lanterna
-        acesa para a frente, como o mergulhador do Depth Theory."""
+    def voce(self, t_in, t_out, x, y, tamanho, olha=1, alvo=False, lanterna=False):
+        """O "você" com `tamanho` px no maior lado (de pé = altura, deitado = comprimento; na escala do E1, os 1,8 m)
+        (olha = 1 para a direita, -1 para a esquerda), com as cantoneiras vermelhas de alvo e a lanterna acesa para a
+        frente, como o mergulhador do Depth Theory."""
         arq = self.silhueta()
         sw, sh = Image.open(arq).size
-        s = altura / max(sw, sh) * 100 * (2.2 if sw > sh else 1)    # personagem deitado (mergulhador) é mais largo
-        larg = sw * s / 100
+        s = tamanho / max(sw, sh) * 100
+        larg, alt = sw * s / 100, sh * s / 100
         fase = round(self.rnd.uniform(0, 6.28), 2)
         fim = t_out + SAI
         op = [[t_in, 0], [t_in + ENTRA, 100], [t_out, 100], [fim, 0]]
         bob = f"value + [0, 5*Math.sin(time*1.6 + {fase})]"
-        if lanterna:     # facho de luz que sai da frente do "você"
-            x0 = x + olha * larg * 0.45
+        deitado = sw > sh
+        if lanterna:     # facho de luz que sai da mão da frente do "você" (no mergulhador deitado, embaixo à frente)
+            x0 = x + olha * larg * 0.47
+            y = y + (alt * 0.22 if deitado else 0)
             # 3 fachos de comprimentos diferentes, somados: forte perto do "você", sumindo longe (um só terminava
             # num corte reto, teste de 2026-11-03)
             fachos = [{"t": "path", "closed": True, "fill": BRANCO, "fill_op": 35,
@@ -309,8 +312,12 @@ class Montador:
                       for L in (260, 440, 640)]
             self.add(kind="shape", name="lanterna", pos=[x0, y], blur=45, blend="add", items=fachos,
                      opacity_keys=[[k[0], k[1] * 0.3] for k in op], expr={"pos": bob}, **{"in": t_in, "out": fim})
+        if lanterna and deitado:
+            y = y - alt * 0.22
+        # borda de luz como a da criatura: o personagem escuro não some no fundo escuro
         self.add(kind="footage", file=str(arq), src=[sw, sh], start=t_in, pos=[x, y],
                  scale=[s * (1 if olha > 0 else -1), s], name="você", opacity_keys=op, expr={"pos": bob},
+                 grade={"borda": [max(1.5, larg / 260), (self.luz or FUNDOS["mar"]["luz"])[1], 0.6]},
                  **{"in": t_in, "out": fim})
         if alvo:         # cantoneiras vermelhas em volta do "você" (ele foi achado)
             m, c = max(80, larg * 0.6), 26
@@ -427,7 +434,7 @@ def cena(M, e, fim):
         if o.get("voce"):
             xv = min(W - 170, max(170, cx + olha * (larg / 2 + 330)))
             t_v = max(c["t"], ini) + 0.3
-            M.voce(t_v, fim, xv, CY + 30, 120, olha=-olha, alvo=bool(o.get("alvo", o.get("sonar"))),
+            M.voce(t_v, fim, xv, CY + 30, 270, olha=-olha, alvo=bool(o.get("alvo", o.get("sonar"))),
                    lanterna=bool(o.get("lanterna", True)))
             if o.get("sonar"):
                 M.sonar(t_v, fim, cx + olha * larg * 0.42, CY + 20, olha)

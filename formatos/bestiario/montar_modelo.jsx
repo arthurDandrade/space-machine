@@ -157,9 +157,11 @@
                 L.name = d.name;
                 if (d.grade) {           // a criatura dentro da água: tingida pela luz do fundo, mais escura, borda acesa
                     var fxg = L.property("ADBE Effect Parade");
-                    var tn = fxg.addProperty("ADBE Tint");
-                    tn.property(1).setValue(d.grade.tint[0]); tn.property(2).setValue(d.grade.tint[1]);
-                    tn.property(3).setValue(d.grade.tint[2]);
+                    if (d.grade.tint) {
+                        var tn = fxg.addProperty("ADBE Tint");
+                        tn.property(1).setValue(d.grade.tint[0]); tn.property(2).setValue(d.grade.tint[1]);
+                        tn.property(3).setValue(d.grade.tint[2]);
+                    }
                     if (d.grade.brilho) fxg.addProperty("ADBE Brightness & Contrast 2").property(1).setValue(d.grade.brilho);
                     if (d.grade.borda) {
                         var bv = fxg.addProperty("ADBE Bevel Alpha");
