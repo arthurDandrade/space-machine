@@ -272,19 +272,24 @@ export function NovoVideoTela() {
   });
   if (!dc) return null;
   const n = divisao.partes.length + (divisao.cold ? 1 : 0);
+  // formato com agente de roteiro: sem roteiro colado, o Claude escreve a partir do título
+  const escreve = !!dc.canal.escreve_roteiro;
+  const so_titulo = escreve && !roteiro.trim();
   return (
     <>
-      <Cabecalho titulo={t("app.novo.titulo")} sub={t("app.novo.explica")} />
+      <Cabecalho titulo={t("app.novo.titulo")} sub={t(dc.canal.capitulo_falado === false ? "app.novo.explica_capitulo" : "app.novo.explica")} />
       <form className="novo-grade" onSubmit={(e) => { e.preventDefault(); criar.mutate(); }}>
         <div className="cartao">
           <label className="campo">{t("app.novo.titulo_video")}<input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Every NFL Team Name Explained" required /></label>
-          <label className="campo">{t("app.novo.roteiro")}
-            <textarea className="roteiro" rows={22} value={roteiro} onChange={(e) => setRoteiro(e.target.value)} placeholder={t("app.novo.roteiro_ex")} required />
+          <label className="campo">{t(escreve ? "app.novo.roteiro_opcional" : "app.novo.roteiro")}
+            <textarea className="roteiro" rows={22} value={roteiro} onChange={(e) => setRoteiro(e.target.value)}
+              placeholder={t(escreve ? "app.novo.roteiro_ex_agente" : "app.novo.roteiro_ex")} required={!escreve} />
           </label>
           <div className="rodape-form">
-            <button className="bt primario" disabled={criar.isPending || !titulo.trim() || !divisao.partes.length}>
-              <Plus size={16} />{t("app.novo.criar", { n })}
+            <button className="bt primario" disabled={criar.isPending || !titulo.trim() || (!so_titulo && !divisao.partes.length)}>
+              <Plus size={16} />{so_titulo ? t("app.novo.escrever") : t("app.novo.criar", { n })}
             </button>
+            {criar.isPending && so_titulo && <span className="sub">{t("app.novo.escrevendo")}</span>}
             {criar.isError && <span className="erro">{criar.error.message}</span>}
           </div>
         </div>

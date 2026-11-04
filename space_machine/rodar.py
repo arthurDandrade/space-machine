@@ -157,6 +157,28 @@ class Rodada:
         roteiro = (self.p / "roteiro.txt").read_text()
         return next((l.lstrip("# ").strip() for l in roteiro.splitlines() if l.startswith("#")), self.nn)
 
+    def _elenco_e_gerador(self):
+        """Para formato com imagem gerada (fonte gemini no rank): o elenco que o vídeo já tem (<vídeo>/elenco/) e se há
+        chave do gerador. Sem chave, recorte/cenário novo não sai: o storyboard usa só o elenco, gravura, foto e vídeo."""
+        def valor_chave(nome):
+            for arq in (Path(self.c["raiz"]) / ".env", motor.DADOS / ".env"):
+                for linha in (arq.read_text().splitlines() if arq.exists() else []):
+                    k, sep, v = linha.partition("=")
+                    if sep and k.strip() == nome and v.strip().strip('"').strip("'"):
+                        return True
+            return bool(os.environ.get(nome))
+        rank = json.dumps((ficha_formato(self.c.get("formato") or FORMATO_PADRAO).get("busca") or {}).get("fontes_por_tipo", {}))
+        if "gemini" not in rank:
+            return ""
+        el = sorted(p.stem for p in (self.video / "elenco").glob("*.png")) if (self.video / "elenco").is_dir() else []
+        txt = ("Elenco que este vídeo já tem (use \"elenco\": \"<nome>\" e ele entra sem gerar nada): "
+               + (", ".join(el) if el else "nenhum ainda") + ".\n")
+        if not valor_chave("GEMINI_API_KEY"):
+            txt += ("SEM GERADOR DE IMAGEM neste canal (falta a GEMINI_API_KEY): NÃO peça recorte nem ilustração novos. "
+                    "Use só o elenco acima (o \"você\" é o card {\"arquivo\": \"../../../../identidade/personagem.png\"}, se "
+                    "existir), gravura, foto e vídeo reais, e os gráficos (E1, N2, L1, D1, T1, F1).\n")
+        return txt
+
     def _pedido_storyboard(self):
         roteiro = (self.p / "roteiro.txt").read_text()
         topico = self.topico()
@@ -178,6 +200,7 @@ class Rodada:
                     f"\"sem_titulo\": true e não escreva \"titulo\"; a 1ª cena começa na 1ª palavra da narração. O nome "
                     f"do capítulo (\"{topico}\") o editor põe sozinho na tela, no começo do bloco.\n"
                     if self.capitulo_mudo() else ""))
+                + self._elenco_e_gerador()
                 + f"\n## roteiro.txt\n{roteiro}\n\n## _work/transcricao.txt ([tempo]palavra)\n{transc}\n\n"
                 "Devolva o cenas.json completo.")
 
@@ -324,10 +347,12 @@ class Rodada:
     def _editar_uma(self):
         # um bloco por vez no After em todo o Mac (o After só roda um script de cada vez e trava com dois)
         trava = open(motor.DADOS / "trava_after", "w")
-        self.marcar("editar", "rodando", "esperando a vez no After")
+        sem_after = (ficha_formato(self.c.get("formato") or FORMATO_PADRAO).get("edicao") or {}).get("motor") == "ffmpeg"
+        self.marcar("editar", "rodando", "esperando a vez de renderizar" if sem_after else "esperando a vez no After")
         fcntl.flock(trava, fcntl.LOCK_EX)
         try:
-            self.marcar("editar", "rodando", "montando e renderizando no After")
+            self.marcar("editar", "rodando", "desenhando e renderizando (FFmpeg)" if sem_after
+                        else "montando e renderizando no After")
             return self._editar_uma_travado()
         finally:
             fcntl.flock(trava, fcntl.LOCK_UN)
@@ -350,6 +375,8 @@ class Rodada:
             if "Traceback" in saida:
                 erro = [l for l in saida.strip().splitlines() if l.strip()][-1]
                 raise Parada(f"a montagem deu erro antes de abrir o After: {erro[:200]} (ver log_editar.txt)")
+            if (ficha_formato(self.c.get("formato") or FORMATO_PADRAO).get("edicao") or {}).get("motor") == "ffmpeg":
+                raise Parada("o compositor não gerou a prévia (ver log_editar.txt)")
             raise Parada("o After não gerou a prévia (pode estar travado num diálogo: olhar a tela)")
         qa = (self.p / "edicao" / f"qa_{self.nn}.md").read_text() if (self.p / "edicao" / f"qa_{self.nn}.md").exists() else ""
         # o qa_NN.md é regravado a cada versão: se o QA desta não rodou, o arquivo ainda é o da versão anterior

@@ -865,6 +865,8 @@ def main():
              "layers": M.layers, "salvar": str(proj / "edicao" / f"bloco_{a.item}_v2.aep"),
              "log": str(proj / "edicao" / f"log_{a.item}_v2.txt")}
     (proj / "edicao" / f"layout_{a.item}.json").write_text(json.dumps(M.registro, ensure_ascii=False, indent=0))
+    # o mesmo plano em JSON: o compositor sem After (motor/edicao_ff/compor.py) desenha a partir dele
+    (proj / "edicao" / f"plano_render_{a.item}.json").write_text(json.dumps(dados, ensure_ascii=False))
     modelo = caminhos.do_formato("edicao.modelo").read_text()
     jsx = proj / "edicao" / f"montar_{a.item}_v2.jsx"
     jsx.write_text("var DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n" + modelo)

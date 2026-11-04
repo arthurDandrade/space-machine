@@ -7,6 +7,7 @@
   python -m space_machine reels <pasta do bloco>   Reels 9:16 do bloco (montado na vertical) em <vídeo>/reels/
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
+  python -m space_machine novo <canal> "<título>" [--roteiro arquivo]  cria o vídeo (sem roteiro: o Claude escreve, nos formatos que têm agente de roteiro)
   python -m space_machine atalho [--pasta ~/Desktop]  cria o app "Space Machine" na área de trabalho
   python -m space_machine atualizar [--conferir] [--sim]   traz o código novo do GitHub (git pull) e remonta o painel
   python -m space_machine limpar [--cache] [--aplicar]  manda para o Lixo o que o sistema gerou e não serve mais
@@ -35,6 +36,16 @@ def main():
     elif cmd == "atalho":
         from .atalho import main as m
         m(args)
+    elif cmd == "novo":
+        # python -m space_machine novo <canal> "<título>" [--roteiro arquivo.txt] [--obs "..."]
+        from .gestao import criar_video
+        from .sistema import canais
+        args = sys.argv[2:]
+        if len(args) < 2 or args[0] not in canais():
+            raise SystemExit('uso: python -m space_machine novo <canal> "<título>" [--roteiro arquivo.txt] [--obs "..."]')
+        rot = open(args[args.index("--roteiro") + 1]).read() if "--roteiro" in args else ""
+        obs = args[args.index("--obs") + 1] if "--obs" in args else ""
+        print(criar_video(canais()[args[0]], args[1], rot, obs))
     elif cmd == "final":
         from .final import main as m
         m(args)

@@ -23,6 +23,16 @@ done
 # o gerador da montagem é do FORMATO do canal (formato.json › edicao.gerador); sem ele, o gerar_ae2.py do explained
 GER=$($PY -c "import sys; sys.path.insert(0, '..'); import caminhos; p = caminhos.do_formato('edicao.gerador', exigir=False); print(p if p.is_file() else 'gerar_ae2.py')" $P) || exit 1
 $PY $GER $P --item $N | tail -1 || exit 1
+# formato com o compositor próprio (formato.json › edicao.motor = "ffmpeg"): sem After — o Python desenha os quadros e o
+# FFmpeg codifica a prévia (meia resolução, como a do After); depois o mesmo QA
+MOTOR_ED=$($PY -c "import sys; sys.path.insert(0, '..'); import caminhos; print((caminhos.ficha().get('edicao') or {}).get('motor', 'after'))" $P)
+if [[ $MOTOR_ED == ffmpeg ]]; then
+  MEIA=--meia; [[ -n $PREVIA_CHEIA ]] && MEIA=
+  $PY ../edicao_ff/compor.py $P --item $N --saida $E/previa_bloco_${N}_v$V.mp4 $MEIA || exit 1
+  [[ -n $SEM_QA ]] && { echo "QA pulado (SEM_QA=1)"; exit 0; }
+  $PY qa/qa_bloco.py $P --item $N --video $E/previa_bloco_${N}_v$V.mp4 2>&1 | grep -E "Prévia|FALHA|↳"
+  exit 0
+fi
 rm -f $E/log_${N}_v2.txt
 osascript -e 'with timeout of 1800 seconds' -e "tell application \"$AE\" to DoScriptFile \"$E/montar_${N}_v2.jsx\"" -e 'end timeout' >/dev/null
 for i in {1..600}; do [ -f $E/log_${N}_v2.txt ] && break; sleep 3; done   # osascript estourou o tempo: espera o After

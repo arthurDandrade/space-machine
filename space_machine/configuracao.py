@@ -430,6 +430,8 @@ MODELOS = [("claude-opus-5-5", "Opus 5.5"), ("claude-sonnet-5-5", "Sonnet 5.5"),
            ("claude-fable-5-1", "Fable 5.1")]
 ESFORCOS = ["low", "medium", "high", "xhigh", "max"]
 ETAPAS_CLAUDE = [
+    ("roteiro", "Roteiro", "Escreve o roteiro inteiro a partir do título, no molde do formato (só nos formatos que "
+     "têm agente de roteiro, como o bestiário)."),
     ("storyboard", "Storyboard", "Planeja as cenas do bloco e corrige até passar nas regras (a etapa mais cara)."),
     ("escolher_imagem", "Escolher imagem", "Escolhe 1 foto/recorte/logo por asset olhando a folha de contato."),
     ("escolher_video", "Escolher vídeo", "Escolhe o vídeo e o início do trecho pelas folhas de quadros."),

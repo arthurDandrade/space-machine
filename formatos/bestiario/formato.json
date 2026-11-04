@@ -13,7 +13,9 @@
  "cenas": "biblioteca_cenas.json",
  "edicao": {
   "gerador": "gerar_ae.py",
-  "modelo": "montar_modelo.jsx"
+  "modelo": "montar_modelo.jsx",
+  "motor": "ffmpeg",
+  "_sobre": "motor = ffmpeg: o bloco é desenhado por motor/edicao_ff/compor.py a partir do plano_render_NN.json que o gerador escreve, e o vídeo final é juntado pelo FFmpeg — o After não entra. O montar_modelo.jsx continua sendo escrito (o mesmo plano) para quem quiser abrir no After."
  },
  "qa": {
   "medidas": "medidas_qa.json",

@@ -26,6 +26,8 @@ export interface ResumoCanal {
   esperando: number;
   atual: { slug: string; titulo: string; n_blocos: number; entregues: number; rodando: number; tem_capa: boolean; capa_v: number } | null;
   rodando_agora: string[];
+  escreve_roteiro?: boolean;     // o formato tem agente de roteiro: o vídeo novo pode nascer só do título
+  capitulo_falado?: boolean;     // false = o nome do capítulo não é narrado (bestiário)
 }
 
 export interface Formato {

@@ -22,7 +22,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
                modelar, primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from .rodar import ETAPAS as ETAPAS_RODAR
-from .sistema import DADOS, FORMATO_PADRAO, REPO, config, formatos, ler_json
+from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
 api = APIRouter(prefix="/api")
 IMAGENS = (".png", ".jpg", ".jpeg", ".webp")
@@ -160,6 +160,9 @@ def _resumo_canal(slug, c):
     return {
         "slug": slug, "nome": c["nome"], "tema": c.get("tema", ""), "idioma": c.get("idioma", "en"),
         "ativo": bool(c.get("ativo")), "cores": _identidade(c),
+        # o formato tem agente de roteiro: o vídeo novo pode nascer só do título (gestao.escrever_roteiro)
+        "escreve_roteiro": bool((ficha_formato(c.get("formato")).get("roteiro") or {}).get("modelo")),
+        "capitulo_falado": (ficha_formato(c.get("formato")).get("roteiro") or {}).get("capitulo_falado", True),
         "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
         "colunas": colunas, "n_videos": len(vids),
         "rodando": sum(v["rodando"] for v in vids), "esperando": sum(v["esperando"] for v in vids),
@@ -550,13 +553,17 @@ def mover_video(slug: str, video: str, coluna: str = Body(..., embed=True)):
 
 
 @api.post("/c/{slug}/novo")
-def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body(..., embed=True),
+def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body("", embed=True),
                ideia: int = Body(0, embed=True)):
-    """ideia: o id da ideia do "Virar vídeo" (sai da lista de ideias quando o vídeo é criado)."""
+    """ideia: o id da ideia do "Virar vídeo" (sai da lista de ideias quando o vídeo é criado). Sem roteiro, num
+    formato com agente de roteiro, o Claude escreve o roteiro a partir do título (pode levar alguns minutos)."""
+    from .motor_claude import ErroClaude
     try:
         video = gestao.criar_video(_canal(slug), titulo, roteiro)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    except ErroClaude as e:
+        raise HTTPException(502, f"O Claude não escreveu o roteiro: {e}")
     gestao.ideia_virou_video(slug, ideia, video)
     return {"ok": True, "video": video}
 

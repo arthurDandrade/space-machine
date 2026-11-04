@@ -14,7 +14,7 @@ from pathlib import Path
 
 from . import estado
 from .motor_claude import _banco
-from .sistema import arquivo_formato, ficha_formato, gravar_json
+from .sistema import arquivo_formato, ficha_formato, gravar_json, ler_json
 
 COLUNAS = [
     ("ideia", "Ideias"),
@@ -216,12 +216,69 @@ def slug_video(t):
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-")[:60]
 
 
-def criar_video(c, titulo, roteiro):
-    """Cria a pasta do vídeo e um bloco por tópico (00 = cold open). Devolve o slug; ValueError com o motivo
-    (para mostrar a quem produz) se não der."""
-    cold_open, partes = dividir_roteiro(roteiro)
+def _modelo_roteiro(c):
+    """O prompt de roteiro: o do canal (prompts/Roteiro do vídeo.md, editável na aba Prompts), senão o do formato."""
+    do_canal = Path(c.get("raiz") or Path(c["producoes"]).parent) / "prompts" / "Roteiro do vídeo.md"
+    if do_canal.exists():
+        return do_canal.read_text()
+    modelo = (ficha_formato(c.get("formato")).get("roteiro") or {}).get("modelo")
+    if modelo and arquivo_formato(modelo, c.get("formato"), exigir=False).is_file():
+        return arquivo_formato(modelo, c.get("formato")).read_text()
+    return None
+
+
+def _medir_roteiro(texto):
+    """(capítulos, palavras narradas) — o que o agente de roteiro precisa acertar."""
+    cold, partes = dividir_roteiro(texto)
+    palavras = len(re.findall(r"[A-Za-z0-9']+", cold + " " + " ".join(t for _, t in partes)))
+    return len(partes), palavras, bool(cold)
+
+
+def escrever_roteiro(c, titulo, obs=""):
+    """O agente de roteiro (formato com roteiro.modelo, 2026-11-04): só com o título, o Claude escreve o roteiro
+    inteiro no molde do formato (cold open + capítulos "# Nome"), e se sair fora do molde (poucos capítulos, curto
+    ou longo demais) corrige numa volta da mesma conversa. Devolve o texto; ValueError se o formato não tem modelo."""
+    import uuid
+    from .motor_claude import _extrair_json, chamar  # noqa: F401
+    sistema = _modelo_roteiro(c)
+    if not sistema:
+        raise ValueError("Este formato não escreve roteiro sozinho: cole o roteiro.")
+    regras = (ler_json(Path(c.get("raiz") or Path(c["producoes"]).parent) / "canal.json", {}) or {}).get("regras") or {}
+    if regras.get("storyboard"):
+        sistema += "\n\n## Regras do tema deste canal\n" + "\n".join(f"- {r}" for r in regras["storyboard"])
+    texto = (f"Título do vídeo: {titulo.strip()}\nCanal: {c.get('nome', '')} — tema: {c.get('tema', '')}\n"
+             f"Idioma da narração: {c.get('idioma', 'en')}\n" + (f"Observação de quem produz: {obs}\n" if obs else "")
+             + "\nEscreva o roteiro completo. Responda só com o roteiro, sem nada antes ou depois.")
+    sid = str(uuid.uuid4())
+    for volta in range(2):
+        r = chamar("roteiro", sistema, texto, canal=c, timeout=1800, sessao=(sid, volta == 0), texto_livre=True,
+                   ctx={"canal": Path(c.get("raiz") or Path(c["producoes"]).parent).name})
+        rot = re.sub(r"^```\w*\n|\n```\s*$", "", r["texto"].strip())
+        n, palavras, tem_cold = _medir_roteiro(rot)
+        problemas = []
+        if not tem_cold:
+            problemas.append("falta o cold open (texto antes do 1º \"# capítulo\")")
+        if not 6 <= n <= 11:
+            problemas.append(f"{n} capítulos (o molde pede 7–10, cada um com uma linha \"# Nome\")")
+        if not 1600 <= palavras <= 3000:
+            problemas.append(f"{palavras} palavras narradas (o molde pede 1.800–2.700)")
+        if not problemas:
+            return rot
+        texto = "Fora do molde: " + "; ".join(problemas) + ". Reescreva o roteiro inteiro corrigindo isso."
+    return rot
+
+
+def criar_video(c, titulo, roteiro, obs=""):
+    """Cria a pasta do vídeo e um bloco por tópico (00 = cold open). Sem roteiro, num formato com agente de roteiro
+    (formato.json › roteiro.modelo), o Claude escreve o roteiro a partir do título. Devolve o slug; ValueError com o
+    motivo (para mostrar a quem produz) se não der."""
     if not titulo.strip():
         raise ValueError("Dê um título ao vídeo.")
+    if not (roteiro or "").strip():
+        if Path(c["producoes"], slug_video(titulo)).exists():
+            raise ValueError(f"Já existe um vídeo com essa pasta ({slug_video(titulo)}).")
+        roteiro = escrever_roteiro(c, titulo, obs)
+    cold_open, partes = dividir_roteiro(roteiro)
     if not partes:
         raise ValueError("O roteiro precisa ter cada tópico começando com uma linha \"# Nome do tópico\".")
     vd = Path(c["producoes"]) / slug_video(titulo)

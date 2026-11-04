@@ -1,47 +1,49 @@
 {
- "_modelos": "Com que modelo do Claude um canal começa em cada etapa. Quem manda é o canal.json de cada canal (painel › canal › Modelos do Claude); isto aqui é só o ponto de partida.",
- "modelos": {
-  "escolher_imagem": "claude-sonnet-5-5",
-  "escolher_video": "claude-sonnet-5-5",
-  "conferir": "claude-haiku-5-5",
-  "storyboard": "claude-opus-5-5",
-  "qa": "claude-opus-5-5",
-  "confirmar_trecho": "claude-sonnet-5-5",
-  "descricao": "claude-sonnet-5-5",
-  "termos_mineracao": "claude-sonnet-5-5"
- },
- "claude_paralelo": 3,
- "claude_timeout_s": 300,
- "imagem_lado_max": 1568,
- "nova_busca_max": 2,
- "finalizar_tentativas": 3,
- "_esforco": "--effort do claude -p por etapa: low (sem raciocínio, mais barato), medium, high, xhigh, max. Também é só o ponto de partida: cada canal tem o seu.",
- "esforco": {
-  "escolher_imagem": "low",
-  "escolher_video": "low",
-  "conferir": "low",
-  "storyboard": "medium",
-  "qa": "medium",
-  "confirmar_trecho": "low",
-  "descricao": "low",
-  "termos_mineracao": "low"
- },
- "storyboard_timeout_s": 2400,
- "storyboard_voltas": 4,
- "_travar_conferir": "true = a entrega para até alguém aprovar os itens de \"conferir\" no painel.",
- "travar_conferir": false,
- "_after_app": "Nome do app do After Effects em /Applications (muda a cada versão anual).",
- "after_app": "Adobe After Effects 2026",
- "idioma_painel": "pt",
- "_video_final": "Vídeo final (juntar os blocos no After): ruído da camada de ajuste em % (0 = sem).",
- "video_final": {
-  "ruido": 6
- },
- "_mineracao": "Mineração: automatica = um garimpo por dia sozinho, no nicho que está há mais tempo sem ir. Vem DESLIGADO: cada garimpo custa ~830 das 10.000 unidades diárias da chave do YouTube, e quem liga precisa saber disso. filtros = o que conta como vídeo que estourou; o padrão de fábrica está em mineracao.py.",
- "mineracao": {
-  "automatica": false,
-  "filtros": {}
- },
- "_limpeza_automatica": "true = ao entregar um bloco, as prévias antigas, os candidatos baixados e o Auto-Save dele vão para o Lixo do Mac.",
- "limpeza_automatica": true
+  "_modelos": "Com que modelo do Claude um canal começa em cada etapa. Quem manda é o canal.json de cada canal (painel › canal › Modelos do Claude); isto aqui é só o ponto de partida.",
+  "modelos": {
+    "escolher_imagem": "claude-sonnet-5-5",
+    "escolher_video": "claude-sonnet-5-5",
+    "conferir": "claude-haiku-5-5",
+    "storyboard": "claude-opus-5-5",
+    "qa": "claude-opus-5-5",
+    "confirmar_trecho": "claude-sonnet-5-5",
+    "descricao": "claude-sonnet-5-5",
+    "termos_mineracao": "claude-sonnet-5-5",
+    "roteiro": "claude-opus-5-5"
+  },
+  "claude_paralelo": 3,
+  "claude_timeout_s": 300,
+  "imagem_lado_max": 1568,
+  "nova_busca_max": 2,
+  "finalizar_tentativas": 3,
+  "_esforco": "--effort do claude -p por etapa: low (sem raciocínio, mais barato), medium, high, xhigh, max. Também é só o ponto de partida: cada canal tem o seu.",
+  "esforco": {
+    "escolher_imagem": "low",
+    "escolher_video": "low",
+    "conferir": "low",
+    "storyboard": "medium",
+    "qa": "medium",
+    "confirmar_trecho": "low",
+    "descricao": "low",
+    "termos_mineracao": "low",
+    "roteiro": "high"
+  },
+  "storyboard_timeout_s": 2400,
+  "storyboard_voltas": 4,
+  "_travar_conferir": "true = a entrega para até alguém aprovar os itens de \"conferir\" no painel.",
+  "travar_conferir": false,
+  "_after_app": "Nome do app do After Effects em /Applications (muda a cada versão anual).",
+  "after_app": "Adobe After Effects 2026",
+  "idioma_painel": "pt",
+  "_video_final": "Vídeo final (juntar os blocos no After): ruído da camada de ajuste em % (0 = sem).",
+  "video_final": {
+    "ruido": 6
+  },
+  "_mineracao": "Mineração: automatica = um garimpo por dia sozinho, no nicho que está há mais tempo sem ir. Vem DESLIGADO: cada garimpo custa ~830 das 10.000 unidades diárias da chave do YouTube, e quem liga precisa saber disso. filtros = o que conta como vídeo que estourou; o padrão de fábrica está em mineracao.py.",
+  "mineracao": {
+    "automatica": false,
+    "filtros": {}
+  },
+  "_limpeza_automatica": "true = ao entregar um bloco, as prévias antigas, os candidatos baixados e o Auto-Save dele vão para o Lixo do Mac.",
+  "limpeza_automatica": true
 }

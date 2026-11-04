@@ -170,8 +170,79 @@ def _guardar_anterior(arq):
         arq.rename(guarda / f"{arq.stem}_{time.strftime('%Y%m%d-%H%M%S', time.localtime(arq.stat().st_mtime))}{arq.suffix}")
 
 
+def _motor(vd):
+    """O motor de edição do formato do canal deste vídeo (formato.json › edicao.motor): "after" ou "ffmpeg"."""
+    from .sistema import ficha_formato
+    cj = ler_json(Path(vd).parent.parent / "canal.json", {}) or {}
+    return (ficha_formato(cj.get("formato")).get("edicao") or {}).get("motor", "after")
+
+
+def montar_ffmpeg(vd):
+    """Vídeo final sem After (formato com edicao.motor = "ffmpeg"): cada bloco entregue é desenhado de novo em
+    1920×1080 pelo compositor (motor/edicao_ff/compor.py) a partir do plano_render_NN.json dele, o FFmpeg junta os
+    blocos sem recomprimir e mistura a trilha do canal, se houver. Sai <vídeo>/final/<título>.mp4."""
+    vd = Path(vd)
+    fim_dir = vd / "final"
+    (fim_dir / "blocos").mkdir(parents=True, exist_ok=True)
+    blocos = entregues(vd)
+    titulo = estado.titulo_video(vd)
+    _marcar(vd, status="rodando", etapa="esperando a vez de renderizar", inicio=time.strftime("%Y-%m-%d %H:%M:%S"),
+            fim="", render=True, blocos=len(blocos), erro="")
+    if not blocos:
+        _marcar(vd, status="erro", etapa="nenhum bloco entregue ainda", fim=time.strftime("%Y-%m-%d %H:%M:%S"))
+        return 1
+    trava = open(DADOS / "trava_after", "w")       # a mesma vez dos blocos: um render pesado de cada vez no Mac
+    fcntl.flock(trava, fcntl.LOCK_EX)
+    try:
+        partes = []
+        for k, mp4 in enumerate(blocos, 1):
+            nn = f"{_numero(mp4):02d}"
+            plano = vd / "blocos" / nn / "edicao" / f"plano_render_{nn}.json"
+            alvo = fim_dir / "blocos" / f"bloco_{nn}.mp4"
+            if plano.exists() and not (alvo.exists() and alvo.stat().st_mtime >= plano.stat().st_mtime):
+                _marcar(vd, etapa=f"renderizando o bloco {nn} em 1920×1080 ({k}/{len(blocos)})")
+                r = subprocess.run([sys.executable, str(MOTOR / "edicao_ff" / "compor.py"), str(vd / "blocos" / nn),
+                                    "--item", nn, "--saida", str(alvo)], capture_output=True, text=True)
+                if r.returncode or not alvo.exists():
+                    _marcar(vd, status="erro", etapa=f"o compositor falhou no bloco {nn}",
+                            erro=(r.stderr or r.stdout).strip()[-300:], fim=time.strftime("%Y-%m-%d %H:%M:%S"))
+                    return 1
+            partes.append(alvo if alvo.exists() else mp4)
+        _marcar(vd, etapa="juntando os blocos (FFmpeg)")
+        lista = fim_dir / "blocos.txt"
+        lista.write_text("".join(f"file '{p_}'\n" for p_ in partes))
+        junto = fim_dir / "_junto.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lista), "-c", "copy",
+                        str(junto)], check=True)
+        nome_mp4 = re.sub(r'[/:"\\]', "-", titulo).strip() or vd.name
+        mp4 = fim_dir / f"{nome_mp4}.mp4"
+        _guardar_anterior(mp4)
+        musica = trilha(vd, fim_dir, partes)
+        if musica:
+            _marcar(vd, etapa="pondo a trilha por baixo")
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(junto), "-i", musica, "-filter_complex",
+                            "[0:a][1:a]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v", "-map", "[a]",
+                            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(mp4)],
+                           check=True)
+            junto.unlink(missing_ok=True)
+        else:
+            junto.rename(mp4)
+        _marcar(vd, mp4=str(mp4))
+    except subprocess.CalledProcessError as e:
+        _marcar(vd, status="erro", etapa="o FFmpeg falhou ao juntar", erro=str(e)[-300:],
+                fim=time.strftime("%Y-%m-%d %H:%M:%S"))
+        return 1
+    finally:
+        fcntl.flock(trava, fcntl.LOCK_UN)
+        trava.close()
+    _marcar(vd, status="ok", etapa="pronto", fim=time.strftime("%Y-%m-%d %H:%M:%S"))
+    return 0
+
+
 def montar(vd, render=False):
     vd = Path(vd)
+    if _motor(vd) == "ffmpeg":
+        return montar_ffmpeg(vd)
     fim_dir = vd / "final"
     fim_dir.mkdir(exist_ok=True)
     blocos = entregues(vd)
