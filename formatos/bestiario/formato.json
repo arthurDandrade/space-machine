@@ -26,7 +26,7 @@
   ]
  },
  "busca": {
-  "_sobre": "Tipos deste formato por cima do motor/busca/config.json (caminhos.config_busca). Aqui \"recorte\" é GERADO (criatura, ícone, personagem em fundo liso; o finalizar.py tira o fundo com o rembg).",
+  "_sobre": "Tipos deste formato por cima do motor/busca/config.json (caminhos.config_busca). Aqui \"recorte\" é GERADO (criatura, ícone, personagem em fundo liso; o finalizar.py tira o fundo com o rembg). Vídeo sem o Internet Archive (teste de 2026-11-04: os programas antigos de lá vêm com vinheta de produtora, marca do acervo queimada — PeriscopeFilm — e tarja; no bestiário o vídeo enche a tela).",
   "fontes_por_tipo": {
    "gravura": [
     [
@@ -45,6 +45,15 @@
    "recorte": [
     [
      "gemini_recorte"
+    ]
+   ],
+   "video": [
+    [
+     "pexels",
+     "pixabay"
+    ],
+    [
+     "commons"
     ]
    ]
   },
