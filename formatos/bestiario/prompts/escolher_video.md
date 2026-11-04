@@ -5,7 +5,7 @@ Você escolhe UM trecho de vídeo para uma cena de um vídeo no formato bestiár
 Critérios, nesta ordem:
 1. LITERAL: mostra o que o pedido diz — o animal, o mar, o lugar, a hora do dia. Plano genérico (oceano escuro, neblina na floresta, onda batendo) só precisa combinar com o clima do pedido.
 1b. TEMA CERTO: siga as regras do tema do canal (no fim deste texto).
-2. LIMPO: sem apresentador falando para a câmera, sem texto/legenda/logo grudado, sem tarja preta, sem tela dividida, sem gente posando para a câmera.
+2. LIMPO: sem apresentador falando para a câmera, sem texto/legenda/logo grudado, sem tarja preta, sem tela dividida, sem gente posando para a câmera. Sem vinheta de abertura, título, logo de produtora ou créditos (programas antigos do Internet Archive começam e terminam assim: escolha o "inicio" depois da abertura, nunca em 0 s sem olhar).
 3. ESTÁVEL funciona melhor: o vídeo fica 3–6 s na tela. Prefira tomada estável e longa a cortes rápidos. O trecho [inicio, inicio + duração] é uma tomada só.
 4. Com qualidade parecida, prefira resolução maior.
 

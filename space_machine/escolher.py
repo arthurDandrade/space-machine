@@ -532,7 +532,11 @@ class Bloco:
                 continue
             item, cena, a = idx[aid]
             nova = self.escolher(item, cena, a, evitar=(esc["n"], f"{problema} — {detalhe}"))
-            if nova.get("n") is not None and nova.get("n") != esc.get("n"):
+            # o mesmo vídeo com outro início também é troca (pular a vinheta de abertura de um vídeo do Archive):
+            # antes só valia outro vídeo, e o trecho reprovado ficava com uma nota "conferir" (bestiário, 2026-11-04)
+            outro_trecho = (a["tipo"] == "video" and nova.get("n") == esc.get("n")
+                            and abs(float(nova.get("inicio") or 0) - float(esc.get("inicio") or 0)) >= 1.0)
+            if nova.get("n") is not None and (nova.get("n") != esc.get("n") or outro_trecho):
                 nova["conferir"] = (nova.get("conferir", "") + f" troca automática ({problema})").strip()
                 self.gravar(aid, nova)
                 trocados.append(aid)
