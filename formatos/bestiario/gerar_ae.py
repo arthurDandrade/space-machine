@@ -138,6 +138,25 @@ class Montador:
                        t_in, t_out, list(pos), f"pílula {txt[:20]}", dy=18)
         return self.texto(txt, t_in, t_out, pos, tam, cor or BRANCO, FONTE_ROTULO, "center", 120, 1500)
 
+    def marcador(self, txt, t_in, t_out, icone="check", n=0):
+        """Rótulo no canto de baixo à esquerda com ✓ verde ou ✗ vermelho ("SHARKS: RARE ✓"); n empilha para cima."""
+        txt = txt.upper()
+        tam = 30
+        w_ = largura(txt, tam, 120) + 44 + 52
+        x0, y = 120, H - 120 - n * 70
+        self.forma([{"t": "rect", "size": [w_, tam * 1.9], "radius": 8, "fill": PILULA, "fill_op": 78}],
+                   t_in, t_out, [x0 + w_ / 2, y], f"marcador {txt[:20]}", dy=14)
+        self.texto(txt, t_in, t_out, [x0 + 22, y], tam, BRANCO, FONTE_ROTULO, "left", 120, 1400, dy=14)
+        xi = x0 + w_ - 40
+        if icone == "x":
+            itens = [{"t": "path", "pts": [[-10, -10], [10, 10]], "stroke": VERMELHO, "sw": 5},
+                     {"t": "path", "pts": [[10, -10], [-10, 10]], "stroke": VERMELHO, "sw": 5}]
+        else:
+            itens = [{"t": "ellipse", "size": [30, 30], "fill": _rgb("#3FB37F"), "trim": False},
+                     {"t": "path", "pts": [[-7, 0], [-2, 6], [8, -6]], "stroke": BRANCO, "sw": 4}]
+        self.forma(itens, t_in + 0.25, t_out, [xi, y], f"ícone {icone}",
+                   trim=[[t_in + 0.25, 0, EASE_OUT], [t_in + 0.6, 100, EASE_IN]])
+
     def destaque(self, txt, t_in, t_out, pos, tam=62):
         """Frase-chave em vermelho com sublinhado que se desenha ("IT KNOWS WHERE YOU ARE")."""
         txt = txt.upper()
@@ -192,7 +211,7 @@ class Montador:
         return dst, w, h, None
 
     def imagem(self, el, t_in, t_out, cx, cy, bw, bh, modo="conter", nome=None, mov=None, espelhar=False,
-               fade=True, opacidade=100, entra_dy=0):
+               fade=True, opacidade=100, entra_dy=0, silhueta=False):
         """Imagem/vídeo na caixa (cx, cy, bw, bh). mov = movimento da criatura ("nada", "entra", "sobe", "close",
         "parado"; a criatura oscila em todos); sem mov, a imagem só aproxima devagar. Devolve (largura, altura)."""
         arq, sw, sh, dur = self.preparar(el)
@@ -217,6 +236,10 @@ class Montador:
             if mov == "nada":               # atravessa devagar para onde olha
                 d = min(260, 22 * tela)
                 kw["pos_keys"] = [[ini, [cx - sx * d / 2, cy]], [fim, [cx + sx * d / 2, cy]]]
+            elif mov == "atravessa":        # cruza a tela inteira, de fora a fora (as orcas do Depth Theory)
+                fora = W / 2 + larg / 2 + 60
+                kw["pos_keys"] = [[ini, [CX - sx * fora, cy]], [fim, [CX + sx * fora, cy]]]
+                kw["opacity_keys"] = [[ini, opacidade], [fim, opacidade]]
             elif mov == "entra":            # chega de fora da tela pelo lado de trás
                 kw["pos_keys"] = [[ini, [cx - sx * (W / 2 + larg / 2 + 40), cy], EASE_OUT], [ini + 1.4, [cx, cy], EASE_IN]]
                 kw["opacity_keys"] = [[ini, opacidade], [t_out, opacidade], [fim, 0]]
@@ -235,7 +258,10 @@ class Montador:
                           "rot": f"value + 1.4*Math.sin(time*0.85 + {fase})"}
             # dentro da água: tingida pela luz do fundo, um pouco mais escura, com a borda de cima acesa; e o corpo
             # ondula de leve (os braços/barbatanas parecem mexer)
-            if self.luz:
+            if silhueta:        # contraluz / vulto: quase preto, só a borda acesa
+                kw["grade"] = {"tint": [[0.01, 0.02, 0.03], [0.07, 0.11, 0.13], 100],
+                               "borda": [max(2.0, larg / 300), (self.luz or FUNDOS["mar"]["luz"])[1], 0.35]}
+            elif self.luz:
                 kw["grade"] = {"tint": [self.luz[0], self.luz[1], TINGE], "brilho": -10,
                                "borda": [max(2.0, larg / 400), self.luz[1], 0.55]}
             kw["ondula"] = [max(3.0, larg / 330), max(160.0, larg / 4.5), 0.45]
@@ -399,15 +425,29 @@ def _opc(c):
     return c.get("opcoes") or {}
 
 
-def cena(M, e, fim):
+def cena(M, e, fim, extras_de=None):
     lay = e["layout"]
     cards = [c for c in e.get("cards", []) if not _opc(c).get("fundo")]
     op = e.get("opcoes") or {}
     textos, rotulos = _txts(e, "textos"), _txts(e, "rotulos")
     ini = e["ini"]
 
+    def vulto(c, o, fim):
+        """O vulto: a mesma criatura, enorme, escura e desfocada, passando rápido na frente da câmera."""
+        v = o.get("vulto")
+        if not v:
+            return
+        t_v = max(v.get("t", c["t"]), ini)
+        if o.get("so_vulto"):        # só o vulto em cena: ele ocupa o estado inteiro, desde o começo
+            t_v = ini
+        M.imagem(c, t_v, max(min(fim, t_v + 2.6), fim if o.get("so_vulto") else 0), CX, CY + 120, 4200, 2300,
+                 mov="atravessa", espelhar=bool(o.get("espelhar")), silhueta=True, nome="vulto")
+        M.layers[-1]["blur"] = 14
+
     def extras_do_card(c, larg, alt, cx, cy):
         o = _opc(c)
+        for n, mk in enumerate(o.get("marcadores", [])):
+            M.marcador(mk["texto"], max(mk.get("t", c["t"]), ini), fim, mk.get("icone", "check"), n)
         if o.get("rotulo"):
             r = o["rotulo"]
             M.rotulo(r["texto"], max(r.get("t", c["t"]), ini), fim, [cx + larg * 0.2, cy - alt / 2 - 30])
@@ -418,7 +458,23 @@ def cena(M, e, fim):
             tx, t = c["legenda"][:2]
             M.destaque(tx, max(t, ini), fim, [CX, H - 130])
 
-    if lay == "C1":                  # a criatura em cena
+    if lay == "_C1_extras":          # estado dentro de uma câmera contínua: só o que não é a criatura
+        larg, alt, cx, olha = extras_de
+        c = cards[0]
+        o = _opc(c)
+        if o.get("voce"):
+            xv = min(W - 170, max(170, cx + olha * (larg / 2 + 330)))
+            t_v = max(c["t"], ini) + 0.3
+            M.voce(t_v, fim, xv, CY + 30, 270, olha=-olha, alvo=bool(o.get("alvo", o.get("sonar"))),
+                   lanterna=bool(o.get("lanterna", True)))
+            if o.get("sonar"):
+                M.sonar(t_v, fim, cx + olha * larg * 0.42, CY + 20, olha)
+        vulto(c, o, fim)
+        # na câmera contínua a criatura está ampliada: rótulo e carimbo vão para lugares fixos da tela
+        extras_do_card(c, 900, 600, CX + 200, CY)
+        for tx, t, *_ in textos[:1]:
+            M.rotulo(tx, max(t, ini), fim, [CX, 150])
+    elif lay == "C1":                  # a criatura em cena
         c = cards[0]
         o = _opc(c)
         mov = o.get("movimento", "nada")
@@ -430,7 +486,20 @@ def cena(M, e, fim):
         bw, bh = (2300, 1300) if mov == "close" else (1450, 780)
         if mov == "close":
             cx -= olha * 380
-        larg, alt = M.imagem(c, c["t"], fim, cx, CY + 20, bw, bh, mov=mov, espelhar=bool(o.get("espelhar")))
+        if o.get("contraluz"):       # foco de luz atrás: a criatura vira silhueta (o mergulhador contra o sol)
+            # anéis sobrepostos do pequeno ao grande: o brilho cai devagar (um disco só, mesmo desfocado, tinha borda)
+            aneis = [{"t": "ellipse", "size": [d_, d_], "fill": _rgb("#CFEFF5"), "fill_op": op_}
+                     for d_, op_ in ((420, 55), (700, 35), (1000, 22), (1400, 12), (1900, 6))]
+            M.add(kind="shape", items=aneis, pos=[cx, CY], name="contraluz", blur=140, blend="add",
+                  opacity_keys=[[c["t"], 0], [c["t"] + 0.8, 90], [fim, 90], [fim + SAI, 0]],
+                  **{"in": c["t"], "out": fim + SAI})
+        if o.get("so_vulto"):        # só o vulto passando (a criatura ainda não aparece)
+            vulto(c, dict(o, vulto=o.get("vulto") or {"t": c["t"]}), fim)
+            larg, alt = 900, 600
+        else:
+            larg, alt = M.imagem(c, c["t"], fim, cx, CY + 20, bw, bh, mov=mov, espelhar=bool(o.get("espelhar")),
+                                 silhueta=bool(o.get("contraluz")))
+            vulto(c, o, fim)
         if o.get("voce"):
             xv = min(W - 170, max(170, cx + olha * (larg / 2 + 330)))
             t_v = max(c["t"], ini) + 0.3
@@ -591,6 +660,72 @@ def cena(M, e, fim):
         raise SystemExit(f"layout \"{lay}\" não existe no bestiário (C1, E1, N1, N2, L1, D1, T1, R1, F1, S1)")
 
 
+ENQUADRAMENTOS = {"inteiro": (1.0, [0.5, 0.5]), "medio": (1.55, [0.62, 0.5]), "close": (2.4, [0.8, 0.5]),
+                  "detalhe": (3.4, [0.85, 0.55])}
+
+
+def chave_imagem(e):
+    """O que identifica a criatura de um C1 (para saber se o estado seguinte é a mesma imagem)."""
+    cards = [c for c in e.get("cards", []) if not _opc(c).get("fundo")]
+    if e["layout"] != "C1" or not cards:
+        return None
+    o = _opc(cards[0])
+    if o.get("so_vulto") or o.get("movimento") in ("atravessa", "close"):
+        return None                  # passagens e closes isolados não viram câmera contínua
+    return (cards[0].get("asset") or cards[0].get("arquivo"), bool(o.get("contraluz")))
+
+
+def cena_continua(M, estados, fins):
+    """Vários estados C1 seguidos com a MESMA criatura (medido no Depth Theory: o cachalote fica 15 s na tela e a
+    câmera vai do plano aberto ao close da cabeça): a criatura entra uma vez e uma câmera (null pai) muda de
+    enquadramento a cada estado — "opcoes": {"camera": "inteiro"|"medio"|"close"|"detalhe"|{"zoom", "ponto"}}.
+    Rótulos, carimbos, legendas, marcadores e o "você" de cada estado continuam na tela, fora da câmera."""
+    e0, ini, fim = estados[0], estados[0]["ini"], fins[-1]
+    c0 = [c for c in e0["cards"] if not _opc(c).get("fundo")][0]
+    o0 = _opc(c0)
+    olha = -1 if o0.get("espelhar") else 1
+    tem_voce = any(_opc([c for c in e["cards"] if not _opc(c).get("fundo")][0]).get("voce") for e in estados)
+    cx = (CX - olha * 260) if tem_voce else CX
+    cam = M.add(kind="null", name="câmera", pos=[CX, CY], **{"in": ini - 0.1, "out": fim + SAI})
+    larg, alt = M.imagem(c0, c0["t"], fim, cx, CY + 20, 1450, 780, mov=o0.get("movimento", "parado")
+                         if o0.get("movimento") in ("entra", "sobe", "parado") else "parado",
+                         espelhar=bool(o0.get("espelhar")))
+    cri = M.layers[-1]
+    cri["parent"] = cam
+    rel = lambda p_: [p_[0] - CX, p_[1] - CY]
+    cri["pos"] = rel(cri["pos"])
+    if cri.get("pos_keys"):
+        cri["pos_keys"] = [[k[0], rel(k[1])] + k[2:] for k in cri["pos_keys"]]
+    esc, pos = [], []
+    anterior = None
+    for k, e in enumerate(estados):
+        cam_ = (e.get("opcoes") or {}).get("camera") or ("inteiro" if k == 0 else "medio")
+        z, pt = (cam_["zoom"], cam_.get("ponto", [0.5, 0.5])) if isinstance(cam_, dict) else ENQUADRAMENTOS[cam_]
+        px = pt[0] if olha > 0 else 1 - pt[0]           # a cabeça fica do lado para onde ela olha
+        alvo = [cx - larg / 2 + px * larg, CY + 20 - alt / 2 + pt[1] * alt]
+        P = [CX - z * (alvo[0] - CX), CY - z * (alvo[1] - CY)]
+        t = e["ini"]
+        if anterior is None:
+            esc.append([t - 0.1, [z * 100, z * 100]])
+            pos.append([t - 0.1, P])
+        else:
+            esc.append([t, [anterior[0] * 100, anterior[0] * 100], EASE_OUT])
+            pos.append([t, anterior[1], EASE_OUT])
+            esc.append([t + 1.1, [z * 100, z * 100], EASE_IN])
+            pos.append([t + 1.1, P, EASE_IN])
+        anterior = (z, P)
+    deriva = 1 + min(0.04, 0.004 * (fim - estados[-1]["ini"]))   # o último enquadramento ainda anda um pouco
+    esc.append([fim + SAI, [anterior[0] * 100 * deriva] * 2])
+    M.layers[cam]["scale_keys"], M.layers[cam]["pos_keys"] = esc, pos
+    # o que é de cada estado
+    for e, f_ in zip(estados, fins):
+        c = [c for c in e["cards"] if not _opc(c).get("fundo")][0]
+        o = _opc(c)
+        sub = dict(e, layout="_C1_extras")
+        sub["cards"] = [c]
+        cena(M, sub, f_, extras_de=(larg, alt, cx, olha))
+
+
 def fundo_de(e, atual):
     """O fundo do estado: um card com "fundo": true (cenário gerado), o "fundo" das opções, ou o de antes."""
     for c in e.get("cards", []):
@@ -647,9 +782,19 @@ def main():
     for e in estados:
         atual = fundo_de(e, atual)
         luz_de[id(e)] = (FUNDOS.get(atual) or {}).get("luz") if isinstance(atual, str) else None
-    for i, e in enumerate(estados):
-        M.luz = luz_de[id(e)]
-        cena(M, e, estados[i + 1]["ini"] if i + 1 < len(estados) else fim_bloco)
+    fins = [estados[i + 1]["ini"] if i + 1 < len(estados) else fim_bloco for i in range(len(estados))]
+    i = 0
+    while i < len(estados):
+        M.luz = luz_de[id(estados[i])]
+        j = i + 1
+        k_ = chave_imagem(estados[i])
+        while k_ and j < len(estados) and chave_imagem(estados[j]) == k_ and luz_de[id(estados[j])] == M.luz:
+            j += 1
+        if j - i > 1:
+            cena_continua(M, estados[i:j], fins[i:j])
+        else:
+            cena(M, estados[i], fins[i])
+        i = j
 
     # vinheta por cima das imagens e por baixo dos textos; a ordem no After vai por camada (estável dentro dela)
     M.add(kind="solid", color=[0, 0, 0], name="vinheta", camada="vinheta", vinheta=[W / 2 + 140, H / 2 + 200, 560],

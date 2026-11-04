@@ -106,17 +106,26 @@ def main():
     linhas.append(f"| 0 | {tit.get('t', 0):.1f}–{tit.get('fim', 0):.1f} s | {fala(0, tit.get('fim', 0))} | "
                   f"E1 título | {tit.get('asset', '')}: recorte — {ativos.get(tit.get('asset'), {}).get('descricao', '')} | "
                   f"{tit.get('texto', '')} |")
-    for e in estados:
+    ref = lambda c_: c_.get("asset") or c_.get("arquivo", "gerado")
+    for i_e, e in enumerate(estados):
         assets, textos = [], []
         for cd in e["ed"].get("cards", []):
             seq = [(cd.get("asset") or cd.get("arquivo", "gerado"), cd["t"])] + [(t.get("asset") or t.get("arquivo", "gerado"), t["t"]) for t in cd.get("troca", [])]
+            # a mesma imagem do estado anterior (câmera contínua do bestiário) não é entrada nova
+            continua = i_e and any(ref(x) == ref(cd) for x in estados[i_e - 1]["ed"].get("cards", []))
             for k, (aid, t0) in enumerate(seq):
                 t1 = seq[k + 1][1] if k + 1 < len(seq) else e["fim"]
+                k2 = i_e + 1
+                while k == len(seq) - 1 and k2 < len(estados) and \
+                        any(ref(x) == aid for x in estados[k2]["ed"].get("cards", [])):
+                    t1 = estados[k2]["fim"]
+                    k2 += 1
                 dur = t1 - t0
-                entradas += 1
+                entradas += 1                # câmera nova na mesma imagem também é mudança na tela
                 x = ativos.get(aid, {})
-                marca = " ⚠️" if dur < MIN_ASSET_S else ""
-                if dur < MIN_ASSET_S:
+                curto = dur < MIN_ASSET_S and not (continua and k == 0)
+                marca = " ⚠️" if curto else ""
+                if curto:
                     curtos.append(f"{aid} {dur:.1f}s")
                 assets.append(f"**{aid}** {x.get('tipo', 'gerado')}"
                               f"{' ' + x['orientacao'] if x.get('orientacao') else ''}: {x.get('descricao') or ('mapa/tabela gerado: ' + Path(aid).name)} "
@@ -133,6 +142,8 @@ def main():
         for k in ("textos", "rotulos"):
             for t in e["ed"].get(k, []):
                 textos.append(str(t[0] if isinstance(t, list) else t))
+        e["continua"] = bool(i_e and any(ref(x) in {ref(y) for y in estados[i_e - 1]["ed"].get("cards", [])}
+                                         for x in e["ed"].get("cards", [])))
         nome = NOMES.get(e["var"], "")
         f_tag = " · seq." if e["n_est"] > 1 else ""
         linhas.append(f"| {e['cena']} | {e['ini']:.1f}–{e['fim']:.1f} s | {fala(e['ini'], e['fim'])} | "
@@ -200,7 +211,9 @@ def main():
     if pilhas:
         avisos.append("pilha (C9) com os cards na mesma palavra em " + ", ".join(pilhas)
                       + ": dê um gatilho para cada card (o de trás numa palavra, o da frente numa palavra depois)")
-    repetidos = {v: n for v, n in collections.Counter(vars_).items() if n > MAX_REPETICOES}
+    # o estado que continua a mesma imagem (câmera contínua) não é um tipo de cena novo
+    repetidos = {v: n for v, n in collections.Counter(e["var"] for e in estados if not e.get("continua")).items()
+                 if n > MAX_REPETICOES}
     if repetidos:
         avisos.append(f"tipo de cena repetido no bloco (cada um no máximo {MAX_REPETICOES}x; troque por outra variação da biblioteca): "
                       + ", ".join(f"{v} {NOMES.get(v, '')} ×{n}".replace("  ", " ") for v, n in sorted(repetidos.items())))

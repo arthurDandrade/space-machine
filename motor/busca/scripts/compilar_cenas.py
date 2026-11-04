@@ -433,8 +433,16 @@ def main():
             # B11: o estado anterior continua na tela (desfocado) até o fim do B11
             k_fim = i + 2 if i + 1 < len(ests) and ests[i + 1]["layout"] == "B11" else i + 1
             fim = ests[k_fim]["ini"] if k_fim < len(ests) else ed_i["fim"]
+            ref = lambda c_: c_.get("asset") or c_.get("arquivo")
             for cd in e.get("cards", []):
                 t = max(e["ini"], cd["t"] - 0.2)
+                if any(ref(x) == ref(cd) for x in (ests[i - 1].get("cards", []) if i else [])):
+                    continue                 # a mesma imagem continuando do estado anterior (câmera contínua)
+                k2 = i + 1                   # e se ela continua nos estados seguintes, conta até ela sair
+                while k2 < len(ests) and any(ref(x) == ref(cd) for x in ests[k2].get("cards", [])):
+                    k2 += 1
+                if k2 > i + 1:
+                    fim = ests[k2]["ini"] if k2 < len(ests) else ed_i["fim"]
                 if fim - t < 1.8:
                     R.avisos.append(f"item {item['id']} ({e['layout']} {e['ini']:.1f}s): "
                                     f"{cd.get('asset') or cd.get('arquivo')} fica só {fim - t:.1f}s na tela (mínimo 1,8s)")

@@ -22,6 +22,10 @@ Tudo entra animado: elementos sobem 18 px e aparecem em 0,35 s; somem em 0,2 s; 
 | F1 | frase | 2–8 palavras em maiúsculas, branca ou vermelha sublinhada | pergunta, virada, gancho | "WHAT DOES IT EAT?", "IF IT DECIDED YOU WERE A PROBLEM…" |
 | S1 | lado a lado | divisória que se desenha, uma imagem de cada lado com o rótulo em cima | lenda × realidade, você × ela | "HUMPBACK: FILTERS / SPERM WHALE: ?" |
 
+**Câmera contínua** (2026-11-03, medida no Depth Theory a cada 0,5 s): C1 seguidos com a mesma criatura viram UM plano — a criatura entra uma vez e um null de câmera vai de enquadramento em enquadramento (`inteiro` 1×, `medio` 1,55× na cabeça, `close` 2,4×, `detalhe` 3,4×, ou zoom e ponto livres) em 1,1 s com ease, e o último ainda anda ~0,4%/s. Rótulos, marcadores, carimbos e o "você" ficam fora da câmera, em lugares fixos da tela. No deles: 1:03–1:17 o cachalote fica parado e entram régua, ônibus e elefantes; 1:17–1:29 a câmera vai do corpo inteiro ao close dos dentes.
+
+Outras peças do C1: `atravessa` (cruza de fora a fora), `contraluz` (foco de luz atrás + silhueta), `vulto`/`so_vulto` (a criatura enorme passando escura e desfocada na frente da câmera), `marcadores` (✓ verde / ✗ vermelho no canto: "SHARKS: RARE ✓").
+
 Título do capítulo: o nome em maiúsculas grandes à esquerda (2 linhas), sublinhado vermelho e a criatura do elenco nadando à direita.
 
 Ainda não tem (a fazer se fizer falta): mapa animado (Antártida, Pangeia), pizza, raio-X do animal, velocímetro "você × ela", contador que sobe.
