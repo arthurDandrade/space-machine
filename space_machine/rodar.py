@@ -149,6 +149,10 @@ class Rodada:
     def cold_open(self):
         return "#! cold open" in (self.p / "roteiro.txt").read_text()
 
+    def capitulo_mudo(self):
+        """Capítulo sem nome falado (formato bestiário): como o cold open, o bloco não tem card de título."""
+        return "#! capítulo" in (self.p / "roteiro.txt").read_text()
+
     def topico(self):
         roteiro = (self.p / "roteiro.txt").read_text()
         return next((l.lstrip("# ").strip() for l in roteiro.splitlines() if l.startswith("#")), self.nn)
@@ -169,7 +173,11 @@ class Rodada:
                 + ("ESTE BLOCO É O COLD OPEN do vídeo (gancho antes do 1º tópico): NÃO tem card de título nem nome "
                    "falado — no item use \"sem_titulo\": true e não escreva \"titulo\". A 1ª cena começa na 1ª palavra "
                    "da narração e precisa prender a atenção logo (cenas curtas, imagens fortes).\n"
-                   if self.cold_open() else "")
+                   if self.cold_open() else
+                   (f"ESTE BLOCO É UM CAPÍTULO SEM NOME FALADO (a narração é uma história contínua): no item use "
+                    f"\"sem_titulo\": true e não escreva \"titulo\"; a 1ª cena começa na 1ª palavra da narração. O nome "
+                    f"do capítulo (\"{topico}\") o editor põe sozinho na tela, no começo do bloco.\n"
+                    if self.capitulo_mudo() else ""))
                 + f"\n## roteiro.txt\n{roteiro}\n\n## _work/transcricao.txt ([tempo]palavra)\n{transc}\n\n"
                 "Devolva o cenas.json completo.")
 
@@ -212,7 +220,7 @@ class Rodada:
                     atual["_avisos_aceitos"] = cenas["_avisos_aceitos"]
                 cenas = atual
             # o nome do tópico vem do roteiro, não da transcrição (o Whisper escreveu "Lambo Field" no bloco 02)
-            if self.cold_open():   # sem card de título; nome_fala = começo da narração (acha o início do bloco)
+            if self.cold_open() or self.capitulo_mudo():   # sem card de título; nome_fala = começo da narração
                 palavras = ler_json(self.p / "_work" / "palavras.json", [])
                 for it in cenas.get("itens", []):
                     it.update({"sem_titulo": True, "nome_fala": " ".join(w["p"] for w in palavras[:3])})

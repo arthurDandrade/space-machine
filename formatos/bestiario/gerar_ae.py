@@ -828,6 +828,29 @@ def main():
             cena(M, estados[i], fins[i])
         i = j
 
+    # marcador de capítulo (o capítulo não é falado: formato.json › roteiro.capitulo_falado = false). Como no vídeo do
+    # urso do Depth Theory (4:08, "HUNT · out in the open · 3/9"): o nome grande embaixo à esquerda e as bolinhas
+    # dos capítulos com o atual aceso, nos primeiros ~3 s do bloco
+    rot = (proj / "roteiro.txt").read_text() if (proj / "roteiro.txt").exists() else ""
+    if "#! capítulo" in rot and rot.startswith("#"):
+        nome_cap = rot.splitlines()[0].lstrip("# ").strip()
+        irmaos = sorted(int(b.name) for b in proj.parent.iterdir() if b.is_dir() and b.name.isdigit() and b.name != "00")
+        n_cap, total = int(proj.name), max(irmaos) if irmaos else int(proj.name)
+        t0 = (estados[0]["ini"] if estados else 0) + 0.15
+        t1 = min(t0 + 3.0, fim_bloco - 0.3)
+        y = H - 250
+        M.texto(nome_cap.upper(), t0, t1, [120, y], 76, BRANCO, FONTE, "left", 30, 1200, nome="capítulo")
+        bolinhas = []
+        for k in range(1, total + 1):
+            x = 132 + (k - 1) * 30
+            if k == n_cap:
+                bolinhas.append({"t": "ellipse", "size": [16, 16], "fill": VERMELHO, "pos": [x, 0], "trim": False})
+            else:
+                bolinhas.append({"t": "ellipse", "size": [12, 12], "stroke": CINZA, "sw": 2, "pos": [x, 0], "trim": False})
+        M.forma(bolinhas, t0 + 0.15, t1, [0, y + 72], "capítulos")
+        M.texto(f"{n_cap}/{total}", t0 + 0.15, t1, [132 + total * 30 + 8, y + 72], 26, CINZA, FONTE_ROTULO, "left", 60,
+                200, nome="capítulo n")
+
     # vinheta por cima das imagens e por baixo dos textos; a ordem no After vai por camada (estável dentro dela)
     M.add(kind="solid", color=[0, 0, 0], name="vinheta", camada="vinheta", vinheta=[W / 2 + 140, H / 2 + 200, 560],
           opacity=62, **{"in": 0, "out": fim_bloco + 2})

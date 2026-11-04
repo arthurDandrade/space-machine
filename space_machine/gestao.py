@@ -14,7 +14,7 @@ from pathlib import Path
 
 from . import estado
 from .motor_claude import _banco
-from .sistema import gravar_json
+from .sistema import arquivo_formato, ficha_formato, gravar_json
 
 COLUNAS = [
     ("ideia", "Ideias"),
@@ -190,6 +190,9 @@ def gerar_descricao(c, slug, video):
 
 # ---------------- novo vídeo ----------------
 MARCA_COLD_OPEN = "#! cold open: bloco sem card de título"
+# formato com capítulo NÃO falado (bestiário: uma história contínua, o nome do capítulo só aparece na tela e na
+# descrição): o bloco não tem a linha "Nome." narrada nem card de título (formato.json › roteiro.capitulo_falado)
+MARCA_CAPITULO = "#! capítulo: o nome só aparece na tela"
 
 
 def dividir_roteiro(roteiro):
@@ -232,11 +235,15 @@ def criar_video(c, titulo, roteiro):
         bd = vd / "blocos" / "00"
         bd.mkdir(parents=True)
         (bd / "roteiro.txt").write_text(f"# Cold open\n{MARCA_COLD_OPEN}\n{cold_open}\n")
+    falado = (ficha_formato(c.get("formato")).get("roteiro") or {}).get("capitulo_falado", True)
     for i, (nome, texto) in enumerate(partes, 1):
         bd = vd / "blocos" / f"{i:02d}"
         bd.mkdir(parents=True)
-        # a linha "# Nome" não é narrada (gerar_narracao.py ignora #); a linha "Nome." logo abaixo é
-        (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
+        if falado:
+            # a linha "# Nome" não é narrada (gerar_narracao.py ignora #); a linha "Nome." logo abaixo é
+            (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
+        else:
+            (bd / "roteiro.txt").write_text(f"# {nome}\n{MARCA_CAPITULO}\n{texto}\n")
     gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
     return vd.name
 

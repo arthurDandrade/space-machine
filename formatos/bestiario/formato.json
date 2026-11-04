@@ -60,5 +60,10 @@
   "estilo": "Flat 2D vector illustration for an animated science documentary: clean geometric shapes, smooth gradients, soft simple shading, thin or no outlines, muted dark palette (deep teal, navy, slate grey) with a few warm accents. A wide background scene with empty space in the middle and no creature or people unless the scene asks for them. No text, no letters, no logos, no watermark, no frame or border. Never depict a real, identifiable person or a real historical event.",
   "estilo_recorte": "Flat 2D vector illustration of a single subject for an animated science documentary: clean geometric shapes, simple soft shading, gentle light from the upper left, thin or no outline. The whole subject is fully visible and centered with generous empty margin around it, on a perfectly plain flat light grey background with no shadow, no ground and no scenery. No text, no letters, no logos, no watermark. Never depict a real, identifiable person."
  },
- "fundo_padrao": "noite"
+ "fundo_padrao": "noite",
+ "roteiro": {
+  "_sobre": "Estrutura do roteiro do formato (conhecimento/01 - Formato/Estrutura do Roteiro.md): uma história contínua, capítulos NÃO falados (o nome aparece só na tela e na descrição). capitulo_falado false = o gestao.criar_video não põe o 'Nome.' narrado e o bloco não tem card de título; o gerar_ae.py mostra o marcador de capítulo. modelo = vai para os prompts do canal quando ele é criado.",
+  "capitulo_falado": false,
+  "modelo": "roteiro_modelo.md"
+ }
 }

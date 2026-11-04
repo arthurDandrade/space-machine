@@ -34,6 +34,9 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   para criar tipos de asset novos, como `gravura` e `ilustracao`).
 - `ilustracao`: modelo, estilo e quantidade das imagens GERADAS pelo Gemini (`motor/busca/scripts/ilustrar.py`, fonte
   `gemini` da busca). O canal pode trocar qualquer campo em `canal.json › ilustracao`.
+- `roteiro`: `capitulo_falado` (false = o capítulo não é narrado: o `gestao.criar_video` não põe a linha "Nome." e o
+  bloco não tem card de título, como no bestiário) e `modelo` (o modelo de roteiro do formato, copiado para os prompts
+  do canal quando ele é criado).
 - Na `biblioteca_cenas.json`: `metas.max_repeticoes` (quantas vezes um tipo de cena volta no bloco; padrão 1) e
   `texto_do_layout` (tipos de cena cujo texto é parte do desenho e não conta no limite de texto sobre imagem).
 

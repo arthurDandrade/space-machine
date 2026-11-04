@@ -22,6 +22,22 @@ Todo estado pode ter `"opcoes": {"fundo": "mar"|"noite"|"grade"|"escuro"}` (sem 
 - **S1 lado a lado**: dois cards com `"acima": ["Legend", "gatilho"]` / `"acima": ["Reality", "gatilho"]` (ou "You" × "Kraken").
 - Título do capítulo: `"titulo": {"tipo": "recorte", "elenco": "kraken", "descricao": ..., "buscas": [...]}`: o nome grande à esquerda e a criatura do elenco nadando à direita. Cold open: `"sem_titulo": true`.
 
+## Do roteiro às cenas
+O roteiro é uma história contínua (conhecimento/01 - Formato/Estrutura do Roteiro.md); cada bloco é um capítulo SEM nome falado (o editor põe o marcador de capítulo na tela sozinho). Cada batida do molde tem a sua cena:
+| Batida do roteiro | Cena |
+|---|---|
+| "Picture this. You're…" (cold open) | C1 do "você" (contraluz, câmera fechando) + marcadores ✓ da crença ("Sharks: rare ✓") |
+| "Then you feel it." / a quebra | vulto passando (`so_vulto`) ou F1 vermelha |
+| "So let's talk about why you'd never want to meet one." | C1 da criatura chegando + `nome` |
+| A pergunta-gancho do capítulo ("Which raises an obvious question. What does it eat?") | F1 vermelha com a pergunta |
+| "First, the size." + comparação | E1 (régua) e/ou N1 (ícones) — a criatura fica, os gráficos somam |
+| Anatomia, poderes, sentidos | C1 em câmera contínua: inteiro → médio → close/detalhe no que é dito, com `circulo`, `rotulo`, `carimbo` |
+| Fonte antiga, artigo, relato com data | D1 (com a gravura) ou T1 (vários anos) |
+| Número que choca | N2 |
+| "What would you actually do? … You could…" | L1 com os itens riscados e o veredito |
+| A virada (o animal real, a explicação) | S1 lenda × realidade, R1 filmagem real em tela cheia |
+| Fecho que volta à abertura | o mesmo C1 do cold open (o mesmo "você", o mesmo lugar) |
+
 ## Regras (o `storyboard.py` confere as que dá para medir)
 1. **Algo novo a cada 4–6 s**: troque de cena quando a ideia muda; gráfico (L1, N2, T1, F1, D1) e câmera nova na mesma criatura contam como mudança. Prefira mover a câmera a trocar de imagem enquanto a narração fala da mesma criatura.
 2. **≥ 5 tipos de cena por bloco**, cada um no máximo 4 vezes. C1 é a base; todo número que importa vira E1/N1/N2; toda fonte antiga vira D1 ou T1; o "what would you do" é L1.
