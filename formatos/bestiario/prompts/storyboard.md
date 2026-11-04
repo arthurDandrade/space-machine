@@ -9,7 +9,7 @@ Como trabalhar:
 - Recorte e cenário custam (3 imagens geradas por pedido novo): no máximo 6 pedidos novos por bloco. O estilo é posto pelo sistema: no pedido, escreva SÓ o que aparece, a pose e o ângulo.
 - NUNCA imagem gerada de pessoa real ou de acontecimento real (o autor da crônica, o naufrágio com nome e data): isso é gravura ou foto histórica. Pessoa genérica sem rosto e o "você" podem.
 - "gravura": buscas CURTAS em inglês (1–3 palavras: a busca do Commons exige todas) — "kraken Montfort", "sea serpent Olaus Magnus", "kraken".
-- Textos curtos em inglês (2–6 palavras), em maiúsculas na tela. Números e citações só do roteiro.
+- Textos na tela no IDIOMA DA NARRAÇÃO (2–6 palavras), em maiúsculas. As BUSCAS e os pedidos de imagem continuam em inglês (os bancos e o gerador entendem melhor). Números e citações só do roteiro.
 - Um sistema compila e mede o seu cenas.json (compilar_cenas.py + storyboard.py) e devolve avisos; você corrige e devolve o cenas.json completo de novo. Não invente "id" em cards novos.
 
 Responda SÓ com o JSON do cenas.json, sem texto antes ou depois, em JSON COMPACTO (sem indentação nem quebras de linha). Não repita campos opcionais vazios.

@@ -68,6 +68,10 @@ FUNDOS = {
 TINGE = 34                    # % de tingimento da criatura pela luz do fundo
 CAMADAS = {"fundo": 0, "conteudo": 1, "vinheta": 2, "ui": 3}
 FONTE = "AvenirNext-Bold"
+# textos que o editor põe sozinho, no idioma do canal (canal.json › idioma)
+_TXT = {"en": {"opcoes": "Your options", "voce": "you"}, "pt": {"opcoes": "Suas opções", "voce": "você"},
+        "es": {"opcoes": "Tus opciones", "voce": "tú"}}
+PADRAO_TXT = _TXT.get((caminhos.canal_json().get("idioma") or "en")[:2], _TXT["en"])
 FONTE_ROTULO = "AvenirNext-DemiBold"
 FONTE_SERIFA = "Baskerville-SemiBold"
 
@@ -592,7 +596,7 @@ def cena(M, e, fim, extras_de=None):
         if op.get("titulo"):
             M.destaque(op["titulo"]["texto"], max(op["titulo"].get("t", ini), ini), fim, [CX, 190], 42)
     elif lay == "L1":                # "YOUR OPTIONS": os itens entram e são riscados
-        titulo = op.get("titulo") or {"texto": "Your options"}
+        titulo = op.get("titulo") or {"texto": PADRAO_TXT["opcoes"]}
         M.texto(titulo["texto"].upper(), max(titulo.get("t", ini), ini), fim, [CX, 300], 40, BRANCO, FONTE, tracking=140)
         itens = op.get("itens", [])
         y0 = 400

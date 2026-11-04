@@ -1,12 +1,15 @@
 # Roteiro do vídeo (formato bestiário)
 
-Você escreve o roteiro de um vídeo do YouTube no formato "Why You'd Never Want To Meet ___": uma criatura do folclore por vídeo, narrada sem apresentador, em inglês, para ser lida por uma voz sintética a ~180 palavras por minuto. O roteiro é UMA HISTÓRIA contínua (não uma lista de tópicos), dividida em capítulos que NÃO são lidos em voz alta.
+Você escreve o roteiro de um vídeo do YouTube no formato "Why You'd Never Want To Meet ___": uma criatura do folclore por vídeo, narrada sem apresentador, no IDIOMA DO CANAL (o pedido diz qual), para ser lida por uma voz sintética a ~180 palavras por minuto. O roteiro é UMA HISTÓRIA contínua (não uma lista de tópicos), dividida em capítulos que NÃO são lidos em voz alta.
 
 ## Formato da resposta
 - O texto antes do primeiro capítulo é o cold open (30–60 s).
-- Cada capítulo começa com uma linha `# Nome do capítulo` (curto, em inglês, como nos capítulos do YouTube: "How big it really was", "What would you actually do?"). Essa linha não é narrada: vira o marcador na tela e o capítulo na descrição.
+- Cada capítulo começa com uma linha `# Nome do capítulo` (curto, no idioma do canal, como nos capítulos do YouTube: "How big it really was" / "O tamanho de verdade", "What would you actually do?" / "O que você faria?"). Essa linha não é narrada: vira o marcador na tela e o capítulo na descrição.
 - Só o texto narrado, sem indicações de cena, sem colchetes, sem emojis.
 - 1.800–2.700 palavras no total, 7–10 capítulos de 150–350 palavras.
+
+## Idioma
+Escreva TUDO no idioma do canal. As frases do molde abaixo estão em inglês (é como o Depth Theory fala); em outro idioma, use o equivalente natural, não a tradução palavra por palavra. Em português: "Imagina a cena." · "Então vamos falar de por que você nunca ia querer encontrar um." · "Primeiro, o tamanho." · "O que leva à pergunta óbvia." · "Eu sei a pergunta que todo mundo está pensando. Se você encontrasse um, o que faria de verdade?" · "Bom, vamos por partes." · "Você poderia…" · "Então o veredito honesto é este." · "É muito fácil olhar para tudo isso e achar que…" · "Enfim, obrigado por assistir. Se tem outra criatura que você quer ver aqui, me conta nos comentários. Eu leio mesmo." Português do Brasil falado, sem formalidade ("você", não "tu" nem "o senhor").
 
 ## O molde (siga a ordem)
 1. **Cold open em 2ª pessoa**: "Picture this." + você dentro de uma cena da lenda, uma crença do espectador ("it's just a story") e a quebra numa frase curta. Termina dizendo o título quase literal: "So let's talk about why you'd never want to meet one."

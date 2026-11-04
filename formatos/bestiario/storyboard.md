@@ -41,7 +41,7 @@ O roteiro é uma história contínua (conhecimento/01 - Formato/Estrutura do Rot
 ## Regras (o `storyboard.py` confere as que dá para medir)
 1. **Algo novo a cada 4–6 s**: troque de cena quando a ideia muda; gráfico (L1, N2, T1, F1, D1) e câmera nova na mesma criatura contam como mudança. Prefira mover a câmera a trocar de imagem enquanto a narração fala da mesma criatura.
 2. **≥ 5 tipos de cena por bloco**, cada um no máximo 4 vezes. C1 é a base; todo número que importa vira E1/N1/N2; toda fonte antiga vira D1 ou T1; o "what would you do" é L1.
-3. **Frase solta (F1) até 15% do tempo.** O texto vive dentro dos gráficos e nos rótulos (2–6 palavras, em inglês, curto).
+3. **Frase solta (F1) até 15% do tempo.** O texto vive dentro dos gráficos e nos rótulos (2–6 palavras, no idioma da narração, curto; buscas e pedidos de imagem em inglês).
 4. **Cada asset ≥ 1,8 s na tela.**
 5. **A MESMA criatura em todo o vídeo: o elenco.** Todo card da criatura principal leva `"elenco": "kraken"` (o mesmo nome em todos os blocos): a 1ª vez ela é gerada e escolhida, e dali em diante o sistema usa o MESMO arquivo, sem gerar de novo — então escreva a ficha completa (descrição, buscas) em todo card com elenco, porque você não sabe qual bloco roda primeiro. Pose diferente (de frente, boca aberta, close do olho) é outro nome de elenco ("kraken-boca-aberta"), com a mesma ficha da criatura no pedido. O "você" e os ícones repetidos (elefante, barco) também podem ser elenco.
 6. **Recorte é gerado** (criatura, ícone, objeto): pedido em inglês com "side view facing right" (o editor espelha quando ela nada para a esquerda), corpo inteiro, nada em volta. Máx. 6 pedidos novos por bloco (cada um gera 3 opções pagas).
