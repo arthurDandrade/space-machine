@@ -303,7 +303,7 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
         registrar(ctx, etapa, modelo, {}, 0, int((time.time() - t0) * 1000), False, "timeout")
         raise ErroClaude(f"{etapa}: o claude não respondeu em {timeout or cfg['claude_timeout_s']} s")
 
-    final = None
+    final, textos = None, []
     for linha in r.stdout.splitlines():
         try:
             d = json.loads(linha)
@@ -311,6 +311,9 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
             continue
         if d.get("type") == "result":
             final = d
+        elif d.get("type") == "assistant":
+            textos += [c.get("text", "") for c in (d.get("message") or {}).get("content") or []
+                       if isinstance(c, dict) and c.get("type") == "text"]
     if not final:
         erro = (r.stderr or r.stdout).strip()[-500:]
         registrar(ctx, etapa, modelo, {}, 0, int((time.time() - t0) * 1000), False, erro)
@@ -327,7 +330,11 @@ def chamar(etapa, sistema, texto, imagens=(), schema=None, modelo=None, ctx=None
         raise ErroClaude(f"{etapa}: {msg}")
     resposta = final.get("structured_output")
     if texto_livre:
-        resposta = {"texto": final.get("result") or ""}
+        # resposta grande (o cenas.json do vídeo inteiro, 2026-11-05) passa do limite de saída: o claude continua
+        # sozinho em outra mensagem e o "result" traz só a última parte. Juntas, as partes são a resposta inteira.
+        resultado = final.get("result") or ""
+        junto = "".join(textos)
+        resposta = {"texto": junto if len(textos) > 1 and len(junto) > len(resultado) else resultado}
     if resposta is None:
         try:
             resposta = _extrair_json(final.get("result"))

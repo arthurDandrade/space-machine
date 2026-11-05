@@ -160,6 +160,11 @@ class RodadaVideo(Rodada):
             it["nome"] = c["nome"]
         return ""
 
+    _PEDE_TROCA = ("Corrija. Devolva SÓ as cenas que mudaram, em JSON compacto: {\"trocar\": {\"<id do capítulo>\": "
+                   "{\"<índice da cena nos itens desse capítulo, começando em 0>\": {<a cena inteira nova>}, \"<índice>\": "
+                   "null para apagar}}}. Índice além do fim acrescenta. Para distribuir melhor as variações, troque "
+                   "cenas em capítulos diferentes. Se um aviso for inevitável, inclua \"_avisos_aceitos\": \"motivo\".")
+
     def storyboard(self):
         if (self.p / "plano.json").exists() and (self.p / "storyboard_video.md").exists():
             return "já existe"
@@ -172,6 +177,17 @@ class RodadaVideo(Rodada):
         voltas = self.cfg.get("storyboard_voltas", 4)
         timeout = int(self.cfg.get("storyboard_timeout_s", 2400) * 1.5)
         ok, retorno = False, ""
+        # já tem um cenas.json (rodada parada no meio, ou escrito à mão): a 1ª volta do vídeo inteiro custa ~850 mil
+        # tokens equiv. (medido em 2026-11-05) — então mede o que existe e pede só a correção
+        atual = ler_json(self.p / "cenas.json") if (self.p / "cenas.json").exists() else None
+        if atual and not self._acertar_itens(atual):
+            gravar_json(self.p / "cenas.json", atual)
+            ok, retorno = self._compilar_e_medir()
+            if ok:
+                return "ok (o cenas.json que já existia passou)"
+            texto += ("\n\n## cenas.json que já existe (feito antes; NÃO reescreva o vídeo, corrija só o que os "
+                      "avisos abaixo apontam)\n" + json.dumps(atual, ensure_ascii=False, separators=(",", ":"))
+                      + "\n\n" + retorno + "\n\n" + self._PEDE_TROCA)
         for volta in range(voltas + 1):
             self.marcar("storyboard", "rodando", f"volta {volta + 1} de {voltas + 1}")
             r = motor.chamar("storyboard", sistema, texto, canal=self.c, ctx=self.ctx, timeout=timeout,
@@ -215,11 +231,7 @@ class RodadaVideo(Rodada):
                 return f"ok em {volta + 1} volta(s)"
             if volta == voltas:
                 break
-            texto = (retorno + "\n\nCorrija. Devolva SÓ as cenas que mudaram, em JSON compacto: {\"trocar\": "
-                     "{\"<id do capítulo>\": {\"<índice da cena nos itens desse capítulo, começando em 0>\": {<a cena "
-                     "inteira nova>}, \"<índice>\": null para apagar}}}. Índice além do fim acrescenta. Para "
-                     "distribuir melhor as variações, troque cenas em capítulos diferentes. Se um aviso for "
-                     "inevitável, inclua \"_avisos_aceitos\": \"motivo\".")
+            texto = retorno + "\n\n" + self._PEDE_TROCA
         if (self.p / "plano.json").exists() and (self.p / "storyboard_video.md").exists():
             aceitos = (ler_json(self.p / "cenas.json", {}) or {}).get("_avisos_aceitos")
             return f"com avisos ({'aceitos: ' + str(aceitos)[:200] if aceitos else retorno[-300:]})"
