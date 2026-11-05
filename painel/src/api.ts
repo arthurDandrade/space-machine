@@ -190,6 +190,28 @@ export interface Video {
   tem_capa: boolean;
   capa_v: number;
   thumb: { url: string; nome: string } | null;
+  fluxo: "blocos" | "video";
+}
+
+// fluxo "video" (2026-11-05): o vídeo inteiro anda junto (space_machine/rodar_video.py)
+export interface ProducaoVideo {
+  rodando: boolean;
+  parado: { etapa?: string; motivo?: string } | null;
+  etapa_atual: string;
+  feito: Record<string, boolean>;
+  atual: string;
+  etapas: { id: string; rotulo: string; status: string; detalhe: string; quando: string }[];
+  capitulos: { nn: string; topico: string; narrado: boolean; transcrito: boolean; qa: string; aprovado: boolean; folha: string | null }[];
+  conferir: { id: string; texto: string; tipo: string; descricao: string; arquivo: string | null }[];
+  conferidos: number;
+  travar_conferir: boolean;
+  assets_total: number;
+  assets_prontos: number;
+  storyboard: string;
+  mp4: string | null;
+  mp4_tamanho: number;
+  log_rodar: string;
+  log_etapa: { nome: string; texto: string } | null;
 }
 
 export interface Esperando {
@@ -290,6 +312,7 @@ export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
   publicacao: Publicacao;
   consumo_detalhe: { chamadas?: number; equivalente?: number };
   etapas: { id: string; rotulo: string }[];
+  producao: ProducaoVideo | null;
 }
 
 export interface DetalheBloco {

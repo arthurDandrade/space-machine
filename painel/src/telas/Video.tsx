@@ -11,6 +11,7 @@ import { copiarTexto, TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { BarraThumb, soltarArquivo, useSoltar, useThumbnail } from "../componentes/Thumbnail";
 import { compacto, haQuanto, useT } from "../textos";
+import { AndamentoVideo, ProducaoVideo } from "./ProducaoVideo";
 
 export const useVideo = (canal: string, video: string) =>
   useQuery({ queryKey: ["video", canal, video], queryFn: () => pegar<DetalheVideo>(`/api/c/${canal}/v/${video}`) });
@@ -328,6 +329,7 @@ export function VideoTela() {
   const t = useT();
   const [params, setParams] = useSearchParams();
   const aba = params.get("aba") === "publicacao" ? "publicacao" : "blocos";
+  const inteiro = !!v?.producao;      // fluxo "video": o vídeo inteiro anda junto (ProducaoVideo.tsx)
   const [filtro, setFiltro] = useState<Filtro>("todos");
   if (error) throw error;
   if (!v || !dc) return <div className="carregando">{t("app.carregando")}</div>;
@@ -353,6 +355,7 @@ export function VideoTela() {
       <div className="video-topo">
         <CapaVideo canal={canal} v={v} />
         <div className="andamento cartao">
+          {inteiro ? <AndamentoVideo canal={canal} v={v} /> : <>
           <div className="parte">
             <div className="pct"><b>{pct}%</b><span>{t("app.video.blocos_entregues", { e: v.entregues, n: v.n_blocos })}</span></div>
             <div className="segmentos grossos">{v.blocos.map((b) => <i key={b.nn} className={b.estado} title={`${b.nn} · ${b.topico}`} />)}</div>
@@ -367,6 +370,7 @@ export function VideoTela() {
             <ControleFila canal={canal} v={v} />
           </div>
           <VideoFinal canal={canal} v={v} />
+          </>}
           <p className="sub rodape-andamento">
             {t("app.video.claude", { n: v.consumo_detalhe.chamadas ?? 0, tokens: compacto(v.consumo_detalhe.equivalente ?? 0) })}
             {" · "}{t("app.video.mexido", { quando: haQuanto(t, v.mudou) })}
@@ -375,11 +379,13 @@ export function VideoTela() {
       </div>
 
       <div className="abas">
-        <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}>{t("app.video.aba_blocos")} <span>{v.n_blocos}</span></button>
+        <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}>{t(inteiro ? "app.video.aba_producao" : "app.video.aba_blocos")}{!inteiro && <span>{v.n_blocos}</span>}</button>
         <button className={aba === "publicacao" ? "on" : ""} onClick={() => setParams({ aba: "publicacao" })}>{t("app.video.aba_publicacao")}</button>
       </div>
 
-      {aba === "blocos" ? (
+      {aba === "blocos" && inteiro ? (
+        <ProducaoVideo canal={canal} v={v} />
+      ) : aba === "blocos" ? (
         <>
           <div className="pilulas" style={{ marginBottom: 16 }}>
             {filtros.map((f) => {

@@ -50,6 +50,9 @@ class Parada(Exception):
 
 
 class Rodada:
+    PROMPT_STORYBOARD = "storyboard"        # o do vídeo inteiro (rodar_video.RodadaVideo) é "storyboard_video"
+    ETAPAS = ETAPAS
+
     def __init__(self, bloco, obs=""):
         self.p = Path(bloco).resolve()
         self.slug, self.c = canal_do_bloco(self.p)
@@ -114,7 +117,7 @@ class Rodada:
                                     arquivo_formato("storyboard.exemplo_cenas", fmt)]
                         if x.exists() and x.parent != self.p), None)
         partes = [
-            motor.prompt("storyboard", self.c),
+            motor.prompt(self.PROMPT_STORYBOARD, self.c),
             "# Regras do storyboard (o storyboard.py mede as que dá)\n"
             + arquivo_formato("storyboard.regras", fmt).read_text(),
             "# Formato do cenas.json (topo do compilar_cenas.py)\n" + doc,
@@ -482,20 +485,20 @@ class Rodada:
 
     def _rodar(self, de=None, ate=None):
         self.de = de
-        i0 = ETAPAS.index(de) if de else 0
-        i1 = ETAPAS.index(ate) if ate else len(ETAPAS) - 1
+        i0 = self.ETAPAS.index(de) if de else 0
+        i1 = self.ETAPAS.index(ate) if ate else len(self.ETAPAS) - 1
         self.estado.pop("parado", None)
         # antes de qualquer etapa: o claude responde com os modelos que este trecho vai usar?
         # (versão velha, login vencido ou modelo errado paravam o bloco no meio da etapa)
         try:
-            motor.checar_claude(ETAPAS[i0:i1 + 1], canal=self.c)
+            motor.checar_claude(self.ETAPAS[i0:i1 + 1], canal=self.c)
         except motor.ErroClaude as e:
             limite = isinstance(e, motor.LimiteDeUso)
             self.estado["parado"] = {"etapa": "checagem do Claude",
                                      "motivo": f"{'limite de uso' if limite else 'erro do Claude'}: {e}"}
             gravar_json(self.arq_estado, self.estado)
             return False
-        for etapa in ETAPAS[i0:i1 + 1]:
+        for etapa in self.ETAPAS[i0:i1 + 1]:
             self.marcar(etapa, "rodando")
             t0 = time.time()
             try:
@@ -531,6 +534,14 @@ class Rodada:
 
 
 def main(argv=None):
+    import sys
+    argv = sys.argv[1:] if argv is None else argv
+    # a pasta de um VÍDEO do fluxo novo (o vídeo inteiro, video.py) vai para o rodar_video
+    from . import video
+    alvo = Path(argv[0]) if argv and not argv[0].startswith("-") else None
+    if alvo and (video.fluxo_video(alvo) or (alvo.name == "producao" and video.fluxo_video(alvo.parent))):
+        from .rodar_video import main as m
+        return m(argv)
     ap = argparse.ArgumentParser(prog="space_machine rodar")
     ap.add_argument("bloco")
     ap.add_argument("--de", choices=ETAPAS)

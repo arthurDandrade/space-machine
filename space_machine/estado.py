@@ -146,6 +146,72 @@ def bloco(caminho, video_dir=None):
     }
 
 
+# etapas do vídeo inteiro (fluxo "video", rodar_video.py) e o rótulo de cada uma no painel
+ETAPAS_VIDEO = [("narracao", "Narração"), ("transcrever", "Transcrição"), ("juntar", "Juntar capítulos"),
+                ("storyboard", "Storyboard"), ("buscar", "Busca"), ("escolher", "Assets"), ("montar", "Render e QA"),
+                ("entregar", "Vídeo final")]
+
+
+def producao_video(vd):
+    """Andamento do VÍDEO INTEIRO (fluxo "video"): <vídeo>/producao/_estudio/estado.json + o que os arquivos dizem
+    que já está feito, os capítulos (narração, transcrição, QA) e o MP4 final."""
+    from . import video
+    vd = Path(vd)
+    p = video.pasta(vd)
+    est = _json(p / "_estudio" / "estado.json", {}) or {}
+    pid = p / "_estudio" / "pid"
+    rodando = pid.exists() and _vivo(pid.read_text().strip())
+    caps = video.capitulos(vd)
+    plano = _json(p / "plano.json")
+    n_assets = 0
+    for item in (plano or {}).get("itens", []):
+        n_assets += 1 if item.get("titulo_asset") else 0
+        n_assets += sum(len(c.get("assets", [])) for c in item.get("cenas", []))
+    man = (_json(p / "manifesto.json", {}) or {}).get("assets", [])
+    escolhas = _json(p / "escolhas.json", {}) or {}
+    pedacos = _json(p / "edicao" / "pedacos.json", []) or []
+    qa = {}
+    for c in caps:
+        md = p / "edicao" / f"qa_{c.name}.md"
+        qa[c.name] = {"md": md.read_text() if md.exists() else "", "aprovado": _aprovado(md),
+                      "folha": str(p / "edicao" / f"qa_{c.name}.jpg") if (p / "edicao" / f"qa_{c.name}.jpg").exists() else None}
+    fim = _json(vd / "final" / "estado.json", {}) or {}
+    mp4 = Path(fim.get("mp4") or vd / "final" / "-")
+    renderizado = bool(pedacos) and all(Path(x["saida"]).exists() for x in pedacos)
+    feito = {
+        "narracao": bool(caps) and all(any(c.glob("narracao.*")) for c in caps),
+        "transcrever": bool(caps) and all((c / "_work" / "palavras.json").exists() for c in caps),
+        "juntar": video.atualizado(vd),
+        "storyboard": plano is not None and (p / "storyboard_video.md").exists(),
+        "buscar": (p / "_work" / "candidatos").is_dir() and any((p / "_work" / "candidatos").glob("*/candidatos.json")),
+        "escolher": bool(plano) and n_assets > 0
+                    and len(man) + sum(1 for e in escolhas.values() if e.get("pular")) >= n_assets,
+        "montar": renderizado and all(qa.get(x["nn"], {}).get("aprovado") for x in pedacos),
+        "entregar": mp4.is_file() and renderizado
+                    and mp4.stat().st_mtime >= max(Path(x["saida"]).stat().st_mtime for x in pedacos),
+    }
+    atual = ""
+    for k, _ in ETAPAS_VIDEO:
+        if not feito[k]:
+            break
+        atual = k
+    sb = p / "storyboard_video.md"
+    return {
+        "rodando": rodando, "parado": None if rodando else est.get("parado"), "etapa_atual": est.get("atual") or "",
+        "feito": feito, "atual": atual,
+        "etapas": [{"id": e, "rotulo": r, **{k: (est.get("etapas", {}).get(e) or {}).get(k, "")
+                                            for k in ("status", "detalhe", "quando")}} for e, r in ETAPAS_VIDEO],
+        "capitulos": [{"nn": c.name, "topico": topico(c), "narrado": any(c.glob("narracao.*")),
+                       "transcrito": (c / "_work" / "palavras.json").exists(), "qa": qa[c.name]} for c in caps],
+        "assets_total": n_assets, "assets_prontos": len(man),
+        "conferir_pendentes": conferir_pendentes(p), "conferidos": len(_para_conferir(p)) - len(conferir_pendentes(p)),
+        "travar_conferir": bool(config().get("travar_conferir")),
+        "storyboard": sb.read_text() if sb.exists() else "",
+        "mp4": str(mp4) if mp4.is_file() else None,
+        "mudou": max([f.stat().st_mtime for f in (p / "_estudio").glob("*")] + [0]) if (p / "_estudio").exists() else 0,
+    }
+
+
 def _vivo(pid):
     import os
     try:
@@ -185,9 +251,14 @@ def video(canal_slug, video_slug, com_blocos=True):
     blocos = blocos_do_video(vd) if com_blocos else []
     n = len(blocos)
     entregues = sum(1 for b in blocos if b["feito"]["entregue"])
+    from .video import fluxo_video
+    prod = producao_video(vd) if fluxo_video(vd) else None
+    if prod:            # fluxo "video": os capítulos não são entregues um a um; o vídeo inteiro é
+        entregues = n if prod["feito"]["entregar"] else 0
     return {"canal": canal_slug, "slug": video_slug, "titulo": titulo_video(vd), "pasta": str(vd),
             "blocos": blocos, "n_blocos": n, "entregues": entregues,
-            "mudou": max([vd.stat().st_mtime] + [b["mudou"] for b in blocos]),
+            "fluxo": "video" if prod else "blocos", "producao": prod,
+            "mudou": max([vd.stat().st_mtime] + [b["mudou"] for b in blocos] + [prod["mudou"] if prod else 0]),
             "consumo": consumo(canal=canal_slug, video=video_slug), "fila": _fila(vd)}
 
 

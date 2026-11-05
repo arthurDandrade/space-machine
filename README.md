@@ -2,19 +2,19 @@
 
 Produz vídeos no formato **"___ Explained"** para os seus canais do YouTube. É uma lista de tópicos narrada, sem apresentador, com cards de foto e vídeo sobre um fundo de papel, textos grandes e animação de entrada e saída.
 
-Você cola o roteiro. O Space Machine faz o resto, bloco por bloco:
-1. gera a narração;
+Você cola o roteiro. O Space Machine faz o resto:
+1. gera a narração, capítulo por capítulo;
 2. transcreve;
-3. planeja as cenas;
+3. planeja as cenas do vídeo inteiro de uma vez (assim cada capítulo tem uma cara e o vídeo não fica repetitivo);
 4. busca as imagens e os vídeos em bancos livres e na web;
 5. escolhe os assets;
-6. monta e renderiza no After Effects;
-7. confere a qualidade.
+6. monta e renderiza o vídeo com o FFmpeg, sem After Effects;
+7. confere a qualidade e entrega um MP4 só.
 
 O Claude só entra nas decisões: planejar as cenas, escolher os assets e corrigir o que o controle de qualidade reprovar.
 
 ## O que você precisa
-- **Mac** com **Adobe After Effects** (o editor).
+- **Mac**. O **Adobe After Effects** só é preciso para os vídeos feitos antes de 2026-11-05, que eram montados nele bloco a bloco.
 - **Assinatura do Claude** e o **Claude Code** instalado (`npm install -g @anthropic-ai/claude-code`).
 - **Homebrew** (https://brew.sh).
 - Chaves grátis de **Pixabay** ou **Pexels** (vídeos e fotos livres).
@@ -55,10 +55,9 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 2. **Regras do tema** (na barra lateral do canal): clique em **Sugerir com o Claude** e revise. São as regras que evitam os erros típicos do assunto. Exemplo: num canal de futebol americano, "football" traz soccer; num canal de culinária, "turkey" traz o país.
 3. **Chaves** (na barra lateral do canal): o token do Claude (`claude setup-token` no Terminal) e as chaves do canal.
 4. **Novo vídeo**: cole o roteiro. Cada tópico começa com uma linha `# Nome do tópico`, e a divisão em blocos aparece enquanto você digita. O texto antes do 1º tópico vira o cold open.
-5. Na página do vídeo, clique em **Produzir**. Os blocos rodam até 3 por vez e aparecem prontos em `edicao/bloco N.mp4` (uma prévia em meia resolução, para conferir; o vídeo final sai do projeto do After de cada bloco, em resolução cheia). Para um bloco só, use o **Produzir** no card dele (ou **Continuar**, se ele parou no meio).
-6. Quer um Reels de um bloco? Na página dele, **Fazer Reels** monta o bloco de novo na vertical (1080×1920) e salva em `reels/bloco N.mp4`. É só para os blocos que você escolher; o resto não muda.
-7. Com os blocos prontos, **Juntar no After** monta `final/final.aep` com o projeto de cada bloco em sequência (e, se marcar, renderiza o MP4 final, num render só).
-8. A **thumbnail** do vídeo vai na página dele (arraste, clique ou cole com ⌘V): ela vira a capa do vídeo no painel, e o painel avisa se passar dos 2 MB do YouTube ou não for 16:9.
+5. Na página do vídeo, clique em **Produzir o vídeo**. Ele narra e transcreve cada capítulo, planeja as cenas do vídeo inteiro, busca e escolhe os assets, renderiza (em 1920×1080, uns 15 min para um vídeo de 12) e entrega `final/<título>.mp4`, com a trilha do canal se houver. A aba **Produção** mostra cada etapa (clique numa para rodar a partir dela), o vídeo, o que conferir, o QA de cada capítulo e o storyboard.
+6. Vídeos criados antes de 2026-11-05 continuam bloco a bloco: **Produzir** roda até 3 blocos por vez (prévias em `edicao/bloco N.mp4`), **Fazer Reels** na página de um bloco faz a versão vertical, e **Juntar no After** monta `final/final.aep` com os blocos em sequência.
+7. A **thumbnail** do vídeo vai na página dele (arraste, clique ou cole com ⌘V): ela vira a capa do vídeo no painel, e o painel avisa se passar dos 2 MB do YouTube ou não for 16:9.
 
 Os prompts que você usa no canal (o de roteiro, o de títulos…) ficam na aba **Prompts**: cada um é um `.md` em `canais/<canal>/prompts/`, com copiar em um clique, editar/visualizar e importar os `.md` que você já tem.
 
@@ -96,7 +95,8 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
 ./spacemachine                          # painel (preso ao terminal)
 ./spacemachine abrir                    # abre o painel; se não estiver ligado, liga em segundo plano
 ./spacemachine atalho                   # cria o app Space Machine na área de trabalho
-./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada
+./spacemachine rodar <pasta do vídeo>   # o vídeo inteiro, do roteiro ao MP4 final (vídeos novos)
+./spacemachine rodar <pasta do bloco>   # um bloco do roteiro até a prévia aprovada (vídeos de antes de 2026-11-05)
 ./spacemachine fila <pasta do vídeo>    # todos os blocos, até 3 por vez
 ./spacemachine final <pasta do vídeo>   # junta os blocos entregues num projeto do After (--render: e o MP4)
 ./spacemachine atualizar                # traz a versão nova do GitHub (--conferir: só olha; --sim: sem perguntar)

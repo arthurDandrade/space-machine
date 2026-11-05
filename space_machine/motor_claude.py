@@ -43,7 +43,8 @@ class LimiteDeUso(ErroClaude):
 
 # etapa → regra do tema do canal (canal.json › regras) que vai junto no prompt
 REGRA_DA_ETAPA = {"escolher_imagem": "escolha", "escolher_video": "escolha", "conferir_asset": "escolha",
-                  "confirmar_trecho": "escolha", "storyboard": "storyboard", "qa": "storyboard"}
+                  "confirmar_trecho": "escolha", "storyboard": "storyboard", "storyboard_video": "storyboard",
+                  "qa": "storyboard"}
 
 
 def arquivo_prompt(nome, formato=None):
@@ -74,7 +75,7 @@ def prompt(nome, canal=None, formato=None):
 # etapas do `rodar` que chamam o Claude → chaves de ["modelos"] (canal.json do canal) que elas usam
 MODELOS_DA_ETAPA = {"storyboard": ["storyboard"],
                     "escolher": ["escolher_imagem", "escolher_video", "confirmar_trecho", "conferir"],
-                    "editar": ["qa"]}
+                    "editar": ["qa"], "montar": ["qa"]}
 CHECAGEM = DADOS / "claude_checagem.json"
 CHECAGEM_VALE_S = 15 * 60
 
@@ -185,6 +186,9 @@ def _env(etapa=None):
     # tokens em vez de 1,5–8,7 mil). De medium para cima, o Claude raciocina o quanto quiser.
     if etapa and config().get("esforco", {}).get(etapa, "low") == "low":
         env["MAX_THINKING_TOKENS"] = "0"
+    if etapa in ("storyboard", "qa"):
+        # o cenas.json do vídeo inteiro (fluxo "video") passa de 20 mil tokens num vídeo de 11 min
+        env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = "64000"
     if ENV.exists():
         for linha in ENV.read_text().splitlines():
             k, _, v = linha.partition("=")

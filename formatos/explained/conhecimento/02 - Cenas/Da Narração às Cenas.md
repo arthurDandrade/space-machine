@@ -28,7 +28,8 @@ Motivo: em [[Who Makes the NFL Possible]] 76% das cenas ficaram em B/C1/A, só 1
 6. **Densidade-alvo: 20–25 assets por minuto** (sequências consomem 2–5 assets cada).
 7. **Nunca o mesmo asset duas vezes.** Para repetir um jogador, outra foto/outro momento.
 8. **Variedade:** **nenhum código da biblioteca repete no mesmo bloco** (2026-10-13; antes era só "não 3 seguidos") e nunca 3 cards únicos (B) seguidos. Nos 21 blocos do Every NFL Position o que mais repetia era A1, C1 e B1. O `storyboard.py` avisa e o storyboard corrige.
-9. Trabalhe **um item por vez** (planejar o vídeo inteiro de uma vez fica superficial).
+   **No vídeo inteiro (fluxo "video", 2026-11-05)** a regra passou a valer para o vídeo: medido no Worst Draft Pick e no Draft Explained, feitos bloco a bloco, cada bloco respeitava a regra e mesmo assim todos tinham a mesma cara — as mesmas ~10 variações em quase todo bloco (A1 em 9 de 9; C1, E4, B10, C4, B11 e A3 em 8 de 9), 11 das 44 nunca usadas, blocos abrindo igual e a mesma busca em até 4 blocos. Agora o `storyboard.py --video` cobra: ≥ 75% da biblioteca no vídeo, nenhuma variação em mais da metade dos capítulos nem mais que 1,6× a média, a mesma só volta depois de 6 estados, cada capítulo abre de um jeito, nenhuma sequência de 3 se repete, e a mesma busca não aparece em dois capítulos.
+9. Trabalhe **um item por vez** (planejar o vídeo inteiro de uma vez fica superficial). **2026-11-05:** no fluxo "video" o storyboard vê o vídeo inteiro num pedido só, justamente para distribuir as variações; as medidas de cada capítulo (ritmo, assets/min, cenas que evoluem, texto solo) continuam valendo e são o que mostra se ficou superficial.
 
 ## Que layout usar para cada situação ⭐
 Repertório completo, com medidas e sintaxe do `cenas.json`, na [[Biblioteca de Cenas]] (tabela "Como escrever no cenas.json"). Todos os códigos abaixo existem no editor.

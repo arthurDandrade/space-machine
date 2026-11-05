@@ -113,5 +113,16 @@
    0.12,
    0.2
   ]
+ },
+ "_metas_video": "Regras do vídeo inteiro (fluxo \"video\", 2026-11-05; storyboard.py --video). Medido em 2 vídeos feitos bloco a bloco (worst draft pick, draft explained): as mesmas ~10 variações em quase todo bloco (A1 em 9 de 9), 11 das 44 nunca usadas, blocos abrindo igual e a mesma busca em até 4 blocos. min_variacoes_frac: o vídeo usa ≥ 75% da biblioteca; max_usos_fator: nenhuma variação passa de 1,6× a média (estados ÷ variações), com piso max_usos_min; max_capitulos_frac: nenhuma aparece em mais da metade dos capítulos; min_distancia: a mesma volta só depois de 6 estados.",
+ "metas_video": {
+  "min_variacoes_frac": 0.75,
+  "max_usos_fator": 1.6,
+  "max_usos_min": 2,
+  "max_capitulos_frac": 0.5,
+  "min_distancia": 6,
+  "fora_da_conta": [
+   "LOGOS"
+  ]
  }
 }

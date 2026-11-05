@@ -43,11 +43,13 @@ def lancar_rodada(b, de="", ate="", obs=""):
 
     Filha do painel, a rodada morria quando o terminal do painel era fechado (bloco 01, 2026-10-11)."""
     from .rodar import ETAPAS
+    from .rodar_video import ETAPAS_VIDEO       # b = <vídeo>/producao: o vídeo inteiro (fluxo "video")
     b = Path(b)
     cmd = [sys.executable, "-m", "space_machine", "rodar", str(b)]
-    if de in ETAPAS:
+    validas = ETAPAS_VIDEO if b.name == "producao" else ETAPAS
+    if de in validas:
         cmd += ["--de", de]
-    if ate in ETAPAS:
+    if ate in validas:
         cmd += ["--ate", ate]
     if obs.strip():
         cmd += ["--obs", obs.strip()]

@@ -144,7 +144,15 @@ def capitulos(vd, intro="Intro"):
     (conferido em 2026-10-16: a soma dos bloco N.mp4 deu os mesmos 909,45 s do final renderizado).
     Nome = linha "# Nome" do roteiro do bloco; o cold open vira `intro`. Devolve [(segundos, nome)]."""
     from .final import _numero, entregues
+    from .video import fluxo_video, pasta
     out, t = [], 0.0
+    if fluxo_video(vd):
+        # fluxo "video": o render_video.py escreve onde cada capítulo começa no vídeo final (producao/edicao/pedacos.json)
+        caps = {c["nn"]: c for c in (ler_json(pasta(vd) / "capitulos.json", []) or [])}
+        for p in ler_json(pasta(vd) / "edicao" / "pedacos.json", []) or []:
+            c = caps.get(p["nn"], {})
+            out.append((p["ini"], intro if c.get("tipo") == "cold_open" else c.get("nome", p["nn"]).rstrip(".:").strip()))
+        return out
     for mp4 in entregues(vd):
         rot = Path(vd) / "blocos" / f"{_numero(mp4):02d}" / "roteiro.txt"
         linhas = rot.read_text().splitlines() if rot.exists() else []
@@ -174,9 +182,11 @@ def gerar_descricao(c, slug, video):
                schema=schema, canal=c, ctx={"canal": slug, "video": video})
     avisos = []
     caps = capitulos(vd, r["intro"].strip() or "Intro")
+    from .video import fluxo_video
     if not caps:
-        avisos.append("Nenhum bloco entregue ainda: a descrição saiu sem capítulos.")
-    elif len(entregues(vd)) < len(blocos):
+        avisos.append("O vídeo ainda não foi renderizado: a descrição saiu sem capítulos." if fluxo_video(vd) else
+                      "Nenhum bloco entregue ainda: a descrição saiu sem capítulos.")
+    elif not fluxo_video(vd) and len(entregues(vd)) < len(blocos):
         avisos.append(f"Só {len(entregues(vd))} de {len(blocos)} blocos entregues: os capítulos valem para o "
                       "vídeo final montado com esses blocos.")
     if caps and len(caps) < 3:
@@ -301,7 +311,12 @@ def criar_video(c, titulo, roteiro, obs=""):
             (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
         else:
             (bd / "roteiro.txt").write_text(f"# {nome}\n{MARCA_CAPITULO}\n{texto}\n")
-    gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
+    info = {"titulo": titulo.strip()}
+    # fluxo do formato (formato.json › producao.fluxo): "video" = o vídeo inteiro como um projeto só (video.py)
+    fluxo = (ficha_formato(c.get("formato")).get("producao") or {}).get("fluxo")
+    if fluxo:
+        info["fluxo"] = fluxo
+    gravar_json(vd / "estudio_video.json", info)
     return vd.name
 
 
@@ -314,7 +329,7 @@ def _ocupado(vd):
     from .fila import ler_fila
     if ler_fila(vd).get("ativa"):
         return "a fila deste vídeo está rodando: pare a fila antes"
-    for pid in list(vd.glob("blocos/*/_estudio/pid")) + [vd / "final" / "pid"]:
+    for pid in list(vd.glob("blocos/*/_estudio/pid")) + [vd / "final" / "pid", vd / "producao" / "_estudio" / "pid"]:
         if pid.exists() and estado._vivo(pid.read_text().strip()):
             return "tem coisa rodando neste vídeo: pare antes"
     return ""

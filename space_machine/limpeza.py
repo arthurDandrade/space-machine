@@ -79,9 +79,26 @@ def _rodando(b):
     return pid.exists() and _vivo(pid.read_text().strip())
 
 
+def lixo_da_producao(vd):
+    """Fluxo "video": com o vídeo final entregue, os candidatos da busca do vídeo inteiro (os escolhidos já estão em
+    producao/assets). Os pedaços renderizados ficam: um capítulo mexido depois só renderiza ele de novo."""
+    p = Path(vd) / "producao"
+    if not (p / "_work" / "candidatos").is_dir() or _rodando(p):
+        return []
+    from .estado import producao_video
+    return [(p / "_work" / "candidatos", "candidatos")] if producao_video(vd)["feito"]["entregar"] else []
+
+
+def depois_de_entregar_video(vd):
+    if not config().get("limpeza_automatica", True):
+        return None
+    itens = lixo_da_producao(vd)
+    return mandar_para_o_lixo(itens) if itens else None
+
+
 def lixo_do_video(vd):
     vd = Path(vd)
-    itens = []
+    itens = lixo_da_producao(vd)
     blocos = vd / "blocos"
     for b in sorted(blocos.iterdir()) if blocos.is_dir() else []:
         if b.is_dir() and b.name.isdigit() and not _rodando(b):

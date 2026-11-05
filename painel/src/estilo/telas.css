@@ -365,7 +365,7 @@ button.nicho { padding: 7px 14px; }      /* o chip "Todos os nichos" é o botão
 .aviso-parado { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: var(--wait-bg); color: var(--wait); margin-bottom: 16px; }
 .aviso-parado div { flex: 1; display: flex; flex-direction: column; }
 .aviso-parado span { color: var(--ink2); font-size: 13px; }
-.trilha { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 8px; }
+.trilha { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 8px; }
 .passo { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 10px 12px; border-radius: 16px; text-align: left; min-width: 0; transition: background 0.2s; }
 .passo:not(:disabled):hover { background: var(--raised); }
 .passo:disabled { cursor: default; }
@@ -392,6 +392,13 @@ button.nicho { padding: 7px 14px; }      /* o chip "Todos os nichos" é o botão
 .reels-card .lado { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
 .reels-card p { margin: 0; }
 .lista-conferir { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+/* fluxo "video": os capítulos do vídeo inteiro (ProducaoVideo.tsx) */
+.lista-capitulos { display: flex; flex-direction: column; gap: 6px; }
+.lista-capitulos .cap { display: flex; align-items: center; gap: 10px; font-size: 13.5px; min-width: 0; }
+.lista-capitulos .cap .nn { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--ink3); flex: none; }
+.lista-capitulos .cap b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lista-capitulos .cap button.selo { border: 0; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.pilulas.versoes button.ruim { color: var(--bad); }
 .conf { display: flex; gap: 12px; align-items: flex-start; }
 .mini-asset { width: 84px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--raised); flex: none; display: grid; place-items: center; font-size: 11px; color: var(--ink3); }
 .mini-asset img, .mini-asset video { width: 100%; height: 100%; object-fit: contain; }
@@ -420,11 +427,11 @@ button.nicho { padding: 7px 14px; }      /* o chip "Todos os nichos" é o botão
 
 @media (max-width: 1150px) {
   .video-topo, .bloco-grade { grid-template-columns: minmax(0, 1fr); }
-  .trilha { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .trilha { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
   .duas-col { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .trilha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .trilha { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .blocos-grade { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 }
 

@@ -53,6 +53,11 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
     v.esperando ? t("app.esperando_n", { n: v.esperando }) : "",
   ].filter(Boolean).join(" · ");
   const base = `/api/c/${canal}/v/${v.slug}/fila`;
+  // fluxo "video": o vídeo inteiro anda junto, sem fila de blocos
+  const inteiro = v.fluxo === "video";
+  const resumoTexto = inteiro
+    ? [t("app.video.capitulos_n", { n: v.n_blocos }), v.rodando ? t("app.estado.run") : v.esperando ? t("app.estado.wait") : ""].filter(Boolean).join(" · ")
+    : resumo;
   return (
     <div className="heroi">
       <div className="arte"><Capa src={urlCapa(canal, v.slug, undefined, v.capa_v)} icone={false} existe={v.tem_capa} /></div>
@@ -60,7 +65,7 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
       <div className="txt">
         <span className="tag">{v.rodando > 0 && <span className="pulso branco" />}{t("app.coluna.producao")}</span>
         <h2><TituloCopiavel texto={v.titulo_pub || v.titulo} /></h2>
-        <p>{resumo}</p>
+        <p>{resumoTexto}</p>
         <Segmentos estados={v.blocos} className="segs" />
         <div className="legenda">
           <span style={{ "--c": "#5BE39A" } as React.CSSProperties}>{t("app.estado.ok")}</span>
@@ -68,7 +73,13 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
           <span style={{ "--c": "#FFC24D" } as React.CSSProperties}>{t("app.estado.wait")}</span>
         </div>
         <div className="acoes">
-          {filaAtiva ? (
+          {inteiro ? (
+            v.rodando ? null : v.entregues < v.n_blocos && (
+              <button className="bt branco" disabled={acao.isPending} onClick={() => acao.mutate(`/api/c/${canal}/v/${v.slug}/produzir`)}>
+                <Play size={16} />{acao.isPending ? t("app.fila.iniciando") : t("app.pv.produzir")}
+              </button>
+            )
+          ) : filaAtiva ? (
             <button className="bt vidro" disabled={acao.isPending} onClick={() => acao.mutate(`${base}/parar`)}>
               <ListOrdered size={16} />{t("app.fila.parar")}
             </button>
@@ -200,7 +211,7 @@ export function ProducaoCanal() {
             <div className="fila">
               {data.rodando.map((r) => (
                 <LinhaRodando key={r.video + r.nn} canal={canal} r={r}
-                              parar={() => parar.mutate(`/api/c/${canal}/v/${r.video}/b/${r.nn}/parar`)} />
+                              parar={() => parar.mutate(r.nn ? `/api/c/${canal}/v/${r.video}/b/${r.nn}/parar` : `/api/c/${canal}/v/${r.video}/produzir/parar`)} />
               ))}
             </div>
           ) : (

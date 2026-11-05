@@ -95,7 +95,7 @@ function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
       <Link to={rota.video(canal, v.slug)} draggable={false}>
         <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
         <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
-        <span className="sub">{t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
+        <span className="sub">{v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos }) : t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
         <div className="progresso"><i style={{ width: `${v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0}%` }} /></div>
       </Link>
       <span className="pega"><GripVertical size={14} /></span>

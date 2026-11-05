@@ -138,7 +138,7 @@ def _after(script, log, espera_s):
     return ""
 
 
-def trilha(vd, fim_dir, blocos):
+def trilha(vd, fim_dir, blocos=(), total=None):
     """A trilha do canal (<canal>/identidade/trilha.*), se houver: repetida até o fim do vídeo, no volume de fundo
     (canal.json › trilha.lufs; padrão −30 LUFS, que deixa a música ~12 dB abaixo da narração, como nas referências
     do bestiário, 2026-11-03), com 2 s de entrada e 4 s de saída. Sem arquivo, o vídeo sai só com a narração."""
@@ -147,11 +147,12 @@ def trilha(vd, fim_dir, blocos):
                 if f.suffix.lower() in (".mp3", ".wav", ".m4a", ".aac", ".aif", ".aiff")), None)
     if not arq:
         return None
-    total = 0.0
-    for b in blocos:          # a duração de cada bloco = a da prévia entregue (a comp do bloco tem a mesma)
-        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(b)],
-                           capture_output=True, text=True)
-        total += float(r.stdout.strip() or 0)
+    if total is None:         # a duração de cada bloco = a da prévia entregue (a comp do bloco tem a mesma)
+        total = 0.0
+        for b in blocos:
+            r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                                str(b)], capture_output=True, text=True)
+            total += float(r.stdout.strip() or 0)
     lufs = float(((ler_json(canal / "canal.json", {}) or {}).get("trilha") or {}).get("lufs", -30))
     saida = fim_dir / "trilha_final.wav"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-stream_loop", "-1", "-i", str(arq), "-t", f"{total:.2f}",

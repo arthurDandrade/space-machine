@@ -24,7 +24,8 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
   const soltar = useSoltar(enviar);
   const capa = urlCapa(canal, v.slug, undefined, v.capa_v);
   const detalhe =
-    v.coluna === "producao" || v.coluna === "roteiro"
+    v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos })     // o vídeo inteiro anda junto
+    : v.coluna === "producao" || v.coluna === "roteiro"
       ? t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })
       : t("app.video.blocos_pronto", { n: v.n_blocos });
   return (
@@ -49,10 +50,11 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
 export function ItemEsperando({ canal, e }: { canal: string; e: Esperando }) {
   const t = useT();
   return (
-    <Link className="item" to={rota.bloco(canal, e.video, e.nn)}>
-      <Capa className="th" src={urlCapa(canal, e.video, e.nn)} existe={e.tem_capa} />
+    // nn vazio = o vídeo inteiro (fluxo "video"): vai para a página do vídeo
+    <Link className="item" to={e.nn ? rota.bloco(canal, e.video, e.nn) : rota.video(canal, e.video)}>
+      <Capa className="th" src={urlCapa(canal, e.video, e.nn || undefined)} existe={e.tem_capa} />
       <div className="t">
-        <b>{e.nn} · {e.topico}</b>
+        <b>{e.nn ? `${e.nn} · ${e.topico}` : e.video_titulo}</b>
         <span><em>{t(`app.etapa.${e.etapa}`, undefined, e.etapa)}</em>{e.motivo ? ` · ${e.motivo}` : ""}</span>
         <span className="de">{e.video_titulo}</span>
       </div>
@@ -65,9 +67,9 @@ export function LinhaRodando({ canal, r, parar }: { canal: string; r: Rodando; p
   const t = useT();
   return (
     <div className="rod">
-      <Link to={rota.bloco(canal, r.video, r.nn)}><Capa className="th" src={urlCapa(canal, r.video, r.nn)} existe={r.tem_capa} /></Link>
+      <Link to={r.nn ? rota.bloco(canal, r.video, r.nn) : rota.video(canal, r.video)}><Capa className="th" src={urlCapa(canal, r.video, r.nn || undefined)} existe={r.tem_capa} /></Link>
       <div className="t">
-        <Link to={rota.bloco(canal, r.video, r.nn)}><b>{r.nn} · {r.topico}</b></Link>
+        <Link to={r.nn ? rota.bloco(canal, r.video, r.nn) : rota.video(canal, r.video)}><b>{r.nn ? `${r.nn} · ${r.topico}` : r.video_titulo}</b></Link>
         <span>{r.etapa ? t(`app.etapa.${r.etapa}`, undefined, r.etapa) : t("app.rodando.comecando")}{r.detalhe ? ` · ${r.detalhe}` : ""}</span>
         <div className="passos">
           {Array.from({ length: r.total }, (_, i) => (

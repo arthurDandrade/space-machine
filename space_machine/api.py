@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limpeza, meus_prompts, mineracao,
                modelar, primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
+from . import video as video_mod
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
@@ -82,15 +83,29 @@ def _resumo_fila(f):
     return {k: f.get(k) for k in ("ativa", "status", "rodando", "esperando", "parados", "max", "motivo", "inicio", "fim")}
 
 
+def _estado_capitulo(prod):
+    """Fluxo "video": os capítulos andam juntos, então todos têm o estado do vídeo inteiro."""
+    if prod["rodando"]:
+        return "run"
+    if prod["feito"]["entregar"]:
+        return "ok"
+    if prod["parado"]:
+        return "wait"
+    return "meio" if prod["atual"] else "todo"
+
+
 def _video(slug, v):
     f = v.get("fila") or {}
     g = gestao.dados_video(slug, v["slug"])
-    blocos = [{"nn": b["nn"], "topico": b["topico"], "estado": _estado_bloco(b, f)} for b in v["blocos"]]
+    prod = v.get("producao")
+    blocos = [{"nn": b["nn"], "topico": b["topico"], "estado": _estado_capitulo(prod) if prod else _estado_bloco(b, f)}
+              for b in v["blocos"]]
     conta = lambda e: sum(1 for b in blocos if b["estado"] == e)
     return {
         "slug": v["slug"], "titulo": v["titulo"], "titulo_pub": g.get("titulo_pub") or "",
         "coluna": gestao.coluna_do_video(v, g), "n_blocos": v["n_blocos"], "entregues": v["entregues"],
         "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
+        "fluxo": v.get("fluxo", "blocos"),
         "mudou": v["mudou"], "data_pub": (g.get("data_pub") or "")[:10], "link": g.get("link") or "",
         "fila": _resumo_fila(f), "consumo": (v.get("consumo") or {}).get("equivalente") or 0,
         "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"]), "thumb": _thumb(v["pasta"]),
@@ -194,6 +209,20 @@ def painel_canal(slug: str):
     resumo, vids, brutos = _resumo_canal(slug, c)
     esperando, rodando, filas = [], [], []
     for v, bruto in zip(vids, brutos):
+        prod = bruto.get("producao")
+        if prod:             # fluxo "video": uma linha pelo vídeo inteiro (nn vazio = a página do vídeo)
+            etapa = prod["etapa_atual"] if prod["rodando"] else (prod["parado"] or {}).get("etapa", "")
+            rot = dict(estado.ETAPAS_VIDEO).get(etapa, etapa)
+            linha = {"video": v["slug"], "video_titulo": v["titulo"], "nn": "", "topico": rot,
+                     "tem_capa": bool(capas.fontes(bruto["pasta"])), "etapa": etapa}
+            if prod["rodando"]:
+                ids = [e for e, _ in estado.ETAPAS_VIDEO]
+                det = next((e["detalhe"] for e in prod["etapas"] if e["id"] == etapa), "")
+                rodando.append({**linha, "indice": ids.index(etapa) + 1 if etapa in ids else 0, "total": len(ids),
+                                "detalhe": det, "desde": prod["mudou"] or None})
+            elif prod["parado"]:
+                esperando.append({**linha, "motivo": prod["parado"].get("motivo", ""), "mudou": prod["mudou"]})
+            continue
         for b, info in zip(bruto["blocos"], v["blocos"]):
             if info["estado"] == "wait":
                 esperando.append({"video": v["slug"], "video_titulo": v["titulo"], "nn": b["nn"], "topico": b["topico"],
@@ -245,7 +274,32 @@ def detalhe_video(slug: str, video: str):
     thumb = capas.info_thumbnail(vd)
     if thumb:
         thumb["url"] = _arquivo(thumb.pop("arquivo")) + f"&v={thumb['versao']}"
-    return {**resumo, "blocos": blocos, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
+    prod = v.get("producao")
+    if prod:
+        p = vd / "producao"
+        man = {a["id"]: a for a in (ler_json(p / "manifesto.json", {}) or {}).get("assets", []) if a.get("id")}
+        conferir = []
+        for aid, texto in prod["conferir_pendentes"].items():
+            a = man.get(aid, {})
+            conferir.append({"id": aid, "texto": texto, "tipo": a.get("tipo", ""), "descricao": a.get("descricao", ""),
+                             "arquivo": _arquivo(p / a["arquivo"]) if a.get("arquivo") and (p / a["arquivo"]).exists() else None})
+        logs = sorted((p / "_estudio").glob("log_*.txt"), key=lambda f: f.stat().st_mtime, reverse=True) \
+            if (p / "_estudio").is_dir() else []
+        etapa_log = next((f for f in logs if f.name != "log_rodar.txt"), None)
+        mp4p = Path(prod["mp4"]) if prod["mp4"] else None
+        prod = {**{k: prod[k] for k in ("rodando", "parado", "etapa_atual", "feito", "atual", "assets_total",
+                                         "assets_prontos", "conferidos", "travar_conferir", "storyboard")},
+                "etapas": [{**e, "detalhe": _curto(vd, e["detalhe"])} for e in prod["etapas"]],
+                "capitulos": [{**{k: c[k] for k in ("nn", "topico", "narrado", "transcrito")},
+                               "qa": c["qa"]["md"], "aprovado": c["qa"]["aprovado"],
+                               "folha": _arquivo(c["qa"]["folha"]) if c["qa"]["folha"] else None}
+                              for c in prod["capitulos"]],
+                "conferir": conferir,
+                "mp4": _arquivo(mp4p) + f"&v={int(mp4p.stat().st_mtime)}" if mp4p else None,
+                "mp4_tamanho": mp4p.stat().st_size if mp4p else 0,
+                "log_rodar": _cauda(p / "_estudio" / "log_rodar.txt", 60),
+                "log_etapa": {"nome": etapa_log.name, "texto": _cauda(etapa_log, 40)} if etapa_log else None}
+    return {**resumo, "producao": prod, "blocos": blocos, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
             "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
             "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
@@ -490,6 +544,32 @@ def rodar_bloco(slug: str, video: str, nn: str, de: str = Body("", embed=True), 
     if estado.bloco(b)["rodando"]:
         raise HTTPException(409, "esse bloco já está rodando")
     fila.lancar_rodada(b, de, ate, obs)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/produzir")
+def produzir_video(slug: str, video: str, de: str = Body("", embed=True), ate: str = Body("", embed=True),
+                   obs: str = Body("", embed=True)):
+    """Fluxo "video": roda o vídeo inteiro (rodar_video.py) a partir de onde parou, ou de/até uma etapa."""
+    vd = _video_dir(slug, video)
+    if not video_mod.fluxo_video(vd):
+        raise HTTPException(409, "este vídeo é produzido bloco a bloco")
+    if estado.producao_video(vd)["rodando"]:
+        raise HTTPException(409, "o vídeo já está sendo produzido")
+    fila.lancar_rodada(video_mod.pasta(vd), de, ate, obs)
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/produzir/parar")
+def parar_video(slug: str, video: str):
+    fila.parar_rodada(video_mod.pasta(_video_dir(slug, video)))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/produzir/conferir")
+def conferir_video(slug: str, video: str):
+    """Quem produz viu o vídeo e aprovou os itens de "conferir" (fluxo "video")."""
+    estado.aprovar_conferir(video_mod.pasta(_video_dir(slug, video)))
     return {"ok": True}
 
 
@@ -1191,6 +1271,12 @@ def assinatura():
                 marcar(p)
             if (vd / "final" / "pid").exists():
                 h.update(f"vivo:{estado._vivo((vd / 'final' / 'pid').read_text().strip())};".encode())
+            est_v = vd / "producao" / "_estudio"        # fluxo "video": o vídeo inteiro
+            if est_v.is_dir():
+                for p in (est_v, est_v / "estado.json", est_v / "log_rodar.txt", est_v / "conferir_ok.json"):
+                    marcar(p)
+                if (est_v / "pid").exists():
+                    h.update(f"vivo:{estado._vivo((est_v / 'pid').read_text().strip())};".encode())
             if not (vd / "blocos").is_dir():
                 continue
             for b in (vd / "blocos").iterdir():

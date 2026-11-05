@@ -73,6 +73,9 @@ def producao_rodando():
         for pid in prod.glob("*/blocos/*/_estudio/pid"):
             if estado._vivo(pid.read_text().strip() or "0"):
                 ocupado.append(f"{c['nome']} › {pid.parents[3].name} › bloco {pid.parents[1].name}")
+        for pid in prod.glob("*/producao/_estudio/pid"):        # fluxo "video": o vídeo inteiro
+            if estado._vivo(pid.read_text().strip() or "0"):
+                ocupado.append(f"{c['nome']} › {pid.parents[2].name} › vídeo inteiro")
         for arq in prod.glob("*/_estudio/fila.json"):
             f = ler_json(arq, {}) or {}
             if f.get("status") in ("rodando", "pausada") and estado._vivo(f.get("pid", "")):
