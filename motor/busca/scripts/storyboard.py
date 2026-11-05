@@ -125,7 +125,8 @@ def medir(item, ed, pal, ativos):
                 curto = dur < MIN_ASSET_S and not (continua and k == 0)
                 marca = " ⚠️" if curto else ""
                 if curto:
-                    curtos.append(f"{aid} {dur:.1f}s")
+                    # 1,78 s escrito "1.8s" parecia dentro do mínimo: mais uma casa quando arredondar esconde
+                    curtos.append(f"{aid} {dur:.1f}s" if round(dur, 1) < MIN_ASSET_S else f"{aid} {dur:.2f}s")
                 assets.append(f"**{aid}** {x.get('tipo', 'gerado')}"
                               f"{' ' + x['orientacao'] if x.get('orientacao') else ''}: {x.get('descricao') or ('mapa/tabela gerado: ' + Path(aid).name)} "
                               f"(entra {t0:.1f}s, {dur:.1f}s na tela{marca})")
@@ -217,7 +218,10 @@ def medir(item, ed, pal, ativos):
         avisos.append(f"tipo de cena repetido no bloco (cada um no máximo {MAX_REPETICOES}x; troque por outra variação da biblioteca): "
                       + ", ".join(f"{v} {NOMES.get(v, '')} ×{n}".replace("  ", " ") for v, n in sorted(repetidos.items())))
     if not TEXTO_SOLO_FAIXA[0] <= t_texto / dur_total <= TEXTO_SOLO_FAIXA[1]:
-        avisos.append(f"texto solo em {t_texto/dur_total:.0%} do tempo (meta {TEXTO_SOLO_FAIXA[0]:.0%}–{TEXTO_SOLO_FAIXA[1]:.0%})")
+        fr = t_texto / dur_total
+        no_limite = f"{fr:.0%}" in (f"{TEXTO_SOLO_FAIXA[0]:.0%}", f"{TEXTO_SOLO_FAIXA[1]:.0%}")
+        avisos.append(f"texto solo em {fr:.1%} do tempo (meta {TEXTO_SOLO_FAIXA[0]:.0%}–{TEXTO_SOLO_FAIXA[1]:.0%})"
+                      .replace(f"{fr:.1%}", f"{fr:.2%}" if no_limite else f"{fr:.0%}", 1))
 
     resumo = (f"{len(item['cenas'])} cenas, {len(estados)} estados, {sum(1 for e in estados for _ in e['ed'].get('cards', []))} cards · "
               f"{len(distintas)} variações ({', '.join(distintas)}) · repetidas {len(vars_) - len(distintas)} · card único {n_unico/len(vars_):.0%} · "
@@ -257,51 +261,36 @@ def _busca_principal(cd):
     return (cd.get("buscas") or [""])[0].strip().lower()
 
 
-def video(proj):
-    """O vídeo inteiro (fluxo "video", 2026-11-05): cada capítulo medido como um bloco, menos a regra de não repetir
-    tipo de cena (que agora vale para o vídeo, com folga), e mais o que só aparece olhando o vídeo todo — medido no
-    "worst draft pick" e no "draft explained", feitos bloco a bloco: as mesmas ~10 variações em quase todo bloco
-    (A1 em 9 de 9), 11 das 44 nunca usadas, blocos abrindo igual e a mesma busca em 4 blocos."""
-    cen = json.loads((proj / "cenas.json").read_text())
-    plano = json.loads((proj / "plano.json").read_text())
-    pal = json.loads((proj / "_work" / "palavras.json").read_text())
-    ativos = ler_ativos(plano)
-    mv = BIBLIOTECA.get("metas_video", {})
-    caps, avisos, md_caps, todos = [], [], [], []
-    for item in cen["itens"]:
-        ed = json.loads((proj / "edicao" / f"plano_edicao_{item['id']}.json").read_text())
-        r = medir(item, ed, pal, ativos)
-        # repetir tipo de cena dentro do capítulo é medido no vídeo inteiro (abaixo)
-        # e quantas variações o vídeo usa também: um capítulo curto (o cold open) não precisa ter 8
-        r["avisos"] = [a for a in r["avisos"] if not a.startswith("tipo de cena repetido no bloco")
-                       and "variações diferentes (meta" not in a]
-        avisos += [f"capítulo {item['id']}: {a}" for a in r["avisos"]]
-        md_caps += [f"## Capítulo {item['id']} — {item['nome']}", "", f"{r['fim']:.1f} s · {r['resumo']}", ""]
-        md_caps += [f"- ⚠️ {a}" for a in r["avisos"]] + ([""] if r["avisos"] else [])
-        md_caps += tabela(r["linhas"]) + [""]
-        vs = [e["var"] for e in r["estados"] if not e.get("continua")]
-        caps.append({"id": item["id"], "vars": vs})
-        todos += [(item["id"], v) for v in vs]
+def regras_video(caps, n_caps=None, n_estados=None):
+    """As regras que só aparecem olhando o vídeo todo (1 a 4 abaixo). caps: [{"id", "vars": [variação de cada
+    estado, na ordem]}]. Serve para o storyboard compilado e para o plano de distribuição (antes do storyboard).
+    n_caps, n_estados: o tamanho do vídeo todo (o plano), quando caps são só os primeiros capítulos — aí os tetos são
+    os do vídeo todo e quantas variações ele usa fica para o fim."""
+    todos = [(c["id"], v) for c in caps for v in c["vars"]]
     n = len(todos)
+    parcial = bool(n_caps) and len(caps) < n_caps
+    avisos = []
+    mv = BIBLIOTECA.get("metas_video", {})
     cont = collections.Counter(v for _, v in todos)
     biblioteca = [v for v in NOMES if v not in mv.get("fora_da_conta", [])]
     # 1) quantas variações da biblioteca o vídeo usa
     usadas = {v for v in cont if v in NOMES}
     meta_uso = math.ceil(mv.get("min_variacoes_frac", 0.75) * len(biblioteca))
-    if len(usadas & set(biblioteca)) < meta_uso:
+    if len(usadas & set(biblioteca)) < meta_uso and not parcial:
         nunca = [v for v in biblioteca if v not in usadas]
         avisos.append(f"o vídeo usa {len(usadas & set(biblioteca))} das {len(biblioteca)} variações (meta ≥ {meta_uso}); "
                       f"nunca usadas: {', '.join(f'{v} {NOMES[v]}' for v in nunca)}")
     # 2) nenhuma variação muito mais usada que as outras, nem em capítulo demais
-    teto = max(mv.get("max_usos_min", 2), math.ceil(mv.get("max_usos_fator", 1.6) * n / max(1, len(biblioteca))))
+    n_teto = max(n, n_estados or 0) if parcial else n
+    teto = max(mv.get("max_usos_min", 2), math.ceil(mv.get("max_usos_fator", 1.6) * n_teto / max(1, len(biblioteca))))
     demais = [f"{v} ×{c}" for v, c in cont.most_common() if c > teto]
     if demais:
-        avisos.append(f"variações usadas demais no vídeo (máx. {teto}x cada em {n} estados): {', '.join(demais)}")
-    teto_caps = max(2, math.ceil(mv.get("max_capitulos_frac", 0.5) * len(caps)))
+        avisos.append(f"variações usadas demais no vídeo (máx. {teto}x cada em {n_teto} estados): {', '.join(demais)}")
+    teto_caps = max(2, math.ceil(mv.get("max_capitulos_frac", 0.5) * (n_caps or len(caps))))
     em_caps = [(v, sum(v in c["vars"] for c in caps)) for v in cont]
     espalhadas = [f"{v} em {k}" for v, k in sorted(em_caps, key=lambda x: -x[1]) if k > teto_caps]
     if espalhadas:
-        avisos.append(f"variações em capítulos demais (máx. {teto_caps} de {len(caps)} capítulos cada; é o que deixa "
+        avisos.append(f"variações em capítulos demais (máx. {teto_caps} de {n_caps or len(caps)} capítulos cada; é o que deixa "
                       f"todo capítulo com a mesma cara): {', '.join(espalhadas)}")
     # 3) a mesma variação não volta logo
     dist = mv.get("min_distancia", 6)
@@ -323,6 +312,37 @@ def video(proj):
     rep3 = [" → ".join(t) for t, k in trincas.items() if k > 1]
     if rep3:
         avisos.append("sequências de 3 variações que se repetem no vídeo: " + "; ".join(rep3))
+    return avisos
+
+
+def video(proj, n_caps=None, n_estados=None):
+    """O vídeo inteiro (fluxo "video", 2026-11-05): cada capítulo medido como um bloco, menos a regra de não repetir
+    tipo de cena (que agora vale para o vídeo, com folga), e mais o que só aparece olhando o vídeo todo — medido no
+    "worst draft pick" e no "draft explained", feitos bloco a bloco: as mesmas ~10 variações em quase todo bloco
+    (A1 em 9 de 9), 11 das 44 nunca usadas, blocos abrindo igual e a mesma busca em 4 blocos."""
+    cen = json.loads((proj / "cenas.json").read_text())
+    plano = json.loads((proj / "plano.json").read_text())
+    pal = json.loads((proj / "_work" / "palavras.json").read_text())
+    ativos = ler_ativos(plano)
+    caps, avisos, md_caps = [], [], []
+    for item in cen["itens"]:
+        ed = json.loads((proj / "edicao" / f"plano_edicao_{item['id']}.json").read_text())
+        r = medir(item, ed, pal, ativos)
+        # repetir tipo de cena dentro do capítulo é medido no vídeo inteiro (abaixo)
+        # e quantas variações o vídeo usa também: um capítulo curto (o cold open) não precisa ter 8
+        r["avisos"] = [a for a in r["avisos"] if not a.startswith("tipo de cena repetido no bloco")
+                       and "variações diferentes (meta" not in a]
+        avisos += [f"capítulo {item['id']}: {a}" for a in r["avisos"]]
+        md_caps += [f"## Capítulo {item['id']} — {item['nome']}", "", f"{r['fim']:.1f} s · {r['resumo']}", ""]
+        md_caps += [f"- ⚠️ {a}" for a in r["avisos"]] + ([""] if r["avisos"] else [])
+        md_caps += tabela(r["linhas"]) + [""]
+        vs = [e["var"] for e in r["estados"] if not e.get("continua")]
+        caps.append({"id": item["id"], "vars": vs, "resumo": r["resumo"]})
+    avisos += regras_video(caps, n_caps, n_estados)
+    todos = [(c["id"], v) for c in caps for v in c["vars"]]
+    n = len(todos)
+    cont = collections.Counter(v for _, v in todos)
+    usadas = {v for v in cont if v in NOMES}
     # 5) a mesma busca em capítulos diferentes (a mesma imagem de novo): use "reusar" se for de propósito
     onde = collections.defaultdict(set)
     for item in cen["itens"]:
@@ -344,10 +364,33 @@ def video(proj):
     md += ["## Variações no vídeo", "", " · ".join(f"{v} ×{c}" for v, c in cont.most_common()), ""] + md_caps
     saida = proj / "storyboard_video.md"
     saida.write_text("\n".join(md) + "\n")
+    # as variações de cada capítulo, na ordem: o storyboard capítulo a capítulo conta o que o vídeo já usou
+    (proj / "_work" / "variacoes_video.json").write_text(json.dumps(caps, ensure_ascii=False))
     print(resumo)
     for x in avisos:
         print("AVISO " + x)
     print(f"→ {saida}")
+    return 1 if avisos else 0
+
+
+def plano_de_distribuicao(arq):
+    """O plano de distribuição do vídeo (a 1ª resposta do storyboard capítulo a capítulo), medido antes de qualquer
+    cena: {"plano": {"<id>": {"abre": "<variação>", "variacoes": [...]}}} — as mesmas regras do vídeo compilado."""
+    plano = json.loads(Path(arq).read_text())
+    plano = plano.get("plano", plano)
+    caps = [{"id": k, "vars": list(v.get("variacoes") or [])} for k, v in plano.items() if isinstance(v, dict)]
+    avisos = []
+    for c, (k, v) in zip(caps, plano.items()):
+        if v.get("abre") and c["vars"] and c["vars"][0] != v["abre"]:
+            avisos.append(f"capítulo {k}: \"abre\" é {v['abre']}, mas \"variacoes\" começa com {c['vars'][0]}")
+    nao = sorted({v for c in caps for v in c["vars"] if v not in NOMES})
+    if nao:
+        avisos.append("variações que não existem na Biblioteca de Cenas: " + ", ".join(nao))
+    avisos += regras_video(caps)
+    n = sum(len(c["vars"]) for c in caps)
+    print(f"plano: {len(caps)} capítulos, {n} estados, {len({v for c in caps for v in c['vars']})} variações")
+    for x in avisos:
+        print("AVISO " + x)
     return 1 if avisos else 0
 
 
@@ -356,9 +399,14 @@ def main():
     ap.add_argument("projeto")
     ap.add_argument("--item")
     ap.add_argument("--video", action="store_true", help="o vídeo inteiro: todos os capítulos + as regras do vídeo")
+    ap.add_argument("--plano", help="mede um plano de distribuição (JSON) com as regras do vídeo, antes das cenas")
+    ap.add_argument("--previsto", nargs=2, type=int, metavar=("CAPITULOS", "ESTADOS"),
+                    help="com --video nos primeiros capítulos: o tamanho do vídeo todo, para os tetos")
     a = ap.parse_args()
     proj = Path(a.projeto)
-    sys.exit(video(proj) if a.video else bloco(proj, a.item))
+    if a.plano:
+        sys.exit(plano_de_distribuicao(a.plano))
+    sys.exit(video(proj, *(a.previsto or ())) if a.video else bloco(proj, a.item))
 
 
 if __name__ == "__main__":

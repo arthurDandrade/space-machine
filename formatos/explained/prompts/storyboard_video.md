@@ -1,9 +1,14 @@
 <!-- Prompt do storyboard do VÍDEO INTEIRO (fluxo "video", 2026-11-05: space_machine/rodar_video.py). O resto do sistema é -->
 <!-- montado na hora como no do bloco (storyboard.md do formato, topo do compilar_cenas.py, notas, Log do canal, exemplo, regras do tema). -->
-Você faz o storyboard do VÍDEO INTEIRO no formato "___ Explained" (cards de foto/vídeo sobre fundo de papel claro, textos grandes, narração sem apresentador). Você recebe o roteiro e a transcrição de todos os capítulos, com o tempo de cada palavra, e devolve UM cenas.json com um item por capítulo, na ordem, cada um com o "id" e o "nome" que o pedido dá: cena por cena, cada estado com layout da Biblioteca de Cenas, a fala (palavras exatamente como estão na transcrição), os cards (tipo, descrição do que o asset precisa mostrar, buscas em inglês do específico ao geral) e os textos.
+Você faz o storyboard do VÍDEO INTEIRO no formato "___ Explained" (cards de foto/vídeo sobre fundo de papel claro, textos grandes, narração sem apresentador). Você recebe o roteiro e a transcrição de todos os capítulos, com o tempo de cada palavra. O cenas.json final tem um item por capítulo, na ordem, cada um com o "id" e o "nome" que o pedido dá: cena por cena, cada estado com layout da Biblioteca de Cenas, a fala (palavras exatamente como estão na transcrição), os cards (tipo, descrição do que o asset precisa mostrar, buscas em inglês do específico ao geral) e os textos.
+
+Você trabalha em duas fases, na mesma conversa:
+1. O PLANO DE DISTRIBUIÇÃO do vídeo, antes de qualquer cena: que variação cada estado de cada capítulo vai usar, como cada capítulo abre e o que faz cada um diferente. O sistema mede o plano com as regras do vídeo (abaixo) e pede correção se precisar.
+2. UM CAPÍTULO POR RESPOSTA, seguindo o plano: cada capítulo com o detalhe de um bloco feito sozinho. O sistema compila e mede cada capítulo junto com os de antes e devolve os avisos dele; no fim, mede o vídeo inteiro.
+Por que assim: o vídeo inteiro num pedido só (2026-11-05) variou mais, mas saiu raso — 106 estados contra 152 do bloco a bloco, 16,6 assets/min contra 20,4, menos cenas que evoluem — e a resposta passou do limite de saída.
 
 Por que o vídeo inteiro: feito capítulo por capítulo, cada um sozinho, o vídeo saía repetitivo — medido em 2 vídeos: as mesmas ~10 variações em quase todo capítulo (A1 em 9 de 9), 11 das 44 nunca usadas, capítulos abrindo igual e a mesma imagem buscada em até 4 capítulos. Agora você vê tudo e distribui:
-- Antes de escrever, leia a transcrição inteira e faça um plano de distribuição: que variações cada capítulo vai usar, para que o vídeo use ≥ 75% da biblioteca e cada capítulo tenha uma cara própria.
+- O plano de distribuição (fase 1) é onde o vídeo usa ≥ 75% da biblioteca e cada capítulo ganha uma cara própria. Nos capítulos (fase 2), siga o plano; desvie quando a fala pedir, sem voltar ao que o vídeo já usou demais.
 - A regra 1 das regras do storyboard ("nenhum tipo de cena repete no bloco") vale assim no vídeo inteiro: nenhuma variação mais que ~1,6× a média (estados ÷ variações), nenhuma em mais da metade dos capítulos, e a mesma variação só volta depois de 6 estados. A1, A2, A3 e A4 continuam sendo tipos diferentes.
 - Cada capítulo ABRE de um jeito diferente (o 1º estado depois do card de título): nada de todos começarem com B10 ou com uma frase A1. Nenhuma sequência de 3 variações se repete no vídeo.
 - A mesma imagem não aparece em dois capítulos: se a ideia volta (o mesmo jogador, o mesmo estádio), mostre outro aspecto dele (outra foto, outra época, um detalhe) com outra busca, ou use {"reusar": "<id>"} se a repetição for de propósito (um callback).
@@ -17,4 +22,4 @@ Como trabalhar:
 - Dados de tabela/gráfico e citações só com números e frases reais do roteiro.
 - Um sistema compila e mede o seu cenas.json (compilar_cenas.py + storyboard.py --video) e devolve avisos por capítulo e do vídeo inteiro; você corrige só o que eles apontam. Não invente "id" em cards novos.
 
-Responda SÓ com o JSON do cenas.json, sem texto antes ou depois, em JSON COMPACTO (sem indentação nem quebras de linha). Não repita campos opcionais vazios.
+Responda SÓ com o JSON que o pedido daquela fase pede (o plano, o item de um capítulo, ou as trocas de uma correção), sem texto antes ou depois, em JSON COMPACTO (sem indentação nem quebras de linha). Não repita campos opcionais vazios.

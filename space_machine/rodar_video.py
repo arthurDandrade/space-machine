@@ -7,8 +7,9 @@ Uso:
 
   narracao, transcrever  por capítulo (<vídeo>/blocos/NN), como antes: dá para refazer a voz de um só
   juntar                 emenda as narrações e as palavras em <vídeo>/producao (video.juntar)
-  storyboard             UM pedido ao Claude com o vídeo inteiro; o compilar_cenas + storyboard.py --video medem e
-                         ele corrige em voltas, como no bloco
+  storyboard             uma conversa com o Claude sobre o vídeo inteiro: 1º o plano de distribuição (medido pelas
+                         regras do vídeo), depois um capítulo por resposta (cada um medido com os de antes); no fim o
+                         compilar_cenas + storyboard.py --video medem o vídeo e ele corrige em voltas, como no bloco
   buscar, escolher       todos os assets do vídeo de uma vez
   montar                 gerar_ae2 por capítulo → compositor sem After (render_video: os capítulos em paralelo, só o
                          que mudou) → QA de cada capítulo; uma correção automática dos que reprovarem
@@ -19,6 +20,7 @@ Cada etapa vê pelos arquivos se já foi feita e pula. Parou: o motivo fica em <
 import argparse
 import fcntl
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -34,7 +36,7 @@ from . import video
 from .canal import gravar_json, ler_json
 from .estado import conferir_pendentes, titulo_video
 from .rodar import Parada, Rodada, _aprovado
-from .sistema import MOTOR
+from .sistema import MOTOR, arquivo_formato
 
 sys.path.insert(0, str(MOTOR / "edicao_ff"))
 import render_video  # noqa: E402  (motor/edicao_ff/render_video.py)
@@ -115,7 +117,7 @@ class RodadaVideo(Rodada):
                    "Métricas do storyboard.py --video:\n" + resumo + "\n\nAVISOS:\n" + "\n".join(avisos)
         return True, resumo
 
-    def _pedido_storyboard(self):
+    def _pedido_storyboard(self, fim="Devolva o cenas.json completo do vídeo."):
         caps = self._capitulos()
         titulo = titulo_video(self.video)
         linhas = []
@@ -138,15 +140,15 @@ class RodadaVideo(Rodada):
                 + self._elenco_e_gerador()
                 + f"\n## roteiro.txt (todos os capítulos)\n{(self.p / 'roteiro.txt').read_text()}\n\n"
                 "## _work/transcricao.txt ([tempo]palavra, no tempo do vídeo inteiro)\n"
-                f"{(self.p / '_work' / 'transcricao.txt').read_text()}\n\n"
-                "Devolva o cenas.json completo do vídeo.")
+                f"{(self.p / '_work' / 'transcricao.txt').read_text()}\n\n" + fim)
 
-    def _acertar_itens(self, cenas):
+    def _acertar_itens(self, cenas, parcial=False):
         """O nome de cada capítulo vem do roteiro, não da transcrição; cold open e capítulo mudo sem card de título.
-        Devolve o problema (texto para o Claude) se os itens não baterem com os capítulos, ou ""."""
+        Devolve o problema (texto para o Claude) se os itens não baterem com os capítulos, ou "".
+        parcial: só os primeiros capítulos (o storyboard capítulo a capítulo)."""
         caps = self._capitulos()
         ids = [str(it.get("id")) for it in cenas.get("itens", [])]
-        if ids != [c["nn"] for c in caps]:
+        if ids != [c["nn"] for c in caps][:len(ids) if parcial else None]:
             return (f"Os itens do cenas.json precisam ser um por capítulo, nesta ordem de \"id\": "
                     f"{', '.join(c['nn'] for c in caps)} (vieram: {', '.join(ids) or 'nenhum'}).")
         palavras = ler_json(self.p / "_work" / "palavras.json", []) or []
@@ -165,6 +167,216 @@ class RodadaVideo(Rodada):
                    "null para apagar}}}. Índice além do fim acrescenta. Para distribuir melhor as variações, troque "
                    "cenas em capítulos diferentes. Se um aviso for inevitável, inclua \"_avisos_aceitos\": \"motivo\".")
 
+    # O vídeo inteiro num pedido só (o 1º teste, 2026-11-05) variou mais que o bloco a bloco, mas saiu raso: 106
+    # estados contra 152 e 16,6 assets/min contra 20,4, e a resposta passou do limite de saída. Agora, na mesma
+    # conversa: 1º um plano de distribuição do vídeo (que variações cada capítulo usa e como abre), medido pelas regras
+    # do vídeo antes de qualquer cena; depois um capítulo por resposta, cada um medido na hora junto com os de antes.
+    S_POR_ESTADO = 4.2         # bloco a bloco, o worst draft pick teve 152 estados em 641 s
+    _JSON = "Responda SÓ com o JSON, compacto (sem indentação nem quebras de linha), sem texto antes ou depois."
+
+    def _dir_sb(self):
+        d = self.p / "_work" / "storyboard"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def _chamar_sb(self, sistema, texto, sid, nova, rotulo):
+        timeout = int(self.cfg.get("storyboard_timeout_s", 2400) * 1.5)
+        r = motor.chamar("storyboard", sistema, texto, canal=self.c, ctx=self.ctx, timeout=timeout,
+                         sessao=(sid, nova), texto_livre=True)
+        with open(self.log("storyboard"), "a") as f:
+            f.write(f"\n=== {rotulo} ({r['_uso']['equivalente']:,} equiv.)\n")
+        try:
+            return motor._extrair_json(r["texto"])
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def _pedido_plano(self):
+        caps = self._capitulos()
+        st = self._st_metas()
+        linhas = [f"- {c['nn']} {c['nome']}: {c['fim'] - c['ini']:.0f} s → ~{self._estados_previstos(c)} estados"
+                  for c in caps]
+        return ("## Fase 1 de 2: o plano de distribuição\n"
+                "Ainda sem cenas: leia a transcrição inteira e planeje o vídeo. Depois você vai escrever um capítulo "
+                "por resposta, seguindo este plano.\n"
+                f"Um estado para cada ~{self.S_POR_ESTADO:.0f} s de narração, como num capítulo feito sozinho (feito "
+                "bloco a bloco, este formato teve 1 estado a cada 4,2 s e 20 assets/min; o vídeo inteiro num pedido "
+                "só caiu para 1 a cada 6 s e 16,6 assets/min, raso demais):\n" + "\n".join(linhas) + "\n"
+                f"As regras do vídeo, que o sistema mede no plano: o vídeo usa ≥ {st['meta_uso']} das "
+                f"{st['biblioteca']} variações; nenhuma passa de ~{st['teto']}× no vídeo nem aparece em mais de "
+                f"{st['teto_caps']} capítulos; a mesma só volta depois de {st['dist']} estados (contando a virada "
+                "de um capítulo para o outro); cada capítulo abre com uma variação diferente; nenhuma sequência de "
+                "3 variações se repete. Use só os códigos da Biblioteca de Cenas: " + ", ".join(st["nomes"]) + ".\n"
+                "Devolva {\"plano\": {\"<id>\": {\"abre\": \"<variação do 1º estado depois do título>\", "
+                "\"variacoes\": [\"<a variação de cada estado, na ordem, começando pela de abertura>\"], "
+                "\"ideia\": \"<uma frase: o que este capítulo mostra e o que o faz diferente dos outros>\"}}}. "
+                + self._JSON)
+
+    def _st_metas(self):
+        """As metas do vídeo (biblioteca_cenas.json › metas_video) em números, para o pedido do plano."""
+        bib = ler_json(arquivo_formato("cenas", self.c.get("formato")))
+        mv = bib.get("metas_video", {})
+        nomes = [v for v in bib["nomes"] if v not in mv.get("fora_da_conta", [])]
+        n = sum(self._estados_previstos(c) for c in self._capitulos())
+        return {"nomes": nomes, "biblioteca": len(nomes),
+                "meta_uso": math.ceil(mv.get("min_variacoes_frac", 0.75) * len(nomes)),
+                "teto": max(mv.get("max_usos_min", 2), math.ceil(mv.get("max_usos_fator", 1.6) * n / len(nomes))),
+                "teto_caps": max(2, math.ceil(mv.get("max_capitulos_frac", 0.5) * len(self._capitulos()))),
+                "dist": mv.get("min_distancia", 6)}
+
+    def _estados_previstos(self, c):
+        return max(2, round((c["fim"] - c["ini"]) / self.S_POR_ESTADO))
+
+    def _medir_plano(self, plano):
+        arq = self._dir_sb() / "plano.json"
+        gravar_json(arq, {"plano": plano})
+        _, saida = self.script("storyboard", "storyboard.py", self.p, "--plano", arq)
+        ids = [c["nn"] for c in self._capitulos()]
+        avisos = [l[6:] for l in saida.splitlines() if l.startswith("AVISO")]
+        if list(plano) != ids:
+            avisos.insert(0, f"o plano precisa ter um item por capítulo, nesta ordem: {', '.join(ids)}")
+        return avisos
+
+    def _plano(self, sistema, sid):
+        """A fase 1. Devolve o plano (de _work/storyboard/plano.json, se uma rodada anterior já fez)."""
+        arq = self._dir_sb() / "plano.json"
+        if arq.exists():
+            return (ler_json(arq) or {}).get("plano"), False     # de uma rodada anterior: a conversa não existe mais
+        self.marcar("storyboard", "rodando", "plano do vídeo")
+        texto = self._pedido_storyboard(fim=self._pedido_plano())
+        plano, nova = None, True
+        for volta in range(3):
+            r = self._chamar_sb(sistema, texto, sid, nova, f"plano, volta {volta}")
+            nova = False
+            plano = (r or {}).get("plano") if isinstance(r, dict) else None
+            if not isinstance(plano, dict):
+                texto = "A resposta não era o JSON do plano. " + self._JSON
+                continue
+            avisos = self._medir_plano(plano)
+            if not avisos:
+                break
+            texto = ("O plano está fora das regras do vídeo:\n" + "\n".join(f"- {a}" for a in avisos)
+                     + "\n\nCorrija e devolva o plano inteiro de novo. " + self._JSON)
+        if not isinstance(plano, dict):
+            raise Parada("o Claude não devolveu um plano de distribuição do vídeo")
+        gravar_json(arq, {"plano": plano})      # mesmo com aviso: as regras são medidas de novo no vídeo compilado
+        return plano, True
+
+    def _parcial(self, itens):
+        """Compila e mede os capítulos feitos até aqui numa pasta à parte (_work/storyboard/parcial), com a narração
+        cortada no fim do último: o fim do último capítulo não pode ser o fim do vídeo."""
+        d = self._dir_sb() / "parcial"
+        (d / "_work").mkdir(parents=True, exist_ok=True)
+        if not (d / "assets").exists():
+            (d / "assets").symlink_to(self.p / "assets", target_is_directory=True)
+        (self.p / "assets").mkdir(exist_ok=True)
+        fim = next(c["fim"] for c in self._capitulos() if c["nn"] == itens[-1]["id"])
+        palavras = ler_json(self.p / "_work" / "palavras.json", []) or []
+        gravar_json(d / "_work" / "palavras.json", [w for w in palavras if w["ini"] < fim - 0.01])
+        gravar_json(d / "cenas.json", {"titulo": titulo_video(self.video), "itens": itens})
+        for f in (d / "edicao").glob("plano_edicao_*.json") if (d / "edicao").exists() else []:
+            f.unlink()
+        cod, saida = self.script("storyboard", "compilar_cenas.py", d)
+        if cod != 0:
+            erros = [l for l in saida.splitlines() if l.startswith("  -") or l.startswith("AVISO")]
+            return None, ["o compilador recusou o capítulo:"] + (erros or [saida.strip()[-800:]])
+        avisos = [l[6:] for l in saida.splitlines() if l.startswith("AVISO")]
+        # os tetos são os do vídeo todo (o tamanho que o plano prevê), não os dos capítulos feitos até aqui
+        plano = (ler_json(self._dir_sb() / "plano.json") or {}).get("plano") or {}
+        previsto = [str(len(self._capitulos())),
+                    str(sum(len(v.get("variacoes") or []) for v in plano.values() if isinstance(v, dict)))]
+        _, saida2 = self.script("storyboard", "storyboard.py", d, "--video", "--previsto", *previsto)
+        avisos += [l[6:] for l in saida2.splitlines() if l.startswith("AVISO")]
+        itens = (ler_json(d / "cenas.json") or {}).get("itens", itens)      # com os ids que o compilador gravou
+        return itens, avisos
+
+    @staticmethod
+    def _deste(avisos, iid):
+        """Dos avisos do vídeo parcial, os que este capítulo pode corrigir agora (os de um capítulo anterior já ficaram
+        para trás). Os tetos de uso já vêm medidos contra o vídeo todo (--previsto): passou, é para este capítulo não
+        usar mais aquela variação."""
+        meus = []
+        for a in avisos:
+            if a.startswith(f"item {iid}") or a.startswith(f"capítulo {iid}:") or f"capítulo {iid}" in a \
+                    or f"({iid})" in a or f", {iid})" in a or a.startswith(("capítulos que abrem", "sequências de 3",
+                                                                             "variações usadas demais",
+                                                                             "variações em capítulos demais")):
+                meus.append(a)
+        return meus
+
+    def _o_que_ja_tem(self, feitos):
+        if not feitos:
+            return ""
+        caps = ler_json(self._dir_sb() / "parcial" / "_work" / "variacoes_video.json", []) or []
+        cont = {}
+        for c in caps:
+            for v in c["vars"]:
+                cont[v] = cont.get(v, 0) + 1
+        ultimos = [v for c in caps for v in c["vars"]][-6:]
+        buscas = []
+        for it in feitos:
+            for cena in it.get("cenas", []):
+                for e in cena.get("estados", []):
+                    for cd in e.get("cards", []):
+                        for x in [cd] + list(cd.get("troca", []) if isinstance(cd, dict) else []):
+                            if isinstance(x, dict) and x.get("buscas"):
+                                buscas.append(f"{it['id']}: {x['buscas'][0]}")
+        return ("O vídeo até aqui (medido): " + " · ".join(f"{c['id']} {c.get('resumo', '')}" for c in caps) + "\n"
+                + "Variações já usadas: " + ", ".join(f"{v} ×{n}" for v, n in sorted(cont.items(), key=lambda x: -x[1]))
+                + f"\nOs últimos {len(ultimos)} estados (não volte a eles logo no começo): {' → '.join(ultimos)}\n"
+                + "Buscas já usadas (a mesma imagem não aparece em dois capítulos): " + "; ".join(buscas) + "\n")
+
+    def _pedido_capitulo(self, c, k, plano, feitos):
+        pc = plano.get(c["nn"]) or {}
+        palavras = [w["p"] for w in ler_json(self.p / "_work" / "palavras.json", []) or []
+                    if c["ini"] - 0.01 <= w["ini"] < c["fim"] - 0.01]
+        forma = {"cold_open": "sem \"titulo\" (cold open)", "mudo": "sem \"titulo\" (capítulo mudo)"}.get(
+            c["tipo"], "com o \"titulo\" (o recorte do card de título)")
+        return (f"## Fase 2: capítulo {c['nn']} — {c['nome']} ({k} de {len(self._capitulos())})\n"
+                f"Narração de {c['ini']:.1f} a {c['fim']:.1f} s no tempo do vídeo ({c['fim'] - c['ini']:.0f} s), de "
+                f"\"{' '.join(palavras[:6])}\" a \"{' '.join(palavras[-6:])}\": todas as falas cobertas.\n"
+                f"O plano dele: abre com {pc.get('abre', '?')}; variações {', '.join(pc.get('variacoes') or [])}; "
+                f"{pc.get('ideia', '')}\n" + self._o_que_ja_tem(feitos)
+                + "Escreva com o detalhe de um capítulo feito sozinho: 20–25 assets/min, cenas que evoluem em 2–4 "
+                "estados, cada asset ≥ 1,8 s. Pode desviar do plano quando a fala pedir, sem usar o que o vídeo já "
+                "usou demais.\n"
+                f"Devolva SÓ o item deste capítulo, {forma}: {{\"id\": \"{c['nn']}\", \"nome\": \"{c['nome']}\", "
+                "\"cenas\": [...]}. " + self._JSON)
+
+    def _capitulo(self, sistema, sid, nova, c, k, plano, feitos):
+        """Um capítulo da fase 2: pede, mede junto com os de antes e, se tiver aviso dele, pede uma correção."""
+        arq = self._dir_sb() / f"{c['nn']}.json"
+        if arq.exists():
+            return ler_json(arq), nova
+        voltas = self.cfg.get("storyboard_voltas_capitulo", 1)
+        texto, item, avisos = self._pedido_capitulo(c, k, plano, feitos), None, []
+        for volta in range(voltas + 1):
+            self.marcar("storyboard", "rodando", f"capítulo {c['nn']} ({k}/{len(self._capitulos())})"
+                        + (f", correção {volta}" if volta else ""))
+            r = self._chamar_sb(sistema, texto, sid, nova, f"capítulo {c['nn']}, volta {volta}")
+            nova = False
+            if isinstance(r, dict) and "itens" in r:
+                r = next((i for i in r["itens"] if str(i.get("id")) == c["nn"]), None)
+            if not isinstance(r, dict) or not isinstance(r.get("cenas"), list):
+                texto = f"A resposta não era o item do capítulo {c['nn']}. " + self._JSON
+                continue
+            r["id"] = c["nn"]
+            cenas = {"itens": feitos + [r]}
+            self._acertar_itens(cenas, parcial=True)
+            itens, todos = self._parcial(cenas["itens"])
+            if itens is None:          # não compilou: este capítulo não pode seguir assim
+                texto = "\n".join(todos) + f"\n\nCorrija e devolva o item do capítulo {c['nn']} inteiro. " + self._JSON
+                continue
+            item, avisos = itens[-1], self._deste(todos, c["nn"])
+            if not avisos:
+                break
+            texto = (f"Medido junto com os capítulos de antes, o {c['nn']} tem estes avisos:\n"
+                     + "\n".join(f"- {a}" for a in avisos)
+                     + f"\n\nCorrija e devolva o item do capítulo {c['nn']} inteiro. " + self._JSON)
+        if item is None:
+            raise Parada(f"storyboard: o capítulo {c['nn']} não compilou ({' '.join(todos)[-300:]})")
+        gravar_json(arq, item)
+        return item, nova
+
     def storyboard(self):
         if (self.p / "plano.json").exists() and (self.p / "storyboard_video.md").exists():
             return "já existe"
@@ -173,10 +385,9 @@ class RodadaVideo(Rodada):
                          "producao/_work/candidatos e producao/escolhas.json e rode de novo)")
         sistema = self._sistema_storyboard()
         sid = str(uuid.uuid4())
-        texto = self._pedido_storyboard()
         voltas = self.cfg.get("storyboard_voltas", 4)
         timeout = int(self.cfg.get("storyboard_timeout_s", 2400) * 1.5)
-        ok, retorno = False, ""
+        ok, retorno, nova = False, "", True
         # já tem um cenas.json (rodada parada no meio, ou escrito à mão): a 1ª volta do vídeo inteiro custa ~850 mil
         # tokens equiv. (medido em 2026-11-05) — então mede o que existe e pede só a correção
         atual = ler_json(self.p / "cenas.json") if (self.p / "cenas.json").exists() else None
@@ -185,13 +396,44 @@ class RodadaVideo(Rodada):
             ok, retorno = self._compilar_e_medir()
             if ok:
                 return "ok (o cenas.json que já existia passou)"
-            texto += ("\n\n## cenas.json que já existe (feito antes; NÃO reescreva o vídeo, corrija só o que os "
-                      "avisos abaixo apontam)\n" + json.dumps(atual, ensure_ascii=False, separators=(",", ":"))
-                      + "\n\n" + retorno + "\n\n" + self._PEDE_TROCA)
+            texto = self._pedido_storyboard(
+                fim="## cenas.json que já existe (feito antes; NÃO reescreva o vídeo, corrija só o que os avisos "
+                    "abaixo apontam)\n" + json.dumps(atual, ensure_ascii=False, separators=(",", ":"))
+                    + "\n\n" + retorno + "\n\n" + self._PEDE_TROCA)
+        else:
+            # fase 1 (o plano) e fase 2 (um capítulo por resposta), na mesma conversa; o que já foi feito numa
+            # rodada anterior fica em _work/storyboard/ e não é pedido de novo
+            plano, na_conversa = self._plano(sistema, sid)
+            nova = not na_conversa
+            feitos = []
+            caps = self._capitulos()
+            for k, c in enumerate(caps, 1):
+                if nova and not (self._dir_sb() / f"{c['nn']}.json").exists():
+                    # rodada retomada: a conversa de antes não existe mais; uma nova com o plano e o que já foi feito
+                    sid = str(uuid.uuid4())
+                    self._chamar_sb(sistema, self._pedido_storyboard(
+                        fim="## Plano de distribuição (fase 1, já feito)\n" + json.dumps(plano, ensure_ascii=False)
+                            + "\n\n## Capítulos já escritos (não mude)\n"
+                            + json.dumps(feitos, ensure_ascii=False, separators=(",", ":"))
+                            + "\n\nResponda só {\"ok\": true}; os próximos capítulos vêm um por mensagem."),
+                        sid, True, "retomada")
+                    nova = False
+                item, nova = self._capitulo(sistema, sid, nova, c, k, plano, feitos)
+                feitos.append(item)
+            cenas = {"titulo": titulo_video(self.video), "itens": feitos}
+            self._acertar_itens(cenas)
+            gravar_json(self.p / "cenas.json", cenas)
+            shutil.rmtree(self.p / "_work" / "storyboard_feito", ignore_errors=True)
+            self._dir_sb().rename(self.p / "_work" / "storyboard_feito")      # refazer = apagar o cenas.json
+            ok, retorno = self._compilar_e_medir()
+            if ok:
+                return f"ok capítulo a capítulo ({len(feitos)} capítulos)"
+            texto = retorno + "\n\n" + self._PEDE_TROCA
         for volta in range(voltas + 1):
-            self.marcar("storyboard", "rodando", f"volta {volta + 1} de {voltas + 1}")
+            self.marcar("storyboard", "rodando", f"vídeo inteiro: correção {volta + 1} de {voltas + 1}")
             r = motor.chamar("storyboard", sistema, texto, canal=self.c, ctx=self.ctx, timeout=timeout,
-                             sessao=(sid, volta == 0), texto_livre=True)
+                             sessao=(sid, nova), texto_livre=True)
+            nova = False
             with open(self.log("storyboard"), "a") as f:
                 f.write(f"\n=== volta {volta} ({r['_uso']['equivalente']:,} equiv.)\n")
             try:
