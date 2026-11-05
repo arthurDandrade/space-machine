@@ -1139,6 +1139,10 @@ def main():
     (proj / "edicao" / f"layout_{a.item}{'_vertical' if VERTICAL else ''}.json").write_text(json.dumps(reg, ensure_ascii=False, indent=0))
     jsx = proj / "edicao" / f"montar_{a.item}_{suf}.jsx"
     jsx.write_text("var DADOS = " + json.dumps(dados, ensure_ascii=False) + ";\n" + modelo)
+    # o mesmo plano para o compositor sem After (motor/edicao_ff/compor.py): "modelo": "cards" = ele faz o que o
+    # montar_modelo2.jsx fazia por cima das layers (fundo de papel, caixas de texto, borrão de movimento)
+    (proj / "edicao" / f"plano_render_{a.item}{'_vertical' if VERTICAL else ''}.json").write_text(
+        json.dumps(dict(dados, modelo="cards"), ensure_ascii=False))
     print(jsx, len(M.layers), "layers")
 
 

@@ -12,8 +12,15 @@ O que ele entende (o mesmo que o modelo do After fazia, 2026-11-04):
     letras, encolhe para caber em max_w, alinhamento e âncora como no After);
   - pai, âncora, posição, escala (negativa = espelhado), rotação e opacidade, com chaves lineares ou com ease;
   - as expressões que os geradores usam (oscilação, partículas, sonar, estrelas), avaliadas a cada quadro;
-  - mesclagem normal, "add" e "screen".
-O que ficou de fora: borrão de movimento.
+  - mesclagem normal, "add" e "screen";
+  - ease com velocidade nas chaves ([vel. entrada, influência, vel. saída, influência], como o After);
+  - "modelo": "cards" no plano (explained, o que o montar_modelo2.jsx fazia, 2026-11-05): fundo de papel (cor,
+    textura, vinheta e a imagem de adesivos do canal), máscara de retângulo arredondado nos cards ("crop" + "radius"),
+    sombra na cor do canal, desfoque animado ("blur_keys"), texto medido como no After ("max_size" + "max_w"), caixa
+    colorida atrás do texto ("box") e borrão de movimento nas imagens (obturador 180°).
+  Comparado com o render do After de um bloco do pro-football (bloco 07 do "worst draft pick", 2026-11-05):
+  32,7 dB de PSNR médio, nenhum quadro abaixo de 24 dB (o que sobra é a textura do papel, que é aleatória).
+O que ficou de fora: borrão de movimento fora do modelo de cards.
 """
 import argparse
 import json
@@ -56,15 +63,16 @@ def fonte(nome_ps, tam):
 
 
 # ---------------- chaves e expressões ----------------
-def _bezier_y(u, x1, x2):
-    """Curva de tempo do ease (x1/x2 = influência de saída e de entrada, 0–1): acha t com x(t)=u e devolve y(t)."""
+def _bezier_y(u, x1, x2, y1=0.0, y2=1.0):
+    """Curva de tempo do ease: pontos de controle (x1, y1) e (1 − x2, y2) — x1/x2 = influência de saída e de entrada
+    (0–1), y1/y2 = onde a velocidade da chave leva a alça (0 e 1 = velocidade zero). Acha t com x(t)=u e devolve y(t)."""
     lo, hi = 0.0, 1.0
     for _ in range(30):
         t = (lo + hi) / 2
         x = 3 * (1 - t) ** 2 * t * x1 + 3 * (1 - t) * t ** 2 * (1 - x2) + t ** 3
         lo, hi = (t, hi) if x < u else (lo, t)
     t = (lo + hi) / 2
-    return 3 * (1 - t) * t ** 2 + t ** 3
+    return 3 * (1 - t) ** 2 * t * y1 + 3 * (1 - t) * t ** 2 * y2 + t ** 3
 
 
 def valor(keys, t, linear=False):
@@ -78,11 +86,20 @@ def valor(keys, t, linear=False):
         if a[0] <= t <= b[0]:
             u = (t - a[0]) / max(1e-9, b[0] - a[0])
             ea, eb = (a[2] if len(a) > 2 else None), (b[2] if len(b) > 2 else None)
-            if not linear and (ea or eb):
-                x1 = (ea[3] / 100) if ea else 0.0
-                x2 = (eb[1] / 100) if eb else 0.0
-                u = _bezier_y(u, min(1, x1), min(1, x2))
             va, vb = np.asarray(a[1], float), np.asarray(b[1], float)
+            if not linear and (ea or eb):
+                # ease do After: [velocidade de entrada, influência de entrada, velocidade de saída, influência de
+                # saída]. A alça de saída de a vai a (influência·T, velocidade·influência·T); a de entrada de b, o
+                # mesmo para trás. Em propriedade de 2 dimensões a velocidade é ao longo do caminho (reto: as
+                # tangentes espaciais são zeradas no modelo).
+                T = b[0] - a[0]
+                dv = vb - va
+                D = float(dv) if dv.ndim == 0 else float(np.linalg.norm(dv))
+                x1 = min(1, max(0.1, ea[3]) / 100) if ea else 0.0
+                x2 = min(1, max(0.1, eb[1]) / 100) if eb else 0.0
+                y1 = ea[2] * x1 * T / D if ea and abs(D) > 1e-9 else 0.0
+                y2 = 1 - (eb[0] * x2 * T / D if eb and abs(D) > 1e-9 else 0.0)
+                u = _bezier_y(u, x1, x2, y1, y2)
             return va + (vb - va) * u
     return np.asarray(keys[-1][1], float)
 
@@ -136,23 +153,41 @@ def _desfocar(rgba, sigma):
     return out, m
 
 
-def _sombra(rgba, o):
-    """Sombra projetada (After: op 0–255, direção em graus, 0 = para cima, distância, suavidade)."""
+def _sombra_alfa(alfa, o):
+    """Só a sombra projetada de um alfa (After: op 0–255, direção em graus, 0 = para cima, distância, suavidade).
+    Devolve (alfa da sombra com margem, margem)."""
     sig = max(0.5, o.get("soft", 10) / 2.5)
     m = int(math.ceil(sig * 3 + o.get("dist", 0)))
-    p = cv2.copyMakeBorder(rgba, m, m, m, m, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0))
-    a = cv2.GaussianBlur(p[..., 3], (0, 0), sig) * (o.get("op", 128) / 255)
+    p = cv2.copyMakeBorder(alfa, m, m, m, m, cv2.BORDER_CONSTANT, value=0)
+    a = cv2.GaussianBlur(p, (0, 0), sig) * (o.get("op", 128) / 255)
     th = math.radians(o.get("dir", 135))
     dx, dy = o.get("dist", 0) * math.sin(th), -o.get("dist", 0) * math.cos(th)
-    a = cv2.warpAffine(a, np.float32([[1, 0, dx], [0, 1, dy]]), (a.shape[1], a.shape[0]))
+    return cv2.warpAffine(a, np.float32([[1, 0, dx], [0, 1, dy]]), (a.shape[1], a.shape[0])), m
+
+
+def _sombra(rgba, o, sombra=None):
+    """A imagem por cima da sombra projetada dela, na cor o["cor"] (padrão preto). `sombra` = (alfa, margem) já
+    calculados (vídeo com máscara fixa: a sombra é a mesma em todo quadro)."""
+    sa, m = sombra if sombra is not None else _sombra_alfa(np.ascontiguousarray(rgba[..., 3]), o)
+    p = cv2.copyMakeBorder(rgba, m, m, m, m, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0))
+    cor = np.asarray(o.get("cor") or [0, 0, 0], np.float32)[:3]
     base = np.zeros_like(p)
-    base[..., 3] = a
-    # a imagem por cima da sombra
     al = p[..., 3:4]
-    base[..., :3] = p[..., :3] * al
-    base[..., 3:4] = al + a[..., None] * (1 - al)
+    a = sa[..., None]
+    base[..., :3] = p[..., :3] * al + cor * a * (1 - al)
+    base[..., 3:4] = al + a * (1 - al)
     base[..., :3] = np.where(base[..., 3:4] > 1e-4, base[..., :3] / np.maximum(base[..., 3:4], 1e-4), 0)
     return base, m
+
+
+def _mascara(w, h, cw, ch, r):
+    """Máscara de retângulo arredondado (cw×ch, raio r) centrada numa imagem w×h, com borda suave de 1 px."""
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = max(0.0, min(r, cw / 2, ch / 2))
+    px = np.abs(xx + 0.5 - w / 2) - (cw / 2 - r)
+    py = np.abs(yy + 0.5 - h / 2) - (ch / 2 - r)
+    dist = np.sqrt(np.maximum(px, 0) ** 2 + np.maximum(py, 0) ** 2) + np.minimum(np.maximum(px, py), 0) - r
+    return np.clip(0.5 - dist, 0, 1)
 
 
 def _grade(rgba, g):
@@ -181,21 +216,34 @@ def _grade(rgba, g):
 
 def _texto(d):
     """Texto como o modelo do After: tamanho, encolhe para caber em max_w, espaçamento, linhas com \\r, alinhamento.
-    Devolve (rgba, âncora em px da imagem)."""
+    Devolve (rgba, âncora em px da imagem, (largura e altura da tinta, tamanho da letra))."""
     tam = float(d.get("size") or 100)
     linhas = str(d["text"]).split("\r")
 
     def medir(tam_):
         f = fonte(d["font"], tam_)
         esp = (d.get("tracking") or 0) / 1000 * tam_
-        larg = [sum(f.getlength(ch) + esp for ch in ln) - (esp if ln else 0) for ln in linhas]
+        if esp:
+            larg = [sum(f.getlength(ch) + esp for ch in ln) - (esp if ln else 0) for ln in linhas]
+        else:                       # sem espaçamento: a linha inteira, com o kerning da fonte
+            larg = [f.getlength(ln) for ln in linhas]
         return f, esp, larg
 
-    f, esp, larg = medir(tam)
-    if d.get("max_w") and max(larg) > d["max_w"]:
-        tam = tam * d["max_w"] / max(larg)
+    if d.get("max_size"):
+        # modelo de cards (explained): como o montar_modelo2.jsx — mede a 100 pt a largura da tinta
+        # (sourceRectAtTime), tamanho = min(max_size, 100·max_w/largura), entrelinha 1,08
+        f100 = fonte(d["font"], 100)
+        caixas = [f100.getbbox(ln) for ln in linhas if ln]
+        larg100 = (max(b[2] for b in caixas) - min(b[0] for b in caixas)) if caixas else 1
+        tam = min(float(d["max_size"]), 100 * d["max_w"] / max(1, larg100)) if d.get("max_w") else float(d["max_size"])
         f, esp, larg = medir(tam)
-    lead = tam * 1.15
+        lead = tam * 1.08
+    else:
+        f, esp, larg = medir(tam)
+        if d.get("max_w") and max(larg) > d["max_w"]:
+            tam = tam * d["max_w"] / max(larg)
+            f, esp, larg = medir(tam)
+        lead = tam * 1.15
     asc, desc = f.getmetrics()
     m = int(tam * 0.5)
     W_, H_ = int(max(larg)) + 2 * m, int(lead * (len(linhas) - 1) + asc + desc) + 2 * m
@@ -204,6 +252,9 @@ def _texto(d):
     for k, ln in enumerate(linhas):
         x = m + {"left": 0, "right": max(larg) - larg[k]}.get(d.get("justify"), (max(larg) - larg[k]) / 2)
         y = m + k * lead
+        if not esp:
+            dr.text((x, y), ln, font=f, fill=255)
+            continue
         for ch in ln:
             dr.text((x, y), ch, font=f, fill=255)
             x += f.getlength(ch) + esp
@@ -218,7 +269,7 @@ def _texto(d):
         x0 = x1 = y0 = y1 = 0
     ax = {"left": x0, "right": x1}.get(d.get("justify"), (x0 + x1) / 2)
     ay = {"top": y0, "bottom": y1}.get(d.get("anchor_mode"), (y0 + y1) / 2)
-    return rgba, [ax, ay]
+    return rgba, [ax, ay], (x1 - x0, y1 - y0, tam)
 
 
 def _comprimento(pts):
@@ -380,6 +431,74 @@ class Video:
             pass
 
 
+# ---------------- modelo de cards (explained) ----------------
+def _luz_suave(b, s):
+    """Mesclagem Luz Suave (W3C): b = base, s = camada de cima, 0–1."""
+    d = np.where(b <= 0.25, ((16 * b - 12) * b + 4) * b, np.sqrt(b))
+    return np.where(s <= 0.5, b - (1 - 2 * s) * b * (1 - b), b + (2 * s - 1) * (d - b))
+
+
+def _fundo_cards(d, W, H):
+    """O fundo de papel do montar_modelo2.jsx, desenhado uma vez: cor do fundo, textura (Fractal Noise: contraste 260,
+    brilho −10, escala 18, em Luz Suave a 14%), vinheta na cor da sombra (elipse 190/220 px além das bordas, pena 650,
+    13%) e, se o canal tiver, a imagem de papel com adesivos (identidade › fundo_imagem)."""
+    W0, H0 = int(d["w"]), int(d["h"])
+    f = np.empty((H0, W0, 3), np.float32)
+    f[...] = np.asarray((d.get("cor_fundo") or [1, 1, 1])[:3], np.float32)
+    rng = np.random.default_rng(7)
+    ruido, amp, cel, soma = np.zeros((H0, W0), np.float32), 1.0, 18.0, 0.0
+    for _ in range(6):                    # complexidade 6: cada oitava 56% do tamanho e 70% da força da anterior
+        gh, gw = int(H0 / cel) + 2, int(W0 / cel) + 2
+        g = rng.random((gh, gw), dtype=np.float32)
+        ruido += amp * cv2.resize(g, (int(gw * cel), int(gh * cel)), interpolation=cv2.INTER_LINEAR)[:H0, :W0]
+        soma += amp
+        amp, cel = amp * 0.7, cel * 0.56
+        if cel < 1:
+            break
+    ruido = np.clip((ruido / soma - 0.5) * 2.6 + 0.5 - 0.1, 0, 1)[..., None]
+    f = f * 0.86 + _luz_suave(f, ruido) * 0.14
+    rx, ry = W0 / 2 + 190 * W0 / 1920, H0 / 2 + 220 * H0 / 1080
+    yy, xx = np.mgrid[0:H0, 0:W0].astype(np.float32)
+    dist = np.sqrt(((xx - W0 / 2) / rx) ** 2 + ((yy - H0 / 2) / ry) ** 2)
+    a = ((1 - np.clip((1 - dist) * min(rx, ry) / 650 + 0.5, 0, 1)) * 0.13)[..., None]
+    f = f * (1 - a) + np.asarray((d.get("cor_sombra") or [0, 0, 0])[:3], np.float32) * a
+    fi = d.get("fundo_imagem")
+    if fi and Path(fi.get("file", "")).exists():
+        im = _premult(np.asarray(Image.open(fi["file"]).convert("RGBA"), np.float32) / 255)
+        e = fi.get("escala", 100) / 100
+        px, py = fi.get("pos") or [W0 / 2, H0 / 2]
+        Mf = np.float32([[e, 0, px - e * im.shape[1] / 2], [0, e, py - e * im.shape[0] / 2]])
+        war = cv2.warpAffine(im, Mf, (W0, H0), flags=cv2.INTER_AREA if e < 1 else cv2.INTER_LINEAR,
+                             borderMode=cv2.BORDER_CONSTANT, borderValue=0) * (fi.get("opacidade", 100) / 100)
+        f = f * (1 - war[..., 3:4]) + war[..., :3]
+    if (W, H) != (W0, H0):
+        f = cv2.resize(f, (W, H), interpolation=cv2.INTER_AREA)
+    return np.clip(f, 0, 1)
+
+
+def _modelo_cards(dados):
+    """O que o montar_modelo2.jsx fazia por cima das layers: fonte padrão do canal nos textos sem fonte, sombra na cor
+    da sombra do canal e vinda de cima (180°), e a caixa colorida (fundo azul da identidade) logo abaixo do texto com
+    "box" — mesmo pai, posição, tempo e fade dele, do tamanho da tinta + 20%/10% da letra de folga."""
+    out = []
+    prox = max([L["id"] for L in dados["layers"]] + [0]) + 1
+    cor_s = dados.get("cor_sombra") or [0, 0, 0]
+    for L in dados["layers"]:
+        L = dict(L)
+        if L["kind"] == "text" and not L.get("font"):
+            L["font"] = dados.get("fonte") or "AvenirNext-Heavy"
+        if L.get("shadow"):
+            L["shadow"] = dict(L["shadow"], cor=cor_s, dir=180)
+        if L["kind"] == "text" and L.get("box"):
+            _, _, (lw, lh, tam) = _texto(L)
+            out.append({"kind": "shape", "id": prox, "name": "caixa " + L.get("name", ""), "parent": L.get("parent"),
+                        "pos": L.get("pos"), "in": L["in"], "out": L["out"], "opacity_keys": L.get("opacity_keys"),
+                        "items": [{"t": "rect", "size": [lw + 0.4 * tam, lh + 0.2 * tam], "fill": L["box"]}]})
+            prox += 1
+        out.append(L)
+    return out
+
+
 # ---------------- a comp ----------------
 def _matriz(pos, anc, esc, rot):
     """Camada → pai: T(pos) · R(rot) · S(esc) · T(−âncora), em 3×3."""
@@ -396,9 +515,13 @@ class Comp:
         self.W, self.H = int(dados["w"] * escala), int(dados["h"] * escala)
         self.esc = escala
         self.fps = dados["fps"]
-        self.layers = dados["layers"]
+        # modelo de cards (explained, montar_modelo2.jsx): fundo de papel, caixas de texto e borrão de movimento
+        self.cards = dados.get("modelo") == "cards"
+        self.layers = _modelo_cards(dados) if self.cards else dados["layers"]
         self.por_id = {L["id"]: L for L in self.layers}
         self.cache, self.videos, self._prep = {}, {}, {}
+        self._anc, self._mascaras, self._sombras, self._desf = {}, {}, {}, {}
+        self.fundo = _fundo_cards(dados, self.W, self.H) if self.cards else None
 
     def transf(self, L, t, memo):
         """Matriz camada → comp no tempo t (pais incluídos)."""
@@ -415,6 +538,8 @@ class Comp:
             anc = L["anchor"]
         elif tipo == "null":
             anc = [0, 0]
+        elif L["id"] in self._anc:   # já desenhada neste quadro (vídeo: não ler o quadro de novo)
+            anc = self._anc[L["id"]]
         else:                       # forma: a origem da layer dentro da imagem desenhada; footage/texto: o centro/âncora
             anc = self.base(L, t)[1]
         M = _matriz(pos[:2], anc, esc[:2], rot)
@@ -435,7 +560,18 @@ class Comp:
             fr = v.quadro(max(0, int(lt * self.fps)))
             rgba = np.ones((v.h, v.w, 4), np.float32)
             rgba[..., :3] = fr.astype(np.float32) / 255
-            return rgba, [L["src"][0] / 2, L["src"][1] / 2]
+            anc = [L["src"][0] / 2, L["src"][1] / 2]
+            if L.get("crop"):
+                rgba[..., 3] = self._mascara(L, v.w, v.h)
+            if L.get("shadow"):
+                # a máscara é a mesma em todo quadro, então a sombra também: calcula uma vez
+                so = self._sombras.get(i)
+                if so is None:
+                    so = self._sombras[i] = _sombra_alfa(np.ascontiguousarray(rgba[..., 3]), L["shadow"])
+                rgba, m = _sombra(rgba, L["shadow"], so)
+                anc = [anc[0] + m, anc[1] + m]
+            self._anc[i] = anc
+            return rgba, anc
         if L["kind"] == "shape" and L.get("trim_keys"):
             frac = float(valor(L["trim_keys"], t)) / 100
             chave = round(frac, 3)
@@ -450,8 +586,11 @@ class Comp:
                 im = Image.open(L["file"]).convert("RGBA")
                 rgba = np.asarray(im, np.float32) / 255
                 anc = [im.width / 2, im.height / 2]
+                if L.get("crop"):
+                    rgba = rgba.copy()
+                    rgba[..., 3] *= self._mascara(L, im.width, im.height)
             elif L["kind"] == "text":
-                rgba, anc = _texto(L)
+                rgba, anc, _ = _texto(L)
             elif L["kind"] == "shape":
                 rgba, anc = _forma(L)
             elif L["kind"] == "solid":
@@ -464,7 +603,15 @@ class Comp:
         _, rgba, anc = self.cache[i]
         if L.get("ondula") and rgba is not None:
             rgba, anc = self._ondula(L, rgba, anc, t)
+        self._anc[i] = anc
         return rgba, anc
+
+    def _mascara(self, L, w, h):
+        """Máscara do card (crop + raio, em px da imagem de origem, centrada), como a do modelo do After."""
+        m = self._mascaras.get(L["id"])
+        if m is None or m.shape != (h, w):
+            m = self._mascaras[L["id"]] = _mascara(w, h, L["crop"][0], L["crop"][1], L.get("radius") or 0)
+        return m
 
     def _efeitos(self, L, rgba, anc):
         if L.get("grade"):
@@ -492,14 +639,38 @@ class Comp:
         out[..., :3] = np.where(a > 1e-4, out[..., :3] / np.maximum(a, 1e-4), 0)
         return out, [anc[0], anc[1] + m]
 
-    def _fonte(self, L, rgba, Mr):
-        """A imagem pré-multiplicada que vai para o warp. Quando ela aparece bem menor na tela, uma versão já reduzida
-        (INTER_AREA, em degraus de 1/8) entra no lugar: não serrilha e o warp fica muito mais barato. Imagem fixa fica
-        em cache; vídeo, ondulação e traço que se desenha são refeitos a cada quadro."""
-        esc = math.sqrt(abs(np.linalg.det(Mr[:2, :2])))
+    def _fonte(self, L, rgba, M, t):
+        """(imagem pré-multiplicada que vai para o warp, A) — A leva as coordenadas dela para as da camada (antes de M).
+        Quando a camada aparece bem menor na tela, uma versão já reduzida (INTER_AREA, em degraus de 1/8) entra no
+        lugar: não serrilha e o warp fica muito mais barato. Com desfoque animado (blur_keys, o Gaussian Blur do After,
+        no tamanho original da camada), o desfoque é feito numa versão reduzida até onde ele não deixa diferença
+        (σ ≥ 2 px depois de reduzir). Imagem fixa fica em cache; vídeo, ondulação e traço que se desenha são refeitos a
+        cada quadro."""
+        esc = math.sqrt(abs(np.linalg.det(M[:2, :2])))
         degrau = 1.0 if esc > 0.85 else max(1 / 8, math.ceil(esc * 8) / 8)
         fixo = not (L.get("ondula") or (L["kind"] == "shape" and L.get("trim_keys")) or
                     (L["kind"] == "footage" and Path(L["file"]).suffix.lower() in (".mp4", ".mov", ".m4v", ".webm")))
+        b = float(valor(L["blur_keys"], t, True)) if L.get("blur_keys") else 0.0
+        if b > 0.05:
+            sig = b / 2.5               # o mesmo fator do "blur" fixo (_efeitos)
+            f = degrau
+            if sig * f > 2:
+                f = min(degrau, max(1 / 16, math.ceil(2 / sig * 16) / 16))
+            chave = (round(b, 2), f)
+            c = self._desf.get(L["id"]) if fixo else None
+            if c is not None and c[0] == chave:
+                return c[1], c[2]
+            src = _premult(rgba)
+            if f < 1:
+                src = cv2.resize(src, (max(1, int(src.shape[1] * f)), max(1, int(src.shape[0] * f))),
+                                 interpolation=cv2.INTER_AREA)
+            m = int(math.ceil(3 * sig * f))
+            src = cv2.GaussianBlur(cv2.copyMakeBorder(src, m, m, m, m, cv2.BORDER_CONSTANT, value=(0, 0, 0, 0)),
+                                   (0, 0), sig * f)
+            A = np.array([[1 / f, 0, -m / f], [0, 1 / f, -m / f], [0, 0, 1]], np.float64)
+            if fixo:
+                self._desf[L["id"]] = (chave, src, A)
+            return src, A
         chave = (L["id"], degrau)
         src = self._prep.get(chave) if fixo else None
         if src is None:
@@ -509,13 +680,29 @@ class Comp:
                                  interpolation=cv2.INTER_AREA)
             if fixo:
                 self._prep[chave] = src
-        if degrau < 1:
-            Mr = Mr @ np.diag([1 / degrau, 1 / degrau, 1.0])
-        return src, Mr
+        return src, np.diag([1 / degrau, 1 / degrau, 1.0])
+
+    def _amostras(self, L, t, M, G, forma):
+        """Borrão de movimento do modelo de cards (After: obturador 180°, fase −90° = de t − ¼ a t + ¼ de quadro, só
+        nas camadas de imagem/vídeo): as matrizes em que a camada é desenhada e somada. Parada = uma só."""
+        if not (self.cards and L["kind"] == "footage"):
+            return [M]
+        q = 0.25 / self.fps
+        h, w = forma[:2]
+        pts = np.array([[0, w, w, 0], [0, 0, h, h], [1, 1, 1, 1]], np.float64)
+        Ma, Mb = G @ self.transf(L, t - q, {}), G @ self.transf(L, t + q, {})
+        desloc = float(np.max(np.hypot(*((Ma @ pts)[:2] - (Mb @ pts)[:2]))))
+        if desloc <= 1.5:
+            return [M]
+        n = min(16, int(math.ceil(desloc / 1.5)))
+        return [G @ self.transf(L, t + q * (2 * k / (n - 1) - 1), {}) for k in range(n)]
 
     def quadro(self, t):
-        f = np.zeros((self.H, self.W, 3), np.float32)
-        f[...] = np.asarray(self.d.get("cor_fundo", [0, 0, 0])[:3], np.float32)
+        if self.fundo is not None:
+            f = self.fundo.copy()
+        else:
+            f = np.zeros((self.H, self.W, 3), np.float32)
+            f[...] = np.asarray(self.d.get("cor_fundo", [0, 0, 0])[:3], np.float32)
         memo = {}
         G = np.diag([self.esc, self.esc, 1.0])
         for L in self.layers:
@@ -529,18 +716,25 @@ class Comp:
             if rgba is None:
                 continue
             M = G @ self.transf(L, t, memo)
-            h, w = rgba.shape[:2]
-            cant = (M @ np.array([[0, w, w, 0], [0, 0, h, h], [1, 1, 1, 1]], np.float64))[:2]
+            src, A = self._fonte(L, rgba, M, t)
+            mats = [Mi @ A for Mi in self._amostras(L, t, M, G, rgba.shape)]
+            h, w = src.shape[:2]
+            pts = np.array([[0, w, w, 0], [0, 0, h, h], [1, 1, 1, 1]], np.float64)
+            cant = np.concatenate([(Mi @ pts)[:2] for Mi in mats], axis=1)
             x0, y0 = max(0, int(math.floor(cant[0].min()))), max(0, int(math.floor(cant[1].min())))
             x1, y1 = min(self.W, int(math.ceil(cant[0].max())) + 1), min(self.H, int(math.ceil(cant[1].max())) + 1)
             if x1 <= x0 or y1 <= y0:
                 continue
-            Mr = M.copy()
-            Mr[0, 2] -= x0
-            Mr[1, 2] -= y0
-            src, Mr = self._fonte(L, rgba, Mr)
-            war = cv2.warpAffine(src, Mr[:2], (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR,
-                                 borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+            war = None
+            for Mi in mats:
+                Mr = Mi.copy()
+                Mr[0, 2] -= x0
+                Mr[1, 2] -= y0
+                w_ = cv2.warpAffine(src, Mr[:2], (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR,
+                                    borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+                war = w_ if war is None else war + w_
+            if len(mats) > 1:
+                war /= len(mats)
             cor, a = war[..., :3] * op, war[..., 3:4] * op
             roi = f[y0:y1, x0:x1]
             modo = L.get("blend")
@@ -557,6 +751,8 @@ class Comp:
                 if L["id"] in self.videos:
                     self.videos.pop(L["id"]).fechar()
                 self.cache.pop(L["id"], None)
+                for dic in (self._anc, self._mascaras, self._sombras, self._desf):
+                    dic.pop(L["id"], None)
                 for k in [k for k in self._prep if k[0] == L["id"]]:
                     self._prep.pop(k)
         return f
@@ -597,9 +793,10 @@ def main():
     ap.add_argument("--item", default="01")
     ap.add_argument("--saida", required=True)
     ap.add_argument("--meia", action="store_true", help="960×540 (prévia de rascunho para o QA)")
+    ap.add_argument("--plano", help="outro arquivo de plano (no lugar de <projeto>/edicao/plano_render_<item>.json)")
     a = ap.parse_args()
     proj = Path(a.projeto).resolve()
-    dados = json.loads((proj / "edicao" / f"plano_render_{a.item}.json").read_text())
+    dados = json.loads((Path(a.plano) if a.plano else proj / "edicao" / f"plano_render_{a.item}.json").read_text())
     s = renderizar(dados, Path(a.saida), 0.5 if a.meia else 1.0, crf=20 if a.meia else 18,
                    preset="veryfast" if a.meia else "medium")
     print(f"OK {a.saida} ({dados['dur']:.1f} s de vídeo em {s:.0f} s)")
