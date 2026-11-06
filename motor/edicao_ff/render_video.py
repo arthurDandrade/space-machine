@@ -45,9 +45,15 @@ def _impressao(dados, meia):
     for f in sorted({L["file"] for L in dados["layers"] if L.get("file")}):
         try:
             st = os.stat(f)
-            h.update(f"{f}|{st.st_size}|{int(st.st_mtime)}".encode())
         except FileNotFoundError:
             h.update(f"{f}|faltando".encode())
+            continue
+        # pelo conteúdo, não pela data: o compilar_cenas e o gerar_ae2 desenham de novo os mapas, tabelas e citações a
+        # cada compilação (iguais byte a byte), e a correção do QA de UM capítulo renderizava de novo os 9 (2026-11-05)
+        if st.st_size <= 64 << 20:
+            h.update(f"{f}|".encode() + hashlib.sha1(Path(f).read_bytes()).digest())
+        else:
+            h.update(f"{f}|{st.st_size}|{int(st.st_mtime)}".encode())
     return h.hexdigest()
 
 

@@ -78,10 +78,16 @@ def checar_render(video, plano, det, R, layout=None):
     fim = plano["fim"]
     fr_cont = [f for f in fr if f["t"] <= fim]
     ha_texto = None
+    ha_card = lambda t: False
     if layout and layout.exists():
-        tx = [(r["in"], r["out"]) for r in json.loads(layout.read_text())
-              if r["tipo"] == "texto" and r.get("estado") != "Título"]
+        lay = json.loads(layout.read_text())
+        tx = [(r["in"], r["out"]) for r in lay if r["tipo"] == "texto" and r.get("estado") != "Título"]
         ha_texto = lambda t: any(a - 0.3 <= t <= b + 0.3 for a, b in tx)
+        # card no layout = não é texto solo, mesmo que o detector não veja o card: um gráfico G3 (card branco sobre o
+        # papel, sem foto) foi lido como texto solo de 60 px e reprovou o capítulo 08 do worst draft pick duas
+        # vezes (2026-11-05)
+        cs = [(r["in"], r["out"]) for r in lay if r["tipo"] == "card"]
+        ha_card = lambda t: any(a <= t <= b for a, b in cs)
     m = medir_deteccao(fr_cont, fps, ha_texto)
     # quanto de cada frame (4 fps) é diferente do fundo de papel — conferência no pixel para os casos em que
     # o detector se perde (card + globo/bandeira encostados não é retângulo: E5/M5/F9)
@@ -121,7 +127,8 @@ def checar_render(video, plano, det, R, layout=None):
     alt = m["altura_texto_solo"]
     if alt:
         # texto solo de verdade = quase toda a tela é papel (texto ocupa <15%); senão é card que o detector perdeu
-        solo = lambda f: not f["cards"] and not f["recortes"] and f["textos"] and ocup.get(round(f["t"] * fps), 0) < 0.15
+        solo = lambda f: not f["cards"] and not f["recortes"] and f["textos"] and not ha_card(f["t"]) \
+            and ocup.get(round(f["t"] * fps), 0) < 0.15
         alt = [max(t[3] for t in f["textos"]) for f in estaveis(fr_cont) if solo(f)] or alt
         med = float(np.median(alt))
         peq = [f"{f['t']:.1f}s ({max(t[3] for t in f['textos'])}px)" for f in estaveis(fr_cont)

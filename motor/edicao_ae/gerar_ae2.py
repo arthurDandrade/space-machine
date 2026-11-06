@@ -68,7 +68,9 @@ class Montador:
             esc = min(esc, 1.0)
             nw, nh = max(1, round(im.width * esc)), max(1, round(im.height * esc))
             dst = self.cache / f"{src.parent.name}_{src.stem}_{nw}{'_p' if png else ''}.png"
-            if not dst.exists():
+            # refaz se a original mudou: um gráfico corrigido (mesmo nome, é o hash do pedido) seguia entrando pela
+            # cópia velha (2026-11-05)
+            if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
                 im.resize((nw, nh), Image.LANCZOS).save(dst)
             return dst, nw, nh, None
         return src, im.width, im.height, None

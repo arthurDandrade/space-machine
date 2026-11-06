@@ -37,6 +37,18 @@ def fmt(v):
     return str(v)
 
 
+def _e_destaque(dest, i, celulas):
+    """O destaque vem pelo índice da linha ou pelo texto de uma célula dela: o storyboard escreve "destaque": "7–18"
+    ou "Interceptions", e só o índice era entendido — nenhuma das 9 tabelas e gráficos do worst draft pick saía
+    destacada (2026-11-05)."""
+    if isinstance(dest, bool) or dest is None:
+        return False
+    if isinstance(dest, int):
+        return dest == i
+    alvo = str(dest).strip().lower()
+    return any(str(c).strip().lower() == alvo for c in celulas)
+
+
 def tabela(spec):
     cols, linhas = spec["colunas"], spec["linhas"]
     f, fb = ImageFont.truetype(ARIAL, 34 * K), ImageFont.truetype(ARIAL_B, 34 * K)
@@ -63,7 +75,7 @@ def tabela(spec):
         x += larg[j]
     y += lh
     for i, l in enumerate(cel):
-        dest = spec.get("destaque") == i
+        dest = _e_destaque(spec.get("destaque"), i, l)
         if dest:
             d.rectangle([pad, y, W - pad, y + lh], fill="#DCE2F5")
         elif i % 2:
@@ -99,15 +111,24 @@ def grafico(spec):
         d.text((pad, y), titulo, font=ft, fill=TEXTO)
         y += 90 * K
     vmax = max(v for _, v in itens) or 1
-    un = (" " + spec["unidade"]) if spec.get("unidade") else ""
+    # moeda vem antes do número: "unidade": "$ million" saía "68 $ million" (2026-11-05)
+    unidade = (spec.get("unidade") or "").strip()
+    moeda = next((m for m in ("R$", "US$", "$", "€", "£", "¥") if unidade.startswith(m)), "")
+    unidade = unidade[len(moeda):].strip()
+    rotulo_valor = lambda v: moeda + fmt(v) + (" " + unidade if unidade else "")
     area = W - 2 * pad - rot_w - 260 * K
+    # o destaque vem pelo índice ou pelo nome da linha (o storyboard escreve "destaque": "Interceptions"; só o
+    # índice era entendido e todas as barras saíam cinzas)
+    dest = spec.get("destaque")
+    if dest is not None and not any(_e_destaque(dest, i, [n]) for i, (n, _) in enumerate(itens)):
+        dest = None                       # destaque que não bate com nenhuma barra: melhor todas azuis que todas cinzas
     for i, (n, v) in enumerate(itens):
-        cor = AZUL if spec.get("destaque") in (None, i) else "#AEB6C8"   # sem destaque: todas azuis
+        cor = AZUL if dest is None or _e_destaque(dest, i, [n]) else "#AEB6C8"   # sem destaque: todas azuis
         d.text((pad + rot_w - 20 * K, y + bh / 2), str(n), font=f, fill=TEXTO, anchor="rm")
         x0 = pad + rot_w
         x1 = x0 + max(6 * K, area * v / vmax)
         d.rounded_rectangle([x0, y, x1, y + bh], radius=10 * K, fill=cor)
-        d.text((x1 + 18 * K, y + bh / 2), fmt(v) + un, font=fb, fill=TEXTO, anchor="lm")
+        d.text((x1 + 18 * K, y + bh / 2), rotulo_valor(v), font=fb, fill=TEXTO, anchor="lm")
         y += bh + gap
     if spec.get("fonte"):
         d.text((pad, y + 10 * K), "Source: " + spec["fonte"], font=fs, fill=CINZA)
