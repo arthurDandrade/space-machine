@@ -34,6 +34,9 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   para criar tipos de asset novos, como `gravura` e `ilustracao`).
 - `ilustracao`: modelo, estilo e quantidade das imagens GERADAS pelo Gemini (`motor/busca/scripts/ilustrar.py`, fonte
   `gemini` da busca). O canal pode trocar qualquer campo em `canal.json › ilustracao`.
+  As fontes `flow` e `flow_recorte` fazem o mesmo pelo Google Flow, na conta de quem usa e sem chave: a busca põe o
+  pedido numa fila, a etapa para, e uma sessão do Claude gera no navegador do app e guarda
+  (`motor/busca/scripts/flow.py`; o passo a passo está no `CLAUDE.md`).
 - `roteiro`: `capitulo_falado` (false = o capítulo não é narrado: o `gestao.criar_video` não põe a linha "Nome." e o
   bloco não tem card de título, como no bestiário) e `modelo` (o modelo de roteiro do formato, copiado para os prompts
   do canal quando ele é criado).

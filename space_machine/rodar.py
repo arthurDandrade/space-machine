@@ -161,7 +161,7 @@ class Rodada:
         return next((l.lstrip("# ").strip() for l in roteiro.splitlines() if l.startswith("#")), self.nn)
 
     def _elenco_e_gerador(self):
-        """Para formato com imagem gerada (fonte gemini no rank): o elenco que o vídeo já tem (<vídeo>/elenco/) e se há
+        """Para formato com imagem gerada (fonte gemini ou flow no rank): o elenco que o vídeo já tem (<vídeo>/elenco/) e se há
         chave do gerador. Sem chave, recorte/cenário novo não sai: o storyboard usa só o elenco, gravura, foto e vídeo."""
         def valor_chave(nome):
             for arq in (Path(self.c["raiz"]) / ".env", motor.DADOS / ".env"):
@@ -171,12 +171,13 @@ class Rodada:
                         return True
             return bool(os.environ.get(nome))
         rank = json.dumps((ficha_formato(self.c.get("formato") or FORMATO_PADRAO).get("busca") or {}).get("fontes_por_tipo", {}))
-        if "gemini" not in rank:
+        if "gemini" not in rank and "flow" not in rank:
             return ""
         el = sorted(p.stem for p in (self.video / "elenco").glob("*.png")) if (self.video / "elenco").is_dir() else []
         txt = ("Elenco que este vídeo já tem (use \"elenco\": \"<nome>\" e ele entra sem gerar nada): "
                + (", ".join(el) if el else "nenhum ainda") + ".\n")
-        if not valor_chave("GEMINI_API_KEY"):
+        # a fonte "flow" é gerada no Google Flow por uma sessão do Claude (motor/busca/scripts/flow.py): não tem chave
+        if "flow" not in rank and not valor_chave("GEMINI_API_KEY"):
             txt += ("SEM GERADOR DE IMAGEM neste canal (falta a GEMINI_API_KEY): NÃO peça recorte nem ilustração novos. "
                     "Use só o elenco acima (o \"você\" é o card {\"arquivo\": \"../../../../identidade/personagem.png\"}, se "
                     "existir), gravura, foto e vídeo reais, e os gráficos (E1, N2, L1, D1, T1, F1).\n")
@@ -300,7 +301,22 @@ class Rodada:
         for aid in so_yt:
             self.script("buscar", "buscar.py", self.p, "--refazer", "--asset", aid, timeout=3600)
         sem = [aid for aid in falta + so_yt if not (ler_json(cand / aid / "candidatos.json") or {}).get("candidatos")]
+        fila = self._esperando_flow()
+        if fila:
+            # desenho pedido ao Google Flow (motor/busca/scripts/flow.py): quem gera é uma sessão do Claude, no
+            # navegador do app. Os assets sem candidato voltam para a busca quando a etapa rodar de novo.
+            for aid in sem:
+                (cand / aid / "candidatos.json").unlink(missing_ok=True)
+            raise Parada(f"{fila} desenhos esperando o Flow: abra uma sessão do Claude nesta pasta e peça "
+                         "\"gere os desenhos do Flow\"; depois rode de novo")
         return f"ok ({len(falta)} novos, {len(so_yt)} refeitos sem YouTube)" + (f" · sem candidatos: {', '.join(sem)}" if sem else "")
+
+    def _esperando_flow(self):
+        """Quantos desenhos deste canal estão na fila do Flow sem imagem e sem recusa."""
+        slug = Path(self.c["raiz"]).name
+        return sum(1 for arq in (motor.DADOS / "cache" / "flow" / "pedidos").glob("*/pedido.json")
+                   if (ler_json(arq) or {}).get("canal") == slug and not list(arq.parent.glob("[0-9][0-9].jpg"))
+                   and not (arq.parent / "recusado.txt").exists())
 
     def escolher(self):
         b = BlocoEscolha(self.p)

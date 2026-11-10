@@ -12,6 +12,7 @@
   python -m space_machine atualizar [--conferir] [--sim]   traz o código novo do GitHub (git pull) e remonta o painel
   python -m space_machine limpar [--cache] [--aplicar]  manda para o Lixo o que o sistema gerou e não serve mais
   python -m space_machine consumo [--video slug]     consumo registrado das chamadas ao Claude
+  python -m space_machine flow [--canal slug]        desenhos esperando o Google Flow (fila; --guardar e --recusado: motor/busca/scripts/flow.py)
 """
 import sys
 
@@ -67,6 +68,12 @@ def main():
             print(f"FALHOU: {e}")
             sys.exit(1)
         print(f"ok: claude {_versao_claude()} logado e respondendo com todos os modelos das etapas")
+    elif cmd == "flow":
+        import os
+        import subprocess
+        from .sistema import DADOS, REPO
+        sys.exit(subprocess.run([sys.executable, str(REPO / "motor" / "busca" / "scripts" / "flow.py"), *args],
+                                env={**os.environ, "SM_DADOS": str(DADOS)}).returncode)
     elif cmd == "consumo":
         from .motor_claude import _banco
         con = _banco()
