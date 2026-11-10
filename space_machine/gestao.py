@@ -266,8 +266,11 @@ def escrever_roteiro(c, titulo, obs=""):
         rot = re.sub(r"^```\w*\n|\n```\s*$", "", r["texto"].strip())
         n, palavras, tem_cold = _medir_roteiro(rot)
         # o molde é do formato (formato.json › roteiro.medidas); sem ele, o do bestiário, o 1º a ter agente de roteiro
+        # do formato, com o que o canal trocar em canal.json › roteiro › medidas (um canal de vídeos mais curtos)
+        cj = ler_json(Path(c.get("raiz") or Path(c["producoes"]).parent) / "canal.json", {}) or {}
         med = {"cold_open": True, "capitulos": [6, 11], "palavras": [1600, 3000],
-               **((ficha_formato(c.get("formato")).get("roteiro") or {}).get("medidas") or {})}
+               **((ficha_formato(c.get("formato")).get("roteiro") or {}).get("medidas") or {}),
+               **((cj.get("roteiro") or {}).get("medidas") or {})}
         problemas = []
         if med["cold_open"] and not tem_cold:
             problemas.append("falta o cold open (texto antes do 1º \"# capítulo\")")

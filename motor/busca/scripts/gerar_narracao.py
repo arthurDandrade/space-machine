@@ -336,7 +336,7 @@ def main():
     ap.add_argument("--modelos", action="store_true")
     ap.add_argument("--uso", action="store_true")
     ap.add_argument("--voz")
-    ap.add_argument("--speed", type=float, default=1.0)
+    ap.add_argument("--speed", type=float, help="velocidade da fala (padrão: canal.json › narracao › velocidade, senão 1.0)")
     ap.add_argument("--modelo")
     ap.add_argument("--provedor", choices=sorted(PROVEDORES))
     a = ap.parse_args()
@@ -357,7 +357,10 @@ def main():
     voz = a.voz or config(prov["voz_env"])
     if not voz:
         sys.exit(f"Sem voz: use --voz ID ou {prov['voz_env']} no .env do canal (veja --vozes)")
-    gerar(Path(a.bloco).resolve(), nome_prov, prov, voz, a.speed, a.modelo)
+    # a velocidade é do canal (canal.json › narracao › velocidade): a voz do teste do cartum saiu a ~210 palavras/min,
+    # contra ~155 das referências do formato (2026-11-09)
+    speed = a.speed if a.speed is not None else float((caminhos.canal_json().get("narracao") or {}).get("velocidade", 1.0))
+    gerar(Path(a.bloco).resolve(), nome_prov, prov, voz, speed, a.modelo)
 
 
 if __name__ == "__main__":
