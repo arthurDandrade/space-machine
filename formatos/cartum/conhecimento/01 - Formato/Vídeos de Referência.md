@@ -31,7 +31,7 @@ Medido em 2026-11-09 em 4 vídeos de um mesmo canal de listas em desenho (os arq
 
 ## O que o Space Machine faz diferente (2026-11-09)
 - O layout é automático (colunas na ordem dos cards), não desenhado à mão tela a tela.
-- A grade de abertura existe (2026-11-09): cada tópico abre com a grade de todos (0,8 s parada no 1º, 0,45 s nos outros), aproxima em 0,5 s no tópico que vai começar e corta para o desenho-símbolo grande com o nome. Na referência a grade aproxima e o próprio desenho vira o cabeçalho; aqui há um corte entre a grade e o cartão.
+- A grade de abertura (2026-11-09): cada tópico abre com a grade de todos (0,8 s parada no 1º, 0,5 s nos outros); em 0,6 s a câmera aproxima no tópico que vai começar, os outros se afastam e somem, e o desenho e o nome dele crescem até o cartão do tópico — as mesmas camadas, sem corte. Na 1ª versão a grade cortava para o cartão e o desenho pulava de tamanho e de lugar. Conferido com 2 tópicos (o teste de futebol) e com uma grade fictícia de 22. Na referência a grade aproxima, para 1 s e corta direto para a 1ª tela, sem cartão; aqui o cartão fica enquanto a 1ª frase é dita.
 - Pessoa real nunca é desenhada (regra do Space Machine): entra como foto, e o desenho ao lado é genérico.
 - Sem pixelado: o que precisaria dele não é desenhado.
 
