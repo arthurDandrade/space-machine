@@ -47,6 +47,7 @@ VIRA = 0.35                       # o cartão do tópico encolhe para o cabeçal
 # 0,5 s, e em 0,6 s a câmera aproxima e o tópico vira o cartão dele, sem corte.
 GRADE_SEGURA_1, GRADE_SEGURA, GRADE_ZOOM = 0.8, 0.5, 0.6
 GRADE_AREA = (70, 50, 1850, 1040)
+TEXTO_MIN = 1.0             # s que um rótulo, legenda ou balão precisa ficar na tela para dar para ler
 EASE_OUT = [0, 0.1, 0, 80]
 EASE_IN = [0, 80, 0, 0.1]
 CAMADAS = {"fundo": 0, "conteudo": 1, "ui": 2}
@@ -226,13 +227,21 @@ def tela(M, e, fim):
     """Um estado = uma tela: os cards em colunas, cada um no seu tempo, tudo até `fim`."""
     cards = e.get("cards") or []
     ini = e["ini"]
-    for v in e.get("textos") or []:
-        txt, t = _par(v)
-        M.texto(txt, ini if t is None else t, fim, TOPO_DATA, 50)
+    # a data embaixo do nome: uma de cada vez (duas no mesmo estado ficavam uma por cima da outra)
+    datas = sorted(((ini if t is None else t, txt) for txt, t in map(_par, e.get("textos") or [])), key=lambda d: d[0])
+    for k, (t, txt) in enumerate(datas):
+        M.texto(txt, t, datas[k + 1][0] if k + 1 < len(datas) else fim, TOPO_DATA, 50)
+    # a tela nunca fica só com o fundo: o card que entra primeiro entra junto com a tela, mesmo que a
+    # palavra dele venha depois (medido em 10 tópicos: 8 reprovavam no QA por 0,6 a 2 s de tela vazia)
+    primeiro = min(cards, key=lambda c: c.get("t", ini)) if cards else None
+
+    def legivel(t, t0):
+        """Texto que entraria no fim da tela é adiantado para ficar TEXTO_MIN s (nunca antes do card dele)."""
+        return max(t0, min(t, fim - TEXTO_MIN))
     anterior = None
     for c, (bx, by, bw, bh) in zip(cards, caixas(cards)):
         opc = c.get("opcoes") or {}
-        t0 = c.get("t", ini)
+        t0 = ini if c is primeiro else c.get("t", ini)
         acima, legenda, bal = c.get("acima"), c.get("legenda"), opc.get("balao")
         topo = (42 if opc.get("circulo") else 0) + (68 if acima else 0) + (150 + (44 if bal and len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0)
         pe = (42 if opc.get("circulo") else 0) + (68 if legenda else 0)
@@ -252,13 +261,13 @@ def tela(M, e, fim):
         y_topo = cy - alt / 2 - folga
         if acima:
             txt, t = _par(acima)
-            M.texto(txt, t0 if t is None else max(t0, t), fim, [cx, y_topo - 36], 46, max_w=bw + VAO - 10)
+            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, y_topo - 36], 46, max_w=bw + VAO - 10)
             y_topo -= 68
         if bal and bal.get("texto"):
-            M.balao(str(bal["texto"]), max(t0, bal.get("t", t0)), fim, cx, y_topo, bw + VAO - 10)
+            M.balao(str(bal["texto"]), legivel(bal.get("t", t0), t0), fim, cx, y_topo, bw + VAO - 10)
         if legenda:
             txt, t = _par(legenda)
-            M.texto(txt, t0 if t is None else max(t0, t), fim, [cx, cy + alt / 2 + 38 + folga], 46, max_w=bw + VAO - 10)
+            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, cy + alt / 2 + 38 + folga], 46, max_w=bw + VAO - 10)
         st = c.get("sticker")
         if isinstance(st, (list, tuple)):       # o compilador entrega [asset, t]; do elenco, {"arquivo", "t"}
             st = {"asset": st[0], "t": st[1] if len(st) > 1 else t0}

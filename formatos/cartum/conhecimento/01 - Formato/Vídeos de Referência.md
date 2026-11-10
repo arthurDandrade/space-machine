@@ -59,3 +59,18 @@ Os mesmos dois tópicos de futebol, refazendo só os desenhos de quem aparece em
 - A etapa de escolha pediu "outra busca" para 2 desenhos gerados e isso criou 6 pedidos soltos, sem personagem, que seguraram o outro tópico. Corrigido: o prompt de escolha não pede nova busca para desenho, e a busca só para pelo Flow se o PRÓPRIO bloco ficou com asset sem candidato.
 - Mancha rosa entre as pernas do treinador: o magenta do fundo veio um pouco irregular, o teste de "borda lisa" reprovou e o recorte caiu no rembg. Corrigido medindo "o quanto é da cor-chave" (min(R, B) − G), que não muda com a claridade: os 18 recortes dos dois tópicos passaram, nenhum pelo rembg.
 - Grade de abertura: com 2 tópicos a aproximação é pequena (1,15×); com 24 chega a 2,6×, como na referência.
+
+## Quarto teste (2026-11-10): vídeo inteiro de 10 tópicos
+"Every NFL Team That Disappeared" no canal `cartum-football-teste`: 10 times, 1.563 palavras, 10 min 30 s, 1920×1080 a 30 qps.
+- Narração pelo Fish Audio a 0,85 de velocidade: ~150 palavras/min, como na referência (a 1,0 dava ~210).
+- Storyboard: 9 tópicos aprovados em 2 voltas, 1 com um aviso aceito. Por tópico: 9 a 10 telas e 14 a 19 assets.
+- Flow: 109 pedidos (11 fichas de personagem, 37 poses, 61 desenhos avulsos), 327 imagens, ~74 min de sessão, 0 créditos, nenhuma recusa. Um jogador-símbolo por time (a mesma ficha, cores diferentes) e o treinador mascote com a referência do teste anterior. O elenco do vídeo fechou em 44 desenhos reaproveitados entre os tópicos.
+- Escolha + render + QA + entrega: ~2 min por tópico (os 10 em ~20 min, um por vez), ~240 mil tokens equivalentes por tópico.
+- Vídeo final (`final --render`, a 1ª vez do cartum): 10 min 30 s de render para 10 min 30 s de vídeo. O gerador roda de novo em cada tópico e a grade de abertura sai com os 10 times.
+- **Tela vazia**: 8 dos 10 tópicos reprovaram no QA na 1ª versão por 0,6 a 2 s só de fundo (o gatilho do 1º card da tela vinha no meio da frase) e por rótulo com menos de 0,7 s. A correção automática resolvia, ao custo de um render e uma chamada a mais por tópico. Corrigido no gerador: o card que entra primeiro entra junto com a tela, e rótulo, legenda e balão são adiantados para ficar 1 s.
+- **Duas datas no mesmo estado** ficavam uma por cima da outra ("1944" e "1945"). Corrigido: uma sai quando a outra entra.
+- **Id repetido**: numa volta de correção do storyboard, um card novo ganhou o id de um card que vinha depois; os dois dividiram a pasta de candidatos, a escolha recebeu o desenho errado e o tópico parou. Corrigido no `compilar_cenas.py` (ids escritos ficam reservados; id repetido troca).
+- O que continua aparecendo:
+  - Mapa pequeno com os nomes da cidade e do estado um por cima do outro ("CLEVELAND/CANTON/OHIO"), e com cara de foto, fora do traço do formato.
+  - Foto histórica de gente pouco conhecida: a escolha marcou "conferir" em várias (dono de time, jogador numa foto de time). O nome que aparece em cima da foto precisa de conferência humana antes de publicar.
+  - Na grade, o nome do tópico que vai abrir fica numa linha só (menor) enquanto os outros quebram em duas.
