@@ -29,24 +29,34 @@ from comum import arquivo_elenco, caminhos, config, gravar_json, iter_assets, le
 _sessao_rembg = [None]
 
 
-def tirar_fundo_liso(im, tol=14):
-    """Desenho de contorno fechado em fundo liso (cartum: formato.json › ilustracao.recorte = "fundo_liso"): some o
-    que tem a cor da borda da imagem E está ligado à borda. O branco de dentro do desenho (camisa, papel) fica, que é
-    onde o rembg erra. Devolve None quando a borda não é lisa (foto, cenário): aí o recorte é o do rembg."""
+def tirar_fundo_liso(im, tol=24):
+    """Desenho de contorno fechado em fundo liso (cartum: formato.json › ilustracao.recorte = "fundo_liso").
+    - Fundo de COR-CHAVE (saturado, ex. magenta: o estilo do formato pede uma cor que não existe no desenho): sai tudo
+      o que tem essa cor, em qualquer lugar da imagem — também os vãos fechados (entre as traves de um poço, dentro
+      da alça de um balde), que ficavam com o fundo quando ele era branco (2026-11-09). A borda é desmisturada da cor
+      do fundo para não sobrar contorno rosado.
+    - Fundo branco ou cinza: só sai o que está ligado à borda da imagem, para o branco de dentro do desenho (camisa,
+      papel) ficar; vão fechado continua com o fundo.
+    Devolve None quando a borda não é lisa (foto, cenário): aí o recorte é o do rembg."""
     import cv2
     import numpy as np
-    rgb = np.asarray(im.convert("RGB"))
-    borda = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]]).astype(int)
+    rgb = np.asarray(im.convert("RGB")).astype(np.float32)
+    borda = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
     cor = np.median(borda, axis=0)
     if (np.abs(borda - cor).max(axis=1) <= tol).mean() < 0.97:
         return None
-    perto = (np.abs(rgb.astype(int) - cor).max(axis=2) <= tol).astype(np.uint8)
+    if cor.max() - cor.min() > 80:
+        dist = np.sqrt(((rgb - cor) ** 2).sum(axis=2))
+        alfa = np.clip((dist - 60) / 90, 0, 1)[..., None]
+        limpo = np.where(alfa > 0.02, (rgb - (1 - alfa) * cor) / np.maximum(alfa, 0.02), rgb)
+        return Image.fromarray(np.dstack([np.clip(limpo, 0, 255), alfa * 255]).astype(np.uint8), "RGBA")
+    perto = (np.abs(rgb - cor).max(axis=2) <= 14).astype(np.uint8)
     _, rot = cv2.connectedComponents(perto, connectivity=4)
     ligados = np.unique(np.concatenate([rot[0], rot[-1], rot[:, 0], rot[:, -1]]))
     fundo = np.isin(rot, ligados[ligados > 0])
     alfa = cv2.GaussianBlur(np.where(fundo, 0, 255).astype(np.uint8), (0, 0), 0.8)
     alfa[fundo] = 0                 # a suavização só entra pelo lado do desenho: não sobra auréola da cor do fundo
-    return Image.fromarray(np.dstack([rgb, alfa]), "RGBA")
+    return Image.fromarray(np.dstack([rgb.astype(np.uint8), alfa]), "RGBA")
 
 
 def recortar(origem, destino):

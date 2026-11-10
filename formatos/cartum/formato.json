@@ -25,7 +25,7 @@
   ]
  },
  "busca": {
-  "_sobre": "Recorte = desenho GERADO no Google Flow por uma sessão do Claude (fonte flow_recorte: fila em cache/flow/pedidos, ver o CLAUDE.md), em fundo branco liso, que o finalizar.py tira pelo contorno (ilustracao.recorte = fundo_liso). Foto e histórica são reais, de banco livre. O formato não usa vídeo.",
+  "_sobre": "Recorte = desenho GERADO no Google Flow por uma sessão do Claude (fonte flow_recorte: fila em cache/flow/pedidos, ver o CLAUDE.md), em fundo magenta liso (cor-chave), que o finalizar.py tira pela cor (ilustracao.recorte = fundo_liso). Foto e histórica são reais, de banco livre. O formato não usa vídeo.",
   "fontes_por_tipo": {
    "recorte": [
     [
@@ -38,12 +38,12 @@
   }
  },
  "ilustracao": {
-  "_sobre": "Lido por motor/busca/scripts/ilustrar.py e flow.py; o canal.json › ilustracao pode trocar qualquer campo. recorte = fundo_liso: o fundo sai pela cor da borda (o que está ligado à borda da imagem), sem o rembg — o desenho tem contorno fechado e muito branco por dentro.",
+  "_sobre": "Lido por motor/busca/scripts/ilustrar.py e flow.py; o canal.json › ilustracao pode trocar qualquer campo. recorte = fundo_liso: o fundo sai pela cor da borda, sem o rembg (finalizar.tirar_fundo_liso). O estilo pede fundo MAGENTA, uma cor-chave que o desenho não usa: assim o fundo sai também dos vãos fechados (com fundo branco eles ficavam brancos, 2026-11-09) e o branco de dentro do desenho fica.",
   "recorte": "fundo_liso",
   "flow": {
    "por_asset": 3
   },
-  "estilo_recorte": "Simple hand-drawn cartoon illustration for an explainer video, in the style of a thick-marker doodle: bold clean black outlines of even weight, flat solid colors, no shading, no gradients, no texture, simple friendly faces with dot eyes. One single subject, fully visible, centered, with generous empty margin around it, on a perfectly plain pure white background with no shadow, no ground line and no scenery. No text, no letters, no numbers, no logos, no watermark, no frame. Never depict a real, identifiable person."
+  "estilo_recorte": "Simple hand-drawn cartoon illustration for an explainer video, in the style of a thick-marker doodle: bold clean black outlines of even weight, flat solid colors, no shading, no gradients, no texture, people and animals have simple friendly faces with dot eyes, objects have no face. One single subject, fully visible, centered, with generous empty margin around it, on a perfectly plain, flat, uniform pure magenta background (hex #FF00FF) that also shows through every gap and hole of the subject, with no shadow, no ground line and no scenery. Never use magenta or hot pink in the subject itself. No text, no letters, no numbers, no logos, no watermark, no frame. Never depict a real, identifiable person."
  },
  "visual": {
   "_sobre": "Lido pelo gerar.py; o canal.json › visual pode trocar qualquer campo. Cor do fundo medida nos 4 vídeos de referência.",

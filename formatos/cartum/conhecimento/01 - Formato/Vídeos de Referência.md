@@ -43,3 +43,11 @@ Um tópico ("Derinkuyu", 42 s, narração provisória pela voz do macOS) no cana
 - Render: prévia 960×540 em 12 s; 1920×1080 a 30 qps em 42 s (1× a duração). QA aprovado na 1ª versão.
 - O recorte por fundo liso saiu limpo nos 14, inclusive manga e camisa brancas.
 - Extrapolando para um vídeo de 20 tópicos: ~280 desenhos, ~4 h de sessão no Flow. O que mais corta isso é o elenco (mascote e ícones repetidos).
+
+## Segundo teste (2026-11-09): futebol americano, voz do Fish Audio, fundo magenta
+Dois tópicos ("The Quarterback" e "The Long Snapper", 55 s no total) no canal `cartum-football-teste`:
+- Narração pelo Fish Audio (`s2.1-pro-free`): 29 s e 26 s para ~105 e ~90 palavras (~210 palavras/min, mais rápido que os ~155 da referência).
+- 24 desenhos no Flow (72 imagens, ~25 min de sessão, 0 créditos) e 2 fotos reais. Com o fundo magenta, nenhum recorte ficou com resto de fundo, inclusive grade do capacete, alça do cronômetro e vãos entre pernas.
+- Os dois tópicos passaram no QA na 2ª versão, depois de uma correção automática cada.
+- Ajustes de layout que o teste pediu: com círculo em volta do card, o nome e a legenda vão para fora dele (o traço passava por cima do texto); o adesivo fica abaixo do cabeçalho (encostava na miniatura do canto).
+- O que continua aparecendo: o mesmo personagem muda de rosto e de proporção entre poses (o quarterback de 4 telas são 4 desenhos diferentes). Falta a imagem de referência no pedido do Flow.

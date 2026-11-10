@@ -224,8 +224,8 @@ def tela(M, e, fim):
         opc = c.get("opcoes") or {}
         t0 = c.get("t", ini)
         acima, legenda, bal = c.get("acima"), c.get("legenda"), opc.get("balao")
-        topo = (68 if acima else 0) + (150 + (44 if bal and len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0)
-        pe = 68 if legenda else 0
+        topo = (42 if opc.get("circulo") else 0) + (68 if acima else 0) + (150 + (44 if bal and len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0)
+        pe = (42 if opc.get("circulo") else 0) + (68 if legenda else 0)
         cx, cy = bx + bw / 2, by + topo + (bh - topo - pe) / 2
         ih = bh - topo - pe
         # o desenho (e as trocas dele, no mesmo lugar)
@@ -237,7 +237,9 @@ def tela(M, e, fim):
                 larg, alt = M.imagem(el, tv, sai, cx, cy, bw, ih)
         if not larg:
             continue
-        y_topo = cy - alt / 2
+        # com círculo em volta do card, o nome e a legenda vão para fora dele (o traço passava por cima do texto)
+        folga = 42 if opc.get("circulo") else 0
+        y_topo = cy - alt / 2 - folga
         if acima:
             txt, t = _par(acima)
             M.texto(txt, t0 if t is None else max(t0, t), fim, [cx, y_topo - 36], 46, max_w=bw + VAO - 10)
@@ -246,14 +248,14 @@ def tela(M, e, fim):
             M.balao(str(bal["texto"]), max(t0, bal.get("t", t0)), fim, cx, y_topo, bw + VAO - 10)
         if legenda:
             txt, t = _par(legenda)
-            M.texto(txt, t0 if t is None else max(t0, t), fim, [cx, cy + alt / 2 + 38], 46, max_w=bw + VAO - 10)
+            M.texto(txt, t0 if t is None else max(t0, t), fim, [cx, cy + alt / 2 + 38 + folga], 46, max_w=bw + VAO - 10)
         st = c.get("sticker")
         if isinstance(st, (list, tuple)):       # o compilador entrega [asset, t]; do elenco, {"arquivo", "t"}
             st = {"asset": st[0], "t": st[1] if len(st) > 1 else t0}
         if st and (st.get("asset") or st.get("arquivo")):
             lado = -1 if bal else 1         # com balão, o adesivo vai para o outro canto
             sx = min(W - 120, max(120, cx + lado * (larg / 2 - 10)))
-            M.imagem(st, max(t0, st.get("t", t0)), fim, sx, max(AREA[1] + 60, cy - alt / 2 + 40), 210, 210)
+            M.imagem(st, max(t0, st.get("t", t0)), fim, sx, max(AREA[1] + 105, cy - alt / 2 + 40), 210, 210)   # abaixo do cabeçalho e da miniatura
         if opc.get("circulo"):
             M.circulo(max(t0, opc["circulo"].get("t", t0)), fim, cx, cy, larg, alt)
         if opc.get("x"):
