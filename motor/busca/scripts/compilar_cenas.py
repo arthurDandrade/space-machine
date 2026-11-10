@@ -175,6 +175,22 @@ def main():
     R = Relogio(palavras)
     usados = set(antigos)
     listados = set()          # ids já existentes nunca são reaproveitados para assets novos
+    # ids que já estão escritos nos cards: um card novo não pode ganhar o id que um card mais adiante já
+    # tem (2026-11-10: o storyboard reescreveu a cena numa volta de correção, o card novo ganhou a letra
+    # de um que vinha depois, e os dois assets dividiram a mesma pasta de candidatos)
+    reservados = set()
+
+    def _ids(o):
+        if isinstance(o, dict):
+            if isinstance(o.get("id"), str) and "gatilho" in o:
+                reservados.add(o["id"])
+            for v in o.values():
+                _ids(v)
+        elif isinstance(o, list):
+            for v in o:
+                _ids(v)
+    _ids(cenas.get("itens", []))
+    vistos = set()            # ids de card já usados nesta compilação (o mesmo id em dois cards: o 2º troca)
     T = lambda k: palavras[k]["ini"]
     cursor = 0
     plano = {"titulo": cenas.get("titulo", proj.name), "itens": []}
@@ -283,10 +299,13 @@ def main():
                         return {"arquivo": str(rel_e)}
                     if spec["elenco"] in do_elenco:       # já pedido neste bloco: o mesmo asset
                         return {"asset": do_elenco[spec["elenco"]]}
+                if spec.get("id") in vistos:      # o mesmo id em dois cards: este ganha um novo
+                    R.avisos.append(f"{onde}: id '{spec['id']}' repetido em dois cards; o segundo ganhou outro")
+                    del spec["id"]
                 while True:
                     letra = chr(ord("a") + cena_atual["_letra"])
                     cena_atual["_letra"] += 1
-                    if spec.get("id") or f"{cena_atual['id']}-{letra}" not in usados:
+                    if spec.get("id") or f"{cena_atual['id']}-{letra}" not in usados | reservados:
                         break
                 tipo = spec.get("tipo", "foto")
                 if spec.get("png") and tipo not in ("logo", "bandeira", "recorte"):
@@ -295,6 +314,7 @@ def main():
                      "papel": papel, "orientacao": spec.get("orientacao", orient),
                      "descricao": spec.get("descricao", ""), "buscas": list(spec.get("buscas", [])), "tempo": t_gat}
                 usados.add(a["id"])
+                vistos.add(a["id"])
                 if not spec.get("id"):     # grava o id no card: recompilar não renomeia (perdia as escolhas)
                     spec["id"] = a["id"]
                     ids_novos.append(a["id"])
