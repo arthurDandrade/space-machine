@@ -74,3 +74,12 @@ Os mesmos dois tópicos de futebol, refazendo só os desenhos de quem aparece em
   - Mapa pequeno com os nomes da cidade e do estado um por cima do outro ("CLEVELAND/CANTON/OHIO"), e com cara de foto, fora do traço do formato.
   - Foto histórica de gente pouco conhecida: a escolha marcou "conferir" em várias (dono de time, jogador numa foto de time). O nome que aparece em cima da foto precisa de conferência humana antes de publicar.
   - Na grade, o nome do tópico que vai abrir fica numa linha só (menor) enquanto os outros quebram em duas.
+
+## Áudio picotado: o roteiro é que estava em frases soltas (2026-11-10)
+Quem assistiu ao vídeo de 10 tópicos achou a narração picotada, "frase a frase". A narração é gerada num pedido só por tópico; o que picota é o texto:
+- O roteiro do teste tinha 10,6 palavras por frase em média, 30% das frases com até 8 palavras e só 6% com 16 ou mais. Os 4 vídeos de referência têm de 15,0 a 20,4 em média, 1% a 18% de curtas e 43% a 72% com 16 ou mais.
+- A voz (Fish Audio) para de 0,6 a 1,0 s em cada ponto final. Num tópico de 68 s eram 14 frases e 9 pausas de mais de 0,5 s.
+- O mesmo tópico reescrito por ideias (8 frases, os fatos da mesma ideia na mesma frase): 6 pausas de mais de 0,5 s.
+- A velocidade 0,85 também estica as pausas (até 1,0 s). Com o texto por ideias, 0,92 dá 159 palavras/min (0,85: 147; 1,0: 171; a referência tem 143 a 157) com pausas de até 0,8 s.
+- No sistema: o `roteiro_modelo.md` pede frase por ideia (14 a 22 palavras, com exemplo do picotado e do fluido) e o agente de roteiro mede isso (`roteiro.medidas.frases` no `formato.json`: média de 14 a 22, no máximo 20% de frases curtas) e reescreve se sair fora.
+

@@ -61,7 +61,7 @@
   "medidas": {
    "cold_open": false,
    "capitulos": [16, 26],
-   "palavras": [2800, 4400]
+   "palavras": [2800, 4400], "frases": {"media": [14, 22], "curtas_max": 0.2}
   }
  }
 }

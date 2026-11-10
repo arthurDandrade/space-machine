@@ -244,6 +244,16 @@ def _medir_roteiro(texto):
     return len(partes), palavras, bool(cold)
 
 
+def _ritmo_roteiro(texto):
+    """(palavras por frase em média, fração de frases de até 8 palavras) do texto narrado. Roteiro de frases
+    curtas, um fato por frase, sai picotado na voz: ela para ~0,8 s em cada ponto final (medido 2026-11-10:
+    10,6 palavras por frase contra 15 a 20 nos vídeos de referência do cartum)."""
+    cold, partes = dividir_roteiro(texto)
+    corrido = re.sub(r"\s+", " ", cold + " " + " ".join(t for _, t in partes)).strip()
+    n = [len(f.split()) for f in re.split(r"(?<=[.!?])\s+", corrido) if f.strip()]
+    return (sum(n) / len(n), sum(x <= 8 for x in n) / len(n)) if n else (0.0, 0.0)
+
+
 def escrever_roteiro(c, titulo, obs=""):
     """O agente de roteiro (formato com roteiro.modelo, 2026-11-04): só com o título, o Claude escreve o roteiro
     inteiro no molde do formato (cold open + capítulos "# Nome"), e se sair fora do molde (poucos capítulos, curto
@@ -281,6 +291,16 @@ def escrever_roteiro(c, titulo, obs=""):
                              "com uma linha \"# Nome\")")
         if not med["palavras"][0] <= palavras <= med["palavras"][1]:
             problemas.append(f"{palavras} palavras narradas (o molde pede de {med['palavras'][0]} a {med['palavras'][1]})")
+        fr = med.get("frases")          # {"media": [14, 22], "curtas_max": 0.2}: só os formatos que pedem
+        if fr:
+            media, curtas = _ritmo_roteiro(rot)
+            if fr.get("media") and not fr["media"][0] <= media <= fr["media"][1]:
+                problemas.append(f"as frases têm {media:.1f} palavras em média (o molde pede de {fr['media'][0]} a "
+                                 f"{fr['media'][1]}: junte na mesma frase os fatos da mesma ideia, ligados por "
+                                 "conectivo, em vez de um fato por frase)")
+            if fr.get("curtas_max") is not None and curtas > fr["curtas_max"]:
+                problemas.append(f"{curtas:.0%} das frases têm até 8 palavras (o molde aceita até "
+                                 f"{fr['curtas_max']:.0%}: frase curta só como fecho de uma ideia)")
         if not problemas:
             return rot
         texto = "Fora do molde: " + "; ".join(problemas) + ". Reescreva o roteiro inteiro corrigindo isso."

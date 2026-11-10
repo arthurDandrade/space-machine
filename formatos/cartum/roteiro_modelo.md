@@ -21,8 +21,12 @@ Cinco batidas, nesta ordem, sem frase de transição entre um tópico e o outro:
 Se o tema do canal for de pessoas, o molde é o mesmo com a vida no lugar do lugar: quem era e como começou → como ganhou poder → o que fez → a virada → a morte, com data e idade, e o que ficou depois.
 
 ## Estilo
-- Frases de 10 a 18 palavras, uma ideia por frase, com uma frase curta de vez em quando para o ritmo ("But it was a trap.").
-- Cada frase precisa caber num DESENHO: prefira sujeito + ação + coisa concreta ("A resident broke through a basement wall") a abstração ("its discovery was accidental").
+- **A voz fala por IDEIAS, não por fatos soltos.** A voz sintética para quase 1 segundo em cada ponto final: um fato por frase sai picotado. Cada frase conta uma ideia inteira, com os 2 ou 3 fatos dela ligados na mesma frase por conectivo ("and", "so", "but", "when", "where", "who", "because", "after") ou por vírgula.
+  - Picotado (não escreva assim): "The club played before the league existed. In 1915, it signed Olympic champion Jim Thorpe. In 1920, team owner Ralph Hay hosted a meeting in his car showroom."
+  - Fluido: "They were playing years before the league existed, and in 1915 they signed Olympic champion Jim Thorpe. In 1920, team owner Ralph Hay invited the other owners to his car showroom, where they created the league."
+- Frases de 14 a 22 palavras em média (a referência tem 15 a 20): 8 a 11 frases num tópico de 170 palavras. Frase curta (até 8 palavras) só como fecho de uma ideia, no máximo 1 a cada 6 ("Then the horror began.").
+- O ponto final é a troca de ideia: o que é → de onde vem → o auge → a virada → o fim. Dentro da mesma ideia, não ponha ponto.
+- Cada ORAÇÃO precisa caber num DESENHO: prefira sujeito + ação + coisa concreta ("A resident broke through a basement wall") a abstração ("its discovery was accidental"). Uma frase de três orações rende três desenhos.
 - Números com unidade e comparação quando ajudar; medidas nos dois sistemas só quando o canal usa ("100 meters (328 feet)").
 - Tom de documentário seco: sem "imagine", sem "incrível", sem exclamação, sem humor forçado.
 - Só fatos que você tem como certos. Onde a fonte é incerta, diga ("Some say…", "Its exact age is unknown").
