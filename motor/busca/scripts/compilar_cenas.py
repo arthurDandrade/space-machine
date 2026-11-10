@@ -357,7 +357,10 @@ def main():
                     sref = novo_asset(dict(st, png=True, tipo=st.get("tipo", "logo")), "sticker", "qualquer", tt)
                     if "asset" in sref and not st.get("id") and not st.get("reusar"):
                         st["id"] = sref["asset"]
-                    if "asset" not in sref:
+                    if "asset" not in sref and sref.get("arquivo") and caminhos.ficha().get("edicao", {}).get("gerador"):
+                        # formato com gerador próprio (cartum): o adesivo pode ser do elenco, que já é um arquivo
+                        card["sticker"] = {"arquivo": sref["arquivo"], "t": rel(tt)}
+                    elif "asset" not in sref:
                         R.erros.append(f"{onde}: sticker precisa ser asset (não arquivo)")
                     else:
                         card["sticker"] = [sref["asset"], rel(tt)]

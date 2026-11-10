@@ -265,13 +265,19 @@ def escrever_roteiro(c, titulo, obs=""):
                    ctx={"canal": Path(c.get("raiz") or Path(c["producoes"]).parent).name})
         rot = re.sub(r"^```\w*\n|\n```\s*$", "", r["texto"].strip())
         n, palavras, tem_cold = _medir_roteiro(rot)
+        # o molde é do formato (formato.json › roteiro.medidas); sem ele, o do bestiário, o 1º a ter agente de roteiro
+        med = {"cold_open": True, "capitulos": [6, 11], "palavras": [1600, 3000],
+               **((ficha_formato(c.get("formato")).get("roteiro") or {}).get("medidas") or {})}
         problemas = []
-        if not tem_cold:
+        if med["cold_open"] and not tem_cold:
             problemas.append("falta o cold open (texto antes do 1º \"# capítulo\")")
-        if not 6 <= n <= 11:
-            problemas.append(f"{n} capítulos (o molde pede 7–10, cada um com uma linha \"# Nome\")")
-        if not 1600 <= palavras <= 3000:
-            problemas.append(f"{palavras} palavras narradas (o molde pede 1.800–2.700)")
+        if not med["cold_open"] and tem_cold:
+            problemas.append("há texto antes do 1º \"# Nome\" (este formato não tem introdução: comece pelo 1º tópico)")
+        if not med["capitulos"][0] <= n <= med["capitulos"][1]:
+            problemas.append(f"{n} capítulos (o molde pede de {med['capitulos'][0]} a {med['capitulos'][1]}, cada um "
+                             "com uma linha \"# Nome\")")
+        if not med["palavras"][0] <= palavras <= med["palavras"][1]:
+            problemas.append(f"{palavras} palavras narradas (o molde pede de {med['palavras'][0]} a {med['palavras'][1]})")
         if not problemas:
             return rot
         texto = "Fora do molde: " + "; ".join(problemas) + ". Reescreva o roteiro inteiro corrigindo isso."
@@ -306,7 +312,11 @@ def criar_video(c, titulo, roteiro, obs=""):
     for i, (nome, texto) in enumerate(partes, 1):
         bd = vd / "blocos" / f"{i:02d}"
         bd.mkdir(parents=True)
-        if falado:
+        if falado == "na_frase":
+            # o nome é o começo da 1ª frase do tópico (cartum: "Derinkuyu is an ancient…"): o bloco tem título, e ele
+            # fica na tela enquanto essa frase é dita; não há a linha "Nome." à parte
+            (bd / "roteiro.txt").write_text(f"# {nome}\n{texto}\n")
+        elif falado:
             # a linha "# Nome" não é narrada (gerar_narracao.py ignora #); a linha "Nome." logo abaixo é
             (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
         else:

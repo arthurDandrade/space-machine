@@ -37,7 +37,9 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   As fontes `flow` e `flow_recorte` fazem o mesmo pelo Google Flow, na conta de quem usa e sem chave: a busca põe o
   pedido numa fila, a etapa para, e uma sessão do Claude gera no navegador do app e guarda
   (`motor/busca/scripts/flow.py`; o passo a passo está no `CLAUDE.md`).
-- `roteiro`: `capitulo_falado` (false = o capítulo não é narrado: o `gestao.criar_video` não põe a linha "Nome." e o
+- `roteiro`: `medidas` (o que o agente de roteiro confere: `cold_open`, `capitulos` e `palavras` como [mín, máx]; sem ela,
+  as do bestiário), `capitulo_falado` (`"na_frase"` = o nome é o começo da 1ª frase do tópico e o bloco tem título, como
+  no cartum; false = o capítulo não é narrado: o `gestao.criar_video` não põe a linha "Nome." e o
   bloco não tem card de título, como no bestiário) e `modelo` (o modelo de roteiro do formato, copiado para os prompts
   do canal quando ele é criado).
 - Na `biblioteca_cenas.json`: `metas.max_repeticoes` (quantas vezes um tipo de cena volta no bloco; padrão 1) e

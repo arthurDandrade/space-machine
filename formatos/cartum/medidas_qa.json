@@ -1,0 +1,5 @@
+{
+ "fonte": "PROVISÓRIO (2026-11-09): o QA do cartum (formato.json › qa.checagens) não usa o detector de cards nem as medidas de tamanho do explained; este arquivo existe porque o qa_bloco.py lê a ficha.",
+ "altura_texto_solo_px": [90.0],
+ "altura_texto_junto_px": [50.0]
+}

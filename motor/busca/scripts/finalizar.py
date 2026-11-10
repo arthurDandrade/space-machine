@@ -24,15 +24,41 @@ from pathlib import Path
 
 from PIL import Image
 
-from comum import arquivo_elenco, config, gravar_json, iter_assets, ler_json, log, slug
+from comum import arquivo_elenco, caminhos, config, gravar_json, iter_assets, ler_json, log, slug
 
 _sessao_rembg = [None]
+
+
+def tirar_fundo_liso(im, tol=14):
+    """Desenho de contorno fechado em fundo liso (cartum: formato.json › ilustracao.recorte = "fundo_liso"): some o
+    que tem a cor da borda da imagem E está ligado à borda. O branco de dentro do desenho (camisa, papel) fica, que é
+    onde o rembg erra. Devolve None quando a borda não é lisa (foto, cenário): aí o recorte é o do rembg."""
+    import cv2
+    import numpy as np
+    rgb = np.asarray(im.convert("RGB"))
+    borda = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]]).astype(int)
+    cor = np.median(borda, axis=0)
+    if (np.abs(borda - cor).max(axis=1) <= tol).mean() < 0.97:
+        return None
+    perto = (np.abs(rgb.astype(int) - cor).max(axis=2) <= tol).astype(np.uint8)
+    _, rot = cv2.connectedComponents(perto, connectivity=4)
+    ligados = np.unique(np.concatenate([rot[0], rot[-1], rot[:, 0], rot[:, -1]]))
+    fundo = np.isin(rot, ligados[ligados > 0])
+    alfa = cv2.GaussianBlur(np.where(fundo, 0, 255).astype(np.uint8), (0, 0), 0.8)
+    alfa[fundo] = 0                 # a suavização só entra pelo lado do desenho: não sobra auréola da cor do fundo
+    return Image.fromarray(np.dstack([rgb, alfa]), "RGBA")
 
 
 def recortar(origem, destino):
     im = Image.open(origem)
     tem_alpha = im.mode in ("RGBA", "LA", "P") and im.convert("RGBA").getchannel("A").getextrema()[0] < 250
-    if not tem_alpha:
+    liso = None
+    if not tem_alpha and {**caminhos.ficha().get("ilustracao", {}),
+                          **caminhos.canal_json().get("ilustracao", {})}.get("recorte") == "fundo_liso":
+        liso = tirar_fundo_liso(im)
+    if liso is not None:
+        im = liso
+    elif not tem_alpha:
         from rembg import new_session, remove
         if _sessao_rembg[0] is None:
             _sessao_rembg[0] = new_session("isnet-general-use")

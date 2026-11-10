@@ -1,0 +1,34 @@
+{
+ "_sobre": "Biblioteca de Cenas do cartum (2026-11-09). O código diz o que a tela mostra; o gerar.py distribui os cards em colunas pela ORDEM em que estão no estado (até 4 numa fileira, 5–6 em duas). Cada código está em conhecimento/02 - Cenas/Biblioteca de Cenas.md.",
+ "nomes": {
+  "P1": "um desenho",
+  "P2": "dois desenhos",
+  "P3": "três desenhos",
+  "P4": "quatro a seis desenhos",
+  "R1": "foto real com desenho",
+  "M1": "mapa com desenho"
+ },
+ "card_unico": ["P1"],
+ "texto_solo": [],
+ "texto_do_layout": ["P1", "P2", "P3", "P4", "R1", "M1"],
+ "_orientacao": "Desenho é gerado quadrado e recortado; foto real e mapa em qualquer proporção.",
+ "orientacao": {
+  "P1": "quadrado",
+  "P2": "quadrado",
+  "P3": "quadrado",
+  "P4": "quadrado",
+  "R1": "qualquer",
+  "M1": "qualquer"
+ },
+ "_metas": "Medido nos 4 vídeos de referência (2026-11-09): um elemento novo a cada 1,6–1,8 s (~35/min, contando ícones e textos) e a tela inteira trocando a cada 4,5–11 s. Aqui a meta é mais baixa (10 assets por minuto) porque cada desenho novo é gerado à mão numa sessão: o resto do ritmo vem de adesivo, balão, seta, X e texto, que não contam como asset. P1 no máximo em 30% dos estados: tela com um desenho só parece vazia.",
+ "metas": {
+  "min_variacoes": 4,
+  "max_card_unico": 0.3,
+  "max_seguidos": 4,
+  "min_asset_s": 1.2,
+  "min_assets_min": 10.0,
+  "min_cenas_f": 0.5,
+  "texto_solo_faixa": [0.0, 0.0],
+  "max_repeticoes": 99
+ }
+}
