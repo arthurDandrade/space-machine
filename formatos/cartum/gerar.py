@@ -223,12 +223,13 @@ def caixas(cards):
     return out
 
 
-def tela(M, e, fim):
-    """Um estado = uma tela: os cards em colunas, cada um no seu tempo, tudo até `fim`."""
+def tela(M, e, fim, espera=0.0):
+    """Um estado = uma tela: os cards em colunas, cada um no seu tempo, tudo até `fim`. `espera`: na 1ª tela do
+    tópico, o tempo de o cartão do título encolher para o cabeçalho (o 1º card entrava por cima dele)."""
     cards = e.get("cards") or []
-    ini = e["ini"]
+    ini = e["ini"] + espera
     # a data embaixo do nome: uma de cada vez (duas no mesmo estado ficavam uma por cima da outra)
-    datas = sorted(((ini if t is None else t, txt) for txt, t in map(_par, e.get("textos") or [])), key=lambda d: d[0])
+    datas = sorted(((ini if t is None else max(ini, t), txt) for txt, t in map(_par, e.get("textos") or [])), key=lambda d: d[0])
     for k, (t, txt) in enumerate(datas):
         M.texto(txt, t, datas[k + 1][0] if k + 1 < len(datas) else fim, TOPO_DATA, 50)
     # a tela nunca fica só com o fundo: o card que entra primeiro entra junto com a tela, mesmo que a
@@ -241,7 +242,7 @@ def tela(M, e, fim):
     anterior = None
     for c, (bx, by, bw, bh) in zip(cards, caixas(cards)):
         opc = c.get("opcoes") or {}
-        t0 = ini if c is primeiro else c.get("t", ini)
+        t0 = ini if c is primeiro else max(ini, c.get("t", ini))
         acima, legenda, bal = c.get("acima"), c.get("legenda"), opc.get("balao")
         topo = (42 if opc.get("circulo") else 0) + (68 if acima else 0) + (150 + (44 if bal and len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0)
         pe = (42 if opc.get("circulo") else 0) + (68 if legenda else 0)
@@ -429,8 +430,8 @@ def main():
         M.texto(nome, 0, fim_bloco, TOPO_NOME, tam_nome, M.fonte_titulo, max_w=1400, tipo="cabecalho")
 
     fins = [estados[i + 1]["ini"] if i + 1 < len(estados) else fim_bloco for i in range(len(estados))]
-    for e, fim in zip(estados, fins):
-        tela(M, e, fim)
+    for k, (e, fim) in enumerate(zip(estados, fins)):
+        tela(M, e, fim, VIRA if k == 0 and tt and vira > 0.3 else 0.0)
 
     M.layers.sort(key=lambda L: CAMADAS[L["camada"]])
     dur = round(fim_bloco, 2)
