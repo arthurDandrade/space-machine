@@ -4,6 +4,7 @@ Você escolhe UMA imagem para uma cena de um vídeo no formato cartum (desenhos 
 
 O tipo muda o que importa:
 - "recorte" (desenho gerado; todas as opções vêm do mesmo pedido; o fundo MAGENTA é uma cor-chave e será removido): escolha a que mostra o pedido com mais clareza — o assunto INTEIRO, sem nada cortado na borda da imagem, contorno preto grosso, cores chapadas sem sombra, SEM texto ou letras, fundo magenta liso e uniforme (sem degradê, chão, sombra ou cenário) e NADA de magenta ou rosa-choque no próprio desenho (essa parte sumiria junto com o fundo). Recuse deformação (mãos a mais, rosto estranho), estilo realista, 3D ou aquarela. Se o card tem "elenco", esta imagem vai valer para o vídeo inteiro: seja exigente, e entre opções boas prefira a que mais parece as outras poses do mesmo personagem.
+- "logo": a logo ou escudo REAL daquele nome (o pedido diz o time/marca e a época), inteira, nítida, de preferência com fundo transparente ou branco liso, que sai no recorte. Recuse foto de produto (camiseta, boné, adesivo, mockup), logo redesenhada com efeito 3D, logo de OUTRO time ou marca de nome parecido (outra cidade, outra liga, outra época) e imagem com marca d'água. Se nenhuma for claramente a certa, diga em "conferir" o que falta confirmar.
 - "foto"/"historica": a pessoa, o lugar ou o objeto REAL do pedido, reconhecível mesmo pequena (ela ocupa um quarto da tela). Sem marca d'água (Vecteezy, Shutterstock, Alamy, Getty, Dreamstime, iStock, Freepik), sem render 3D ou imagem de IA no lugar de foto real, sem texto grande por cima, sem colagem.
 
 Sempre:

@@ -90,6 +90,28 @@ def recortar(origem, destino):
     im.save(destino)
 
 
+def limpar_logo(origem, destino):
+    """Logo em formato de fundo liso (cartum): PNG cortado no contorno. A que já vem com transparência só é cortada;
+    a de fundo branco/liso perde o fundo ligado à borda (o branco de dentro do desenho fica). Fundo que não é liso:
+    devolve False e o arquivo segue como veio."""
+    im = Image.open(origem)
+    if not (im.mode in ("RGBA", "LA", "P") and im.convert("RGBA").getchannel("A").getextrema()[0] < 250):
+        import numpy as np
+        rgb = np.asarray(im.convert("RGB")).astype(np.float32)
+        cor = np.median(np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]]), axis=0)
+        if cor.max() - cor.min() > 80:      # fundo colorido: a cor-chave tiraria a mesma cor de dentro da logo
+            return False
+        im = tirar_fundo_liso(im)
+        if im is None:
+            return False
+    im = im.convert("RGBA")
+    box = im.getchannel("A").point(lambda v: 255 if v > 20 else 0).getbbox()
+    if box:
+        im = im.crop(box)
+    im.save(destino)
+    return True
+
+
 def baixar_trecho_direto(url, inicio, dur, destino):
     """Vídeo de banco livre (Pexels, Pixabay, Commons, Archive): o ffmpeg lê só o trecho do arquivo
     remoto e já entrega H.264 até 1080p, sem áudio."""
@@ -166,6 +188,11 @@ def main():
                     destino = pasta / f"{prefixo}.png"
                     log(f"[{aid}] recortando fundo")
                     recortar(origem, destino)
+                elif asset["tipo"] == "logo" and {**caminhos.ficha().get("ilustracao", {}),
+                                                  **caminhos.canal_json().get("ilustracao", {})}.get("recorte") == "fundo_liso" \
+                        and limpar_logo(origem, pasta / f"{prefixo}.png"):
+                    destino = pasta / f"{prefixo}.png"
+                    log(f"[{aid}] logo: fundo liso tirado")
                 else:
                     destino = pasta / f"{prefixo}{origem.suffix.lower()}"
                     shutil.copy2(origem, destino)
