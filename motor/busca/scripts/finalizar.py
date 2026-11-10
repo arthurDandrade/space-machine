@@ -29,7 +29,7 @@ from comum import arquivo_elenco, caminhos, config, gravar_json, iter_assets, le
 _sessao_rembg = [None]
 
 
-def tirar_fundo_liso(im):
+def tirar_fundo_liso(im, borda_lisa=0.97):
     """Desenho de contorno fechado em fundo liso (cartum: formato.json › ilustracao.recorte = "fundo_liso").
     - Fundo de COR-CHAVE (saturado, ex. magenta: o estilo do formato pede uma cor que não existe no desenho): sai tudo
       o que tem essa cor, em qualquer lugar da imagem — também os vãos fechados (entre as traves de um poço, entre as
@@ -55,7 +55,7 @@ def tirar_fundo_liso(im):
         alfa = (1 - np.clip((chave(rgb) - 0.18 * k_fundo) / (0.32 * k_fundo), 0, 1))[..., None]
         limpo = np.where(alfa > 0.02, (rgb - (1 - alfa) * cor) / np.maximum(alfa, 0.02), rgb)
         return Image.fromarray(np.dstack([np.clip(limpo, 0, 255), alfa * 255]).astype(np.uint8), "RGBA")
-    if (np.abs(borda - cor).max(axis=1) <= 24).mean() < 0.97:
+    if (np.abs(borda - cor).max(axis=1) <= 24).mean() < borda_lisa:
         return None
     perto = (np.abs(rgb - cor).max(axis=2) <= 14).astype(np.uint8)
     _, rot = cv2.connectedComponents(perto, connectivity=4)
@@ -101,7 +101,7 @@ def limpar_logo(origem, destino):
         cor = np.median(np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]]), axis=0)
         if cor.max() - cor.min() > 80:      # fundo colorido: a cor-chave tiraria a mesma cor de dentro da logo
             return False
-        im = tirar_fundo_liso(im)
+        im = tirar_fundo_liso(im, borda_lisa=0.85)      # logo em faixa clara com um canto de enfeite: 92% da borda lisa
         if im is None:
             return False
     im = im.convert("RGBA")
