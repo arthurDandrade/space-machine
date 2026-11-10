@@ -496,9 +496,10 @@ def avisos():
 # ---------------- imagens ----------------
 @api.get("/c/{slug}/marca/{qual}")
 def imagem_marca(slug: str, qual: str):
-    if qual not in ("banner", "logo"):
+    if qual not in ("banner", "logo", "fundo"):
         raise HTTPException(404)
-    f = marca(_canal(slug), qual)
+    c = _canal(slug)
+    f = configuracao.fundo_do_canal(slug) if qual == "fundo" else marca(c, qual)
     if not f:
         raise HTTPException(404, f"o canal não tem {qual}")
     if qual == "banner":
@@ -762,6 +763,8 @@ def config_canal(slug: str):
             "cores": _identidade(c), "fonte": ident.get("fonte_marca_arquivo", ""),
             "fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()],
             "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
+            "usa_fundo": bool((ficha_formato(c.get("formato")).get("identidade") or {}).get("fundo_imagem")),
+            "fundo": bool(configuracao.fundo_do_canal(slug)),
             "regras": configuracao.regras_em_texto(cj.get("regras", {}) or {})}
 
 
@@ -787,10 +790,11 @@ def salvar_identidade(slug: str, cores: dict = Body(..., embed=True), fonte: str
 
 @api.post("/c/{slug}/marca/{qual}")
 async def enviar_marca(slug: str, qual: str, arquivo: UploadFile = File(...)):
-    """Troca o logo ou o banner do canal. O anterior vai para identidade/anteriores/ (nada se perde)."""
+    """Troca o logo, o banner ou a imagem de fundo dos vídeos do canal. O anterior vai para identidade/anteriores/
+    (nada se perde)."""
     c = _canal(slug)
     ext = Path(arquivo.filename or "").suffix.lower()
-    if qual not in ("banner", "logo") or ext not in IMAGENS:
+    if qual not in ("banner", "logo", "fundo") or ext not in IMAGENS:
         raise HTTPException(400, "Envie uma imagem PNG, JPG ou WEBP.")
     dados = await arquivo.read()
     if len(dados) > 20 * 1024 * 1024:
@@ -801,6 +805,9 @@ async def enviar_marca(slug: str, qual: str, arquivo: UploadFile = File(...)):
         Image.open(BytesIO(dados)).verify()
     except Exception:  # noqa: BLE001 — qualquer falha de leitura = não é imagem
         raise HTTPException(400, "Esse arquivo não é uma imagem que dê para abrir.")
+    if qual == "fundo":
+        configuracao.trocar_fundo(slug, Image.open(BytesIO(dados)))
+        return {"ok": True}
     pasta = Path(c["raiz"]) / "identidade"
     pasta.mkdir(exist_ok=True)
     antigos = [f for f in pasta.glob(f"{qual}.*") if f.suffix.lower() in IMAGENS]
@@ -810,6 +817,14 @@ async def enviar_marca(slug: str, qual: str, arquivo: UploadFile = File(...)):
         for f in antigos:
             f.rename(guarda / f"{qual}_{time.strftime('%Y%m%d-%H%M%S')}{f.suffix}")
     (pasta / f"{qual}{ext}").write_bytes(dados)
+    return {"ok": True}
+
+
+@api.delete("/c/{slug}/marca/fundo")
+def tirar_fundo(slug: str):
+    """Os vídeos do canal ficam sem imagem de fundo (só a cor e a textura). A imagem vai para identidade/anteriores/."""
+    _canal(slug)
+    configuracao.tirar_fundo(slug)
     return {"ok": True}
 
 

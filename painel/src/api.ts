@@ -416,7 +416,7 @@ export const enviar = <T = { ok: boolean },>(url: string, corpo?: unknown) =>
   }).then((r) => resposta<T>(r));
 
 // endereços das imagens (a API gera e guarda em cache)
-export const urlMarca = (canal: string, qual: "banner" | "logo") => `/api/c/${canal}/marca/${qual}`;
+export const urlMarca = (canal: string, qual: "banner" | "logo" | "fundo") => `/api/c/${canal}/marca/${qual}`;
 // logo guardado de um canal que você quer modelar (cache/modelos/ nos dados)
 export const urlLogoModelo = (id: number) => `/api/modelar/${id}/logo`;
 // thumbnail do vídeo e logo do canal garimpados (cache/mineracao/ nos dados)

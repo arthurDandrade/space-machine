@@ -1,11 +1,11 @@
-// Configurações de um canal: identidade (nome, cores, fonte, logo, banner, com prévia), regras do tema,
+// Configurações de um canal: identidade (nome, cores, fonte, logo, banner, fundo dos vídeos, com prévia), regras do tema,
 // log de aprendizados, modelos do Claude por etapa e chaves de API. Que modelo roda cada etapa é escolha de
 // cada canal (canal.json › modelos/esforco): um canal pode ser todo Opus e o outro todo Haiku.
 // Chave secreta nunca chega inteira aqui: só a máscara.
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, KeyRound, Save, Sparkles, Upload, Wand2 } from "lucide-react";
+import { Check, Copy, KeyRound, Save, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
 import { Cores, enviar, ErroApi, Formato, Narracao, pegar, urlMarca } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
@@ -16,7 +16,7 @@ import { compacto, useT } from "../textos";
 type Regras = Record<"escolha" | "storyboard" | "genericas" | "genericas_hist" | "proibidos" | "permitido_se" | "trocas", string>;
 interface ConfigCanal {
   slug: string; nome: string; ativo: boolean; tema: string; idioma: string; cores: Cores; fonte: string;
-  fontes: { arquivo: string; nome: string }[]; banner: boolean; logo: boolean; regras: Regras;
+  fontes: { arquivo: string; nome: string }[]; banner: boolean; logo: boolean; fundo: boolean; usa_fundo: boolean; regras: Regras;
   formato: string; formatos: Formato[];
 }
 const useConfig = (canal: string) =>
@@ -27,7 +27,7 @@ const CORES: [keyof Cores, string][] = [
   ["cor_caixa", "app.ident.caixa"], ["cor_sombra", "app.ident.sombra"],
 ];
 
-function TrocarImagem({ canal, qual, tem, cores, nome, versao, mudou }: { canal: string; qual: "logo" | "banner"; tem: boolean; cores: Cores; nome: string; versao: number; mudou: () => void }) {
+function TrocarImagem({ canal, qual, tem, cores, nome, versao, mudou }: { canal: string; qual: "logo" | "banner" | "fundo"; tem: boolean; cores: Cores; nome: string; versao: number; mudou: () => void }) {
   const t = useT();
   const campo = useRef<HTMLInputElement>(null);
   const [erro, setErro] = useState("");
@@ -41,18 +41,32 @@ function TrocarImagem({ canal, qual, tem, cores, nome, versao, mudou }: { canal:
     if (!r.ok) setErro((await r.json().catch(() => ({}))).detail || r.statusText);
     else mudou();
   };
+  // só a imagem de fundo dos vídeos dá para tirar: sem ela o vídeo fica com a cor e a textura
+  const tirar = async () => {
+    if (!window.confirm(t("app.ident.tirar_fundo"))) return;
+    setErro("");
+    const r = await fetch(`/api/c/${canal}/marca/${qual}`, { method: "DELETE" });
+    if (!r.ok) setErro((await r.json().catch(() => ({}))).detail || r.statusText);
+    else mudou();
+  };
+  const rot = qual === "fundo" ? "fundo_img" : qual;
   return (
     <div className={`troca-img ${qual}`}>
-      <div className="previa-img" style={tem ? undefined : { background: fundoDoCanal(cores) }}>
-        {tem ? <img src={`${urlMarca(canal, qual)}?v=${versao}`} alt="" /> : <span>{iniciais(nome)}</span>}
+      <div className="previa-img" style={tem ? undefined : { background: qual === "fundo" ? cores.cor_fundo : fundoDoCanal(cores) }}>
+        {tem ? <img src={`${urlMarca(canal, qual)}?v=${versao}`} alt="" /> : qual !== "fundo" && <span>{iniciais(nome)}</span>}
       </div>
       <div>
-        <b>{t(`app.ident.${qual}`)}</b>
-        <span className="sub">{t(`app.ident.${qual}_dica`)}</span>
+        <b>{t(`app.ident.${rot}`)}</b>
+        <span className="sub">{t(`app.ident.${rot}_dica`)}</span>
         <input ref={campo} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && mandar(e.target.files[0])} />
-        <button type="button" className="bt pequeno" disabled={enviando} onClick={() => campo.current?.click()}>
-          <Upload size={14} />{enviando ? t("app.enviando") : t(tem ? "app.ident.trocar" : "app.ident.enviar")}
-        </button>
+        <div className="troca-botoes">
+          <button type="button" className="bt pequeno" disabled={enviando} onClick={() => campo.current?.click()}>
+            <Upload size={14} />{enviando ? t("app.enviando") : t(tem ? "app.ident.trocar" : "app.ident.enviar")}
+          </button>
+          {qual === "fundo" && tem && (
+            <button type="button" className="bt pequeno" disabled={enviando} onClick={tirar}><Trash2 size={14} />{t("app.ident.tirar")}</button>
+          )}
+        </div>
         {erro && <span className="erro">{erro}</span>}
       </div>
     </div>
@@ -147,6 +161,7 @@ export function IdentidadeTela() {
           <div className="cartao imagens">
             <TrocarImagem canal={canal} qual="logo" tem={data.logo} cores={cores} nome={nome} versao={versao} mudou={mudouImagem} />
             <TrocarImagem canal={canal} qual="banner" tem={data.banner} cores={cores} nome={nome} versao={versao} mudou={mudouImagem} />
+            {data.usa_fundo && <TrocarImagem canal={canal} qual="fundo" tem={data.fundo} cores={cores} nome={nome} versao={versao} mudou={mudouImagem} />}
           </div>
         </div>
       </div>

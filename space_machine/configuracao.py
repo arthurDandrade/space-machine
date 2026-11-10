@@ -8,6 +8,7 @@
 Os scripts do motor leem as chaves por motor/caminhos.env(). Os arquivos são gravados com permissão 600 e o painel
 nunca mostra uma chave inteira (só os 4 últimos caracteres).
 """
+import time
 import json
 import os
 import re
@@ -361,6 +362,58 @@ def salvar_identidade(slug, cores, fonte):
     if fonte in fontes():
         ident["fonte_marca_arquivo"], ident["fonte_marca"] = fonte, Path(fonte).stem
     gravar_json(arq, cj)
+
+
+def fundo_do_canal(slug):
+    """A imagem de fundo dos vídeos do canal (canal.json › identidade.fundo_imagem), ou None."""
+    rel = ((ler_json(CANAIS / slug / "canal.json", {}) or {}).get("identidade") or {}).get("fundo_imagem")
+    f = CANAIS / slug / rel if rel else None
+    return f if f and f.is_file() else None
+
+
+def _guardar_fundo(slug):
+    """Tira a imagem de fundo de uso: o arquivo vai para identidade/anteriores/ (nada se perde)."""
+    f = fundo_do_canal(slug)
+    if f:
+        guarda = CANAIS / slug / "identidade" / "anteriores"
+        guarda.mkdir(parents=True, exist_ok=True)
+        f.rename(guarda / f"fundo_{time.strftime('%Y%m%d-%H%M%S')}{f.suffix.lower()}")
+
+
+def trocar_fundo(slug, imagem):
+    """imagem: PIL.Image. Grava identidade/fundo.png|jpg e aponta o canal.json para ela, já com a escala que cobre
+    o quadro de 1920×1080 inteiro, centralizada (a escala padrão do motor foi medida para uma imagem só)."""
+    _guardar_fundo(slug)
+    pasta = CANAIS / slug / "identidade"
+    pasta.mkdir(parents=True, exist_ok=True)
+    # o After não importa WEBP: sai PNG se tiver transparência, JPG se não
+    transparente = imagem.mode in ("RGBA", "LA", "P") and "A" in imagem.convert("RGBA").getbands() \
+        and imagem.convert("RGBA").getextrema()[3][0] < 255
+    if transparente:
+        arq = pasta / "fundo.png"
+        imagem.convert("RGBA").save(arq)
+    else:
+        arq = pasta / "fundo.jpg"
+        imagem.convert("RGB").save(arq, quality=93)
+    arq_cj = CANAIS / slug / "canal.json"
+    cj = ler_json(arq_cj, {}) or {}
+    ident = cj.setdefault("identidade", {})
+    ident["fundo_imagem"] = f"identidade/{arq.name}"
+    ident["fundo_escala"] = round(max(1920 / imagem.width, 1080 / imagem.height) * 100, 3)
+    ident["fundo_pos"] = [960, 540]
+    gravar_json(arq_cj, cj)
+
+
+def tirar_fundo(slug):
+    """Sem imagem de fundo: os vídeos ficam só com a cor e a textura de papel."""
+    _guardar_fundo(slug)
+    arq_cj = CANAIS / slug / "canal.json"
+    cj = ler_json(arq_cj, {}) or {}
+    ident = cj.setdefault("identidade", {})
+    ident["fundo_imagem"] = None
+    for k in ("fundo_escala", "fundo_pos"):
+        ident.pop(k, None)
+    gravar_json(arq_cj, cj)
 
 
 def _linhas(txt):

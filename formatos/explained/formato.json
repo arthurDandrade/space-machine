@@ -17,6 +17,10 @@
  "qa": {
   "medidas": "medidas_qa.json"
  },
+ "identidade": {
+  "fundo_imagem": true,
+  "_sobre": "O formato põe a imagem de fundo do canal (canal.json › identidade.fundo_imagem) atrás dos cards; o painel só mostra o campo para trocar ou tirar a imagem nos canais de formato que marcam isto."
+ },
  "producao": {
   "fluxo": "video",
   "_sobre": "Fluxo de produção do vídeo novo (2026-11-05): \"video\" = o vídeo inteiro é um projeto só (space_machine/video.py e rodar_video.py): narração e transcrição por capítulo, storyboard do vídeo inteiro, uma busca e uma escolha, e o compositor sem After (motor/edicao_ff) renderiza e entrega um MP4 só. Os vídeos criados antes (sem \"fluxo\" no estudio_video.json) continuam bloco a bloco, no After."
