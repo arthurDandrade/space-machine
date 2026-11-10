@@ -8,9 +8,18 @@
   "R1": "foto real com desenho",
   "M1": "mapa com desenho"
  },
- "card_unico": ["P1"],
+ "card_unico": [
+  "P1"
+ ],
  "texto_solo": [],
- "texto_do_layout": ["P1", "P2", "P3", "P4", "R1", "M1"],
+ "texto_do_layout": [
+  "P1",
+  "P2",
+  "P3",
+  "P4",
+  "R1",
+  "M1"
+ ],
  "_orientacao": "Desenho é gerado quadrado e recortado; foto real e mapa em qualquer proporção.",
  "orientacao": {
   "P1": "quadrado",
@@ -28,7 +37,29 @@
   "min_asset_s": 1.2,
   "min_assets_min": 10.0,
   "min_cenas_f": 0.5,
-  "texto_solo_faixa": [0.0, 0.0],
+  "texto_solo_faixa": [
+   0.0,
+   0.0
+  ],
   "max_repeticoes": 99
+ },
+ "metas_video": {
+  "_sobre": "Regras do VÍDEO INTEIRO (fluxo \"video\"). No cartum a variação é só quantos desenhos a tela tem, então as regras de distribuição de variações do explained ficam desligadas; o que o vídeo inteiro resolve aqui é o ELENCO: o mesmo desenho pedido uma vez e repetido pelo nome. max_gerados_min é uma meta inicial (bloco a bloco o vídeo de teste teve 10,4 desenhos novos por minuto na 1ª versão e 11,5 diferentes por minuto na 2ª): acertar com os próximos vídeos.",
+  "s_por_estado": 6.5,
+  "min_variacoes_frac": 0.5,
+  "max_usos_fator": 99,
+  "max_capitulos_frac": 1.0,
+  "min_distancia": 1,
+  "aberturas_iguais": true,
+  "trincas_iguais": true,
+  "tipos_gerados": [
+   "recorte"
+  ],
+  "max_gerados_min": 8,
+  "pedido_plano": "Uma tela (estado) para cada ~6 a 7 s de narração: em geral uma tela por frase do roteiro, com 2 a 4 desenhos que entram um a um:",
+  "regras_plano": "No cartum a variação diz só quantos desenhos a tela tem (misture: não mais de 30% de P1). O que o plano precisa resolver é o ELENCO do vídeo, porque cada desenho novo é gerado à mão e o sistema mede quantos o vídeo pede (meta: no máximo 8 desenhos novos por minuto de narração). Decida agora: (a) os PERSONAGENS (o mascote do canal e quem mais aparece em várias telas), cada um com a ficha física escrita uma vez; (b) as POSES de cada personagem que o vídeo vai repetir (5 a 8 poses do mascote servem ao vídeo todo; 3 ou 4 poses por personagem de capítulo); (c) os OBJETOS, ÍCONES e GRUPOS que voltam em mais de um capítulo (troféu, saco de dinheiro, calendário, torcida, cidade pequena, trem...). Tudo isso entra em \"elenco\" com um nome curto; nos capítulos, a 1ª aparição traz o pedido completo e as outras só o nome.",
+  "plano_extra": "\"personagens\": {\"<nome>\": \"<a ficha física, em inglês, a mesma no vídeo todo>\"}, \"elenco\": {\"<nome-do-desenho>\": \"<o que o desenho mostra, em inglês; pose de personagem começa por @nome>\"}",
+  "pedido_capitulo": "Escreva com o detalhe do formato: uma tela por frase (4 a 11 s), 2 a 4 cards por tela entrando um a um, algo novo a cada 2–3 s. Use o elenco do plano pelo nome sempre que servir; desenho novo só para o que é específico deste capítulo. Pode desviar do plano quando a fala pedir.",
+  "aviso_mesma_busca": "o mesmo pedido de desenho em capítulos diferentes sem \"elenco\" (dê um nome de elenco ao desenho e, na 2ª vez, use só {\"elenco\": \"<nome>\"}; ou peça outro desenho): "
  }
 }

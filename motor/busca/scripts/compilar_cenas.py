@@ -48,6 +48,7 @@ Formato de cenas.json:
            "estilo": "cheio"|"contorno", "cor": "azul"|"laranja", "formato": "4:3"} num card = mapa GERADO por
   scripts/gerar_mapa.py (Natural Earth, cores do canal) em assets/mapas/; não entra na busca.
 """
+import os
 import hashlib
 import json
 import re
@@ -120,7 +121,7 @@ def elenco(proj, nome):
     <vídeo>/elenco/<nome>.png (o finalizar.py guarda lá a escolhida); os blocos seguintes usam o mesmo arquivo, então a
     criatura é a mesma no vídeo inteiro. Devolve (caminho relativo ao bloco, já existe?)."""
     arq = arquivo_elenco(proj, nome)
-    return Path("..") / ".." / "elenco" / arq.name, arq.exists()
+    return Path(os.path.relpath(arq, proj)), arq.exists()
 
 
 def norm(p):
@@ -299,6 +300,9 @@ def main():
                         return {"arquivo": str(rel_e)}
                     if spec["elenco"] in do_elenco:       # já pedido neste bloco: o mesmo asset
                         return {"asset": do_elenco[spec["elenco"]]}
+                    if not spec.get("buscas"):            # só o nome, e ninguém definiu antes: não há o que gerar
+                        R.erros.append(f"{onde}: elenco '{spec['elenco']}' ainda não existe e o card não tem "
+                                       "\"buscas\" (a 1ª vez que um elenco aparece traz tipo, descricao e buscas)")
                 if spec.get("id") in vistos:      # o mesmo id em dois cards: este ganha um novo
                     R.avisos.append(f"{onde}: id '{spec['id']}' repetido em dois cards; o segundo ganhou outro")
                     del spec["id"]

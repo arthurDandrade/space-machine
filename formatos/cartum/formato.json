@@ -15,7 +15,7 @@
   "gerador": "gerar.py",
   "motor": "ffmpeg",
   "regerar_no_final": true,
-  "_sobre": "motor = ffmpeg: o gerar.py escreve o plano_render_NN.json e o motor/edicao_ff/compor.py desenha. Não há modelo do After. regerar_no_final: o vídeo final roda o gerador de cada bloco de novo antes de desenhar, porque a grade de abertura mostra o símbolo de TODOS os tópicos e um bloco feito cedo ainda não tinha os dos outros."
+  "_sobre": "motor = ffmpeg: o gerar.py escreve o plano_render_NN.json e o motor/edicao_ff/compor.py desenha. Não há modelo do After. regerar_no_final: o vídeo final roda o gerador de cada bloco de novo antes de desenhar, porque a grade de abertura mostra o símbolo de TODOS os tópicos e um bloco feito cedo ainda não tinha os dos outros. No fluxo \"video\" a grade já sai completa (todos os títulos estão no mesmo manifesto) e o regerar_no_final só serve aos vídeos antigos, feitos bloco a bloco."
  },
  "qa": {
   "medidas": "medidas_qa.json",
@@ -60,8 +60,25 @@
   "modelo": "roteiro_modelo.md",
   "medidas": {
    "cold_open": false,
-   "capitulos": [16, 26],
-   "palavras": [2800, 4400], "frases": {"media": [14, 22], "curtas_max": 0.2}
+   "capitulos": [
+    16,
+    26
+   ],
+   "palavras": [
+    2800,
+    4400
+   ],
+   "frases": {
+    "media": [
+     14,
+     22
+    ],
+    "curtas_max": 0.2
+   }
   }
+ },
+ "producao": {
+  "fluxo": "video",
+  "_sobre": "O vídeo inteiro é um projeto só (2026-11-10, space_machine/video.py e rodar_video.py): narração por capítulo, storyboard do vídeo todo numa conversa (1º o plano com o ELENCO do vídeo, depois um capítulo por resposta), uma busca, uma fila de desenhos, uma escolha, e o compositor entrega um MP4 só. Feito bloco a bloco, cada tópico pedia os desenhos dele sem saber dos outros (109 e depois 81 pedidos novos num vídeo de 10 tópicos) e a grade de abertura só fechava no vídeo final."
  }
 }

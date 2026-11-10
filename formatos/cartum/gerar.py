@@ -289,6 +289,24 @@ def topicos_do_video(proj):
     """[(nn, nome, arquivo do desenho-símbolo | None)] de todos os tópicos do vídeo, na ordem. O símbolo é o asset do
     título do bloco (manifesto) ou, se o bloco ainda não foi feito, o elenco do título dele em <vídeo>/elenco/."""
     out = []
+    if proj.name == "producao":
+        # o vídeo inteiro num projeto só (fluxo "video"): os tópicos são os itens do plano.json e o símbolo de cada
+        # um é o título dele no MESMO manifesto — a grade sai completa na 1ª montagem, sem gerar de novo no final
+        try:
+            man = {m["id"]: m for m in json.loads((proj / "manifesto.json").read_text())["assets"]}
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
+            man = {}
+        for it in json.loads((proj / "plano.json").read_text()).get("itens", []):
+            try:
+                tt = json.loads((proj / "edicao" / f"plano_edicao_{it['id']}.json").read_text()).get("titulo")
+            except (FileNotFoundError, json.JSONDecodeError):
+                tt = None
+            if not tt:          # cold open ou capítulo sem título: não entra na grade
+                continue
+            arq = proj / tt["arquivo"] if tt.get("arquivo") else \
+                (proj / man[tt["asset"]]["arquivo"] if tt.get("asset") in man else None)
+            out.append((it["id"], it["nome"], arq if arq and arq.exists() else None))
+        return out
     for b in sorted(d for d in proj.parent.iterdir() if d.is_dir() and d.name.isdigit() and (d / "roteiro.txt").exists()):
         linhas = (b / "roteiro.txt").read_text().splitlines()
         if not linhas or not linhas[0].startswith("#") or any(ln.startswith("#! cold open") for ln in linhas[:3]):
@@ -377,6 +395,12 @@ def main():
     M = Montador(proj)
     estados = [e for c in plano["cenas"] for e in c["estados"]]
     fim_bloco = plano["fim"] + FIM_BLOCO
+    if proj.name == "producao":
+        # no vídeo inteiro o pedaço do capítulo vai até o começo do seguinte (render_video): a última tela fica até lá
+        itens = json.loads((proj / "plano.json").read_text()).get("itens", [])
+        k = next((i for i, it in enumerate(itens) if it["id"] == a.item), None)
+        if k is not None and k + 1 < len(itens):
+            fim_bloco = max(fim_bloco, itens[k + 1]["inicio"] - itens[k]["inicio"] + 0.1)
     M.add(kind="solid", color=M.cor_fundo, name="fundo", camada="fundo", **{"in": 0, "out": fim_bloco + 2})
 
     # o tópico abre com o desenho-símbolo grande e o nome embaixo, enquanto a 1ª frase é dita; quando a 1ª tela
@@ -402,7 +426,7 @@ def main():
         # crescem até o cartão (as mesmas camadas, sem corte), ficam enquanto a 1ª frase é dita e encolhem para o
         # cabeçalho quando a 1ª tela entra
         topicos = topicos_do_video(proj)
-        eu = next((k for k, tp in enumerate(topicos) if tp[0] == proj.name), None)
+        eu = next((k for k, tp in enumerate(topicos) if tp[0] == (a.item if proj.name == "producao" else proj.name)), None)
         g = None
         if eu is not None and len(topicos) >= 2:
             t_grade = (GRADE_SEGURA_1 if eu == 0 else GRADE_SEGURA) + GRADE_ZOOM

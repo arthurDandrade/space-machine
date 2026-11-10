@@ -48,9 +48,15 @@ def slug(texto, maximo=40):
     return t[:maximo] or "x"
 
 
+def pasta_do_video(proj):
+    """A pasta do vídeo de um projeto: <vídeo>/blocos/NN (bloco a bloco) ou <vídeo>/producao (o vídeo inteiro)."""
+    proj = Path(proj)
+    return proj.parent if proj.name == "producao" else proj.parent.parent
+
+
 def arquivo_elenco(proj, nome):
     """<vídeo>/elenco/<nome>.png: a criatura/personagem do vídeo, a mesma em todos os blocos (bestiário)."""
-    return Path(proj).parent.parent / "elenco" / f"{re.sub(r'[^a-z0-9]+', '-', nome.lower()).strip('-')}.png"
+    return pasta_do_video(proj) / "elenco" / f"{re.sub(r'[^a-z0-9]+', '-', nome.lower()).strip('-')}.png"
 
 
 def log(*a):

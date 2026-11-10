@@ -29,6 +29,14 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   do layout do explained). Formato com gerador próprio ainda não faz Reels.
 - `edicao.regerar_no_final`: true = o vídeo final roda o gerador de cada bloco de novo antes de desenhar (cartum: a grade
   de abertura mostra o símbolo de todos os tópicos, e um bloco feito cedo ainda não tinha os dos outros).
+- `producao.fluxo`: `"video"` = o vídeo novo nasce como um projeto só (`space_machine/video.py`, `rodar_video.py`): narração por
+  capítulo, storyboard do vídeo todo numa conversa (plano + um capítulo por resposta), uma busca, uma escolha e um MP4. O que
+  o formato diz sobre o vídeo inteiro fica em `biblioteca_cenas.json › metas_video`: as regras de distribuição das variações
+  (`min_variacoes_frac`, `max_usos_fator`, `max_capitulos_frac`, `min_distancia`, e `aberturas_iguais`/`trincas_iguais` = true
+  para desligar as duas últimas), `s_por_estado`, os textos do pedido (`pedido_plano`, `regras_plano`, `plano_extra` — o que
+  mais o plano devolve, ex. o elenco —, `pedido_capitulo`, `aviso_mesma_busca`) e, em formato de desenho gerado,
+  `tipos_gerados` + `max_gerados_min` (quantos desenhos o vídeo pode mandar gerar por minuto). Precisa do prompt
+  `prompts/storyboard_video.md`. Sem `producao.fluxo`, o formato é bloco a bloco.
 - `qa.checagens`: o que o `qa_bloco.py` confere — `render` (detector de cards sobre papel), `tela_vazia` (fundo
   escuro: tela preta > 0,5 s), `vazio_layout` (fundo desenhado: só o fundo na tela > 0,5 s, pelo layout_NN.json), `layout` (texto por cima de imagem + texto rápido), `layout_tempo` (só texto rápido),
   `origem`. Sem a lista: `render`, `layout`, `origem`.

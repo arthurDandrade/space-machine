@@ -195,20 +195,28 @@ class RodadaVideo(Rodada):
         st = self._st_metas()
         linhas = [f"- {c['nn']} {c['nome']}: {c['fim'] - c['ini']:.0f} s → ~{self._estados_previstos(c)} estados"
                   for c in caps]
+        mv = st["mv"]
+        # o que é do FORMATO vem de biblioteca_cenas.json › metas_video: "pedido_plano" (o ritmo e as regras do plano)
+        # e "plano_extra" (o que mais o plano devolve, ex. o elenco do vídeo no cartum); sem eles, os do explained
+        ritmo = mv.get("pedido_plano") or (
+            f"Um estado para cada ~{self._s_por_estado():.0f} s de narração, como num capítulo feito sozinho (feito "
+            "bloco a bloco, este formato teve 1 estado a cada 4,2 s e 20 assets/min; o vídeo inteiro num pedido "
+            "só caiu para 1 a cada 6 s e 16,6 assets/min, raso demais):")
+        regras = mv.get("regras_plano") or (
+            f"As regras do vídeo, que o sistema mede no plano: o vídeo usa ≥ {st['meta_uso']} das "
+            f"{st['biblioteca']} variações; nenhuma passa de ~{st['teto']}× no vídeo nem aparece em mais de "
+            f"{st['teto_caps']} capítulos; a mesma só volta depois de {st['dist']} estados (contando a virada "
+            "de um capítulo para o outro); cada capítulo abre com uma variação diferente; nenhuma sequência de "
+            "3 variações se repete.")
         return ("## Fase 1 de 2: o plano de distribuição\n"
                 "Ainda sem cenas: leia a transcrição inteira e planeje o vídeo. Depois você vai escrever um capítulo "
                 "por resposta, seguindo este plano.\n"
-                f"Um estado para cada ~{self.S_POR_ESTADO:.0f} s de narração, como num capítulo feito sozinho (feito "
-                "bloco a bloco, este formato teve 1 estado a cada 4,2 s e 20 assets/min; o vídeo inteiro num pedido "
-                "só caiu para 1 a cada 6 s e 16,6 assets/min, raso demais):\n" + "\n".join(linhas) + "\n"
-                f"As regras do vídeo, que o sistema mede no plano: o vídeo usa ≥ {st['meta_uso']} das "
-                f"{st['biblioteca']} variações; nenhuma passa de ~{st['teto']}× no vídeo nem aparece em mais de "
-                f"{st['teto_caps']} capítulos; a mesma só volta depois de {st['dist']} estados (contando a virada "
-                "de um capítulo para o outro); cada capítulo abre com uma variação diferente; nenhuma sequência de "
-                "3 variações se repete. Use só os códigos da Biblioteca de Cenas: " + ", ".join(st["nomes"]) + ".\n"
+                + ritmo + "\n" + "\n".join(linhas) + "\n"
+                + regras + " Use só os códigos da Biblioteca de Cenas: " + ", ".join(st["nomes"]) + ".\n"
                 "Devolva {\"plano\": {\"<id>\": {\"abre\": \"<variação do 1º estado depois do título>\", "
                 "\"variacoes\": [\"<a variação de cada estado, na ordem, começando pela de abertura>\"], "
-                "\"ideia\": \"<uma frase: o que este capítulo mostra e o que o faz diferente dos outros>\"}}}. "
+                "\"ideia\": \"<uma frase: o que este capítulo mostra e o que o faz diferente dos outros>\"}}"
+                + (", " + mv["plano_extra"] if mv.get("plano_extra") else "") + "}. "
                 + self._JSON)
 
     def _st_metas(self):
@@ -217,19 +225,25 @@ class RodadaVideo(Rodada):
         mv = bib.get("metas_video", {})
         nomes = [v for v in bib["nomes"] if v not in mv.get("fora_da_conta", [])]
         n = sum(self._estados_previstos(c) for c in self._capitulos())
-        return {"nomes": nomes, "biblioteca": len(nomes),
+        return {"nomes": nomes, "biblioteca": len(nomes), "mv": mv,
                 "meta_uso": math.ceil(mv.get("min_variacoes_frac", 0.75) * len(nomes)),
                 "teto": max(mv.get("max_usos_min", 2), math.ceil(mv.get("max_usos_fator", 1.6) * n / len(nomes))),
                 "teto_caps": max(2, math.ceil(mv.get("max_capitulos_frac", 0.5) * len(self._capitulos()))),
                 "dist": mv.get("min_distancia", 6)}
 
+    def _s_por_estado(self):
+        """Segundos de narração por estado no formato do canal (metas_video › s_por_estado; o do explained é 4,2)."""
+        bib = ler_json(arquivo_formato("cenas", self.c.get("formato"))) or {}
+        return float((bib.get("metas_video") or {}).get("s_por_estado", self.S_POR_ESTADO))
+
     def _estados_previstos(self, c):
-        return max(2, round((c["fim"] - c["ini"]) / self.S_POR_ESTADO))
+        return max(2, round((c["fim"] - c["ini"]) / self._s_por_estado()))
 
     def _medir_plano(self, plano):
-        arq = self._dir_sb() / "plano.json"
+        arq = self._dir_sb() / "plano_medir.json"
         gravar_json(arq, {"plano": plano})
         _, saida = self.script("storyboard", "storyboard.py", self.p, "--plano", arq)
+        arq.unlink(missing_ok=True)
         ids = [c["nn"] for c in self._capitulos()]
         avisos = [l[6:] for l in saida.splitlines() if l.startswith("AVISO")]
         if list(plano) != ids:
@@ -243,7 +257,7 @@ class RodadaVideo(Rodada):
             return (ler_json(arq) or {}).get("plano"), False     # de uma rodada anterior: a conversa não existe mais
         self.marcar("storyboard", "rodando", "plano do vídeo")
         texto = self._pedido_storyboard(fim=self._pedido_plano())
-        plano, nova = None, True
+        plano, nova, extra = None, True, {}
         for volta in range(3):
             r = self._chamar_sb(sistema, texto, sid, nova, f"plano, volta {volta}")
             nova = False
@@ -251,6 +265,8 @@ class RodadaVideo(Rodada):
             if not isinstance(plano, dict):
                 texto = "A resposta não era o JSON do plano. " + self._JSON
                 continue
+            # o que mais o formato pediu no plano (metas_video › plano_extra: o elenco do vídeo, no cartum)
+            extra = {k: v for k, v in r.items() if k != "plano"}
             avisos = self._medir_plano(plano)
             if not avisos:
                 break
@@ -258,8 +274,13 @@ class RodadaVideo(Rodada):
                      + "\n\nCorrija e devolva o plano inteiro de novo. " + self._JSON)
         if not isinstance(plano, dict):
             raise Parada("o Claude não devolveu um plano de distribuição do vídeo")
-        gravar_json(arq, {"plano": plano})      # mesmo com aviso: as regras são medidas de novo no vídeo compilado
+        gravar_json(arq, {"plano": plano, **extra})      # mesmo com aviso: as regras são medidas de novo no vídeo compilado
         return plano, True
+
+    def _plano_extra(self):
+        """O que o plano trouxe além das variações (o elenco do vídeo, no cartum), para lembrar a cada capítulo."""
+        d = ler_json(self._dir_sb() / "plano.json") or {}
+        return {k: v for k, v in d.items() if k != "plano" and v}
 
     def _parcial(self, itens):
         """Compila e mede os capítulos feitos até aqui numa pasta à parte (_work/storyboard/parcial), com a narração
@@ -320,10 +341,21 @@ class RodadaVideo(Rodada):
                         for x in [cd] + list(cd.get("troca", []) if isinstance(cd, dict) else []):
                             if isinstance(x, dict) and x.get("buscas"):
                                 buscas.append(f"{it['id']}: {x['buscas'][0]}")
+        elenco = {}
+        for it in feitos:
+            cards = [it.get("titulo") or {}] + [cd for cena in it.get("cenas", []) for e in cena.get("estados", [])
+                                                for cd in e.get("cards", [])]
+            for cd in cards:
+                for x in [cd, cd.get("sticker") if isinstance(cd, dict) else None] + \
+                        list(cd.get("troca", []) if isinstance(cd, dict) else []):
+                    if isinstance(x, dict) and x.get("elenco") and x.get("buscas"):
+                        elenco.setdefault(x["elenco"], x.get("descricao") or x["buscas"][0][:60])
         return ("O vídeo até aqui (medido): " + " · ".join(f"{c['id']} {c.get('resumo', '')}" for c in caps) + "\n"
                 + "Variações já usadas: " + ", ".join(f"{v} ×{n}" for v, n in sorted(cont.items(), key=lambda x: -x[1]))
                 + f"\nOs últimos {len(ultimos)} estados (não volte a eles logo no começo): {' → '.join(ultimos)}\n"
-                + "Buscas já usadas (a mesma imagem não aparece em dois capítulos): " + "; ".join(buscas) + "\n")
+                + "Buscas já usadas (a mesma imagem não aparece em dois capítulos): " + "; ".join(buscas) + "\n"
+                + ("Elenco já criado neste vídeo (para repetir o MESMO desenho, só {\"elenco\": \"<nome>\"} no "
+                   "card, sem buscas): " + "; ".join(f"{k} = {v}" for k, v in elenco.items()) + "\n" if elenco else ""))
 
     def _pedido_capitulo(self, c, k, plano, feitos):
         pc = plano.get(c["nn"]) or {}
@@ -331,14 +363,20 @@ class RodadaVideo(Rodada):
                     if c["ini"] - 0.01 <= w["ini"] < c["fim"] - 0.01]
         forma = {"cold_open": "sem \"titulo\" (cold open)", "mudo": "sem \"titulo\" (capítulo mudo)"}.get(
             c["tipo"], "com o \"titulo\" (o recorte do card de título)")
+        mv = (ler_json(arquivo_formato("cenas", self.c.get("formato"))) or {}).get("metas_video") or {}
+        detalhe = mv.get("pedido_capitulo") or (
+            "Escreva com o detalhe de um capítulo feito sozinho: 20–25 assets/min, cenas que evoluem em 2–4 "
+            "estados, cada asset ≥ 1,8 s. Pode desviar do plano quando a fala pedir, sem usar o que o vídeo já "
+            "usou demais.")
+        extra = self._plano_extra() if k == 1 or not feitos else {}      # na conversa retomada o plano inteiro já foi
         return (f"## Fase 2: capítulo {c['nn']} — {c['nome']} ({k} de {len(self._capitulos())})\n"
                 f"Narração de {c['ini']:.1f} a {c['fim']:.1f} s no tempo do vídeo ({c['fim'] - c['ini']:.0f} s), de "
                 f"\"{' '.join(palavras[:6])}\" a \"{' '.join(palavras[-6:])}\": todas as falas cobertas.\n"
                 f"O plano dele: abre com {pc.get('abre', '?')}; variações {', '.join(pc.get('variacoes') or [])}; "
                 f"{pc.get('ideia', '')}\n" + self._o_que_ja_tem(feitos)
-                + "Escreva com o detalhe de um capítulo feito sozinho: 20–25 assets/min, cenas que evoluem em 2–4 "
-                "estados, cada asset ≥ 1,8 s. Pode desviar do plano quando a fala pedir, sem usar o que o vídeo já "
-                "usou demais.\n"
+                + ("O que o plano definiu para o vídeo todo: " + json.dumps(extra, ensure_ascii=False) + "\n"
+                   if extra else "")
+                + detalhe + "\n"
                 f"Devolva SÓ o item deste capítulo, {forma}: {{\"id\": \"{c['nn']}\", \"nome\": \"{c['nome']}\", "
                 "\"cenas\": [...]}. " + self._JSON)
 
@@ -412,7 +450,9 @@ class RodadaVideo(Rodada):
                     # rodada retomada: a conversa de antes não existe mais; uma nova com o plano e o que já foi feito
                     sid = str(uuid.uuid4())
                     self._chamar_sb(sistema, self._pedido_storyboard(
-                        fim="## Plano de distribuição (fase 1, já feito)\n" + json.dumps(plano, ensure_ascii=False)
+                        fim="## Plano de distribuição (fase 1, já feito)\n"
+                            + json.dumps({"plano": plano, **self._plano_extra()} if self._plano_extra() else plano,
+                                         ensure_ascii=False)
                             + "\n\n## Capítulos já escritos (não mude)\n"
                             + json.dumps(feitos, ensure_ascii=False, separators=(",", ":"))
                             + "\n\nResponda só {\"ok\": true}; os próximos capítulos vêm um por mensagem."),
@@ -496,8 +536,11 @@ class RodadaVideo(Rodada):
                     tmp.replace(f)
 
     def _gerar_planos(self):
-        """gerar_ae2.py de cada capítulo cujo plano_render é mais velho que o que entra nele."""
-        gerador = Path(self.c["editor"]) / "gerar_ae2.py"
+        """O gerador (o do formato, formato.json › edicao.gerador, ou o gerar_ae2.py do motor) de cada capítulo cujo
+        plano_render é mais velho que o que entra nele."""
+        gerador = arquivo_formato("edicao.gerador", self.c.get("formato"), exigir=False)
+        if not gerador.is_file():
+            gerador = Path(self.c["editor"]) / "gerar_ae2.py"
         entradas = [self.p / "manifesto.json", self.p / "cenas.json", self.p / "plano.json", gerador]
         base = max((f.stat().st_mtime for f in entradas if f.exists()), default=0)
         feitos = []

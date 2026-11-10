@@ -304,12 +304,14 @@ def regras_video(caps, n_caps=None, n_estados=None):
         avisos.append(f"a mesma variação volta a menos de {dist} estados: " + "; ".join(perto[:12])
                       + (f" (+{len(perto) - 12})" if len(perto) > 12 else ""))
     # 4) capítulos que abrem igual (o 1º estado depois do título) e sequências de 3 que se repetem
+    # (formato de poucas variações, como o cartum, em que a variação é só quantos desenhos a tela tem, desliga as
+    # duas com metas_video › aberturas_iguais / trincas_iguais = true)
     aberturas = collections.Counter(c["vars"][0] for c in caps if c["vars"])
-    iguais = [f"{v} abre {k} capítulos" for v, k in aberturas.items() if k > 1]
+    iguais = [] if mv.get("aberturas_iguais") else [f"{v} abre {k} capítulos" for v, k in aberturas.items() if k > 1]
     if iguais:
         avisos.append("capítulos que abrem com a mesma variação (cada um começa de um jeito): " + ", ".join(iguais))
     trincas = collections.Counter(tuple(v for _, v in todos[k:k + 3]) for k in range(n - 2))
-    rep3 = [" → ".join(t) for t, k in trincas.items() if k > 1]
+    rep3 = [] if mv.get("trincas_iguais") else [" → ".join(t) for t, k in trincas.items() if k > 1]
     if rep3:
         avisos.append("sequências de 3 variações que se repetem no vídeo: " + "; ".join(rep3))
     return avisos
@@ -350,14 +352,29 @@ def video(proj, n_caps=None, n_estados=None):
             for e in c["estados"]:
                 for cd in e.get("cards", []):
                     for x in [cd] + list(cd.get("troca", [])):
-                        if isinstance(x, dict) and _busca_principal(x):
+                        # card com "elenco" é repetição declarada (o mesmo desenho, de propósito): não conta
+                        if isinstance(x, dict) and _busca_principal(x) and not x.get("elenco"):
                             onde[_busca_principal(x)].add(item["id"])
     dup = [f"\"{q}\" ({', '.join(sorted(ids))})" for q, ids in onde.items() if len(ids) > 1]
     if dup:
-        avisos.append("a mesma busca em capítulos diferentes (a imagem vai se repetir; troque o assunto da imagem ou "
-                      "use {\"reusar\": \"<id>\"} se for de propósito): " + "; ".join(dup))
+        avisos.append((BIBLIOTECA.get("metas_video", {}).get("aviso_mesma_busca") or
+                       "a mesma busca em capítulos diferentes (a imagem vai se repetir; troque o assunto da imagem ou "
+                       "use {\"reusar\": \"<id>\"} se for de propósito): ") + "; ".join(dup))
     resumo = (f"{len(caps)} capítulos, {n} estados · {len(usadas)} variações usadas · a mais usada "
               f"{cont.most_common(1)[0][0] if cont else '—'} ×{cont.most_common(1)[0][1] if cont else 0}")
+    # 6) formato de desenho GERADO (metas_video › tipos_gerados): quantos desenhos o vídeo manda gerar. Cada um custa
+    # uma geração (no cartum, ~40 s de uma sessão no Flow); o que volta com o mesmo "elenco" é um desenho só
+    mvid = BIBLIOTECA.get("metas_video", {})
+    if mvid.get("tipos_gerados"):
+        gerados = [a for it in plano.get("itens", []) for a in
+                   ([it["titulo_asset"]] if it.get("titulo_asset") else []) + [x for c in it.get("cenas", []) for x in c.get("assets", [])]
+                   if a.get("tipo") in mvid["tipos_gerados"]]
+        minutos = max(0.1, sum(it["fim"] - it["inicio"] for it in plano.get("itens", [])) / 60)
+        resumo += f" · {len(gerados)} desenhos a gerar ({len(gerados) / minutos:.1f}/min)"
+        if mvid.get("max_gerados_min") and len(gerados) / minutos > mvid["max_gerados_min"]:
+            avisos.append(f"{len(gerados)} desenhos a gerar em {minutos:.1f} min ({len(gerados) / minutos:.1f}/min; "
+                          f"meta ≤ {mvid['max_gerados_min']}/min): repita desenhos pelo \"elenco\" (a mesma pose do "
+                          "personagem, o mesmo objeto, o mesmo ícone) em vez de pedir um novo parecido")
     md = [f"# Storyboard do vídeo — {cen.get('titulo', proj.parent.name)}", "", resumo, ""]
     md += ["## ⚠️ Fora das regras", ""] + [f"- {x}" for x in avisos] + [""] if avisos else \
         ["✅ Dentro das regras de variedade e ritmo.", ""]
