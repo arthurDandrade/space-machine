@@ -14,7 +14,8 @@
  "edicao": {
   "gerador": "gerar.py",
   "motor": "ffmpeg",
-  "_sobre": "motor = ffmpeg: o gerar.py escreve o plano_render_NN.json e o motor/edicao_ff/compor.py desenha. Não há modelo do After."
+  "regerar_no_final": true,
+  "_sobre": "motor = ffmpeg: o gerar.py escreve o plano_render_NN.json e o motor/edicao_ff/compor.py desenha. Não há modelo do After. regerar_no_final: o vídeo final roda o gerador de cada bloco de novo antes de desenhar, porque a grade de abertura mostra o símbolo de TODOS os tópicos e um bloco feito cedo ainda não tinha os dos outros."
  },
  "qa": {
   "medidas": "medidas_qa.json",
@@ -43,7 +44,7 @@
   "flow": {
    "por_asset": 3
   },
-  "estilo_recorte": "Simple hand-drawn cartoon illustration for an explainer video, in the style of a thick-marker doodle: bold clean black outlines of even weight, flat solid colors, no shading, no gradients, no texture, people and animals have simple friendly faces with dot eyes, objects have no face. One single subject, fully visible, centered, with generous empty margin around it, on a perfectly plain, flat, uniform pure magenta background (hex #FF00FF) that also shows through every gap and hole of the subject, with no shadow, no ground line and no scenery. Never use magenta or hot pink in the subject itself. No text, no letters, no numbers, no logos, no watermark, no frame. Never depict a real, identifiable person."
+  "estilo_recorte": "Simple hand-drawn cartoon illustration for an explainer video, in the style of a thick-marker doodle: bold clean black outlines of even weight, flat solid colors, no shading, no gradients, no texture, people and animals have simple friendly faces with dot eyes, objects have no face. One single subject, fully visible, centered, with generous empty margin around it, on a perfectly plain, flat, uniform pure magenta background (hex #FF00FF) that also shows through every gap and hole of the subject, with no shadow, no ground line and no scenery. Never use magenta, hot pink or purple in the subject itself. No text, no letters, no numbers, no logos, no watermark, no frame. Never depict a real, identifiable person."
  },
  "visual": {
   "_sobre": "Lido pelo gerar.py; o canal.json › visual pode trocar qualquer campo. Cor do fundo medida nos 4 vídeos de referência.",

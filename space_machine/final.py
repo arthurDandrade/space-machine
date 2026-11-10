@@ -196,10 +196,23 @@ def montar_ffmpeg(vd):
     fcntl.flock(trava, fcntl.LOCK_EX)
     try:
         partes = []
+        from .sistema import arquivo_formato, ficha_formato
+        cj = ler_json(vd.parent.parent / "canal.json", {}) or {}
+        regerar = None
+        if (ficha_formato(cj.get("formato")).get("edicao") or {}).get("regerar_no_final"):
+            g = arquivo_formato("edicao.gerador", cj.get("formato"), exigir=False)
+            regerar = g if g.is_file() else None
         for k, mp4 in enumerate(blocos, 1):
             nn = f"{_numero(mp4):02d}"
             plano = vd / "blocos" / nn / "edicao" / f"plano_render_{nn}.json"
             alvo = fim_dir / "blocos" / f"bloco_{nn}.mp4"
+            if regerar and plano.exists():
+                # o que depende do vídeo inteiro (a grade de tópicos do cartum) só fica completo agora
+                antes, mt = plano.read_text(), plano.stat().st_mtime
+                subprocess.run([sys.executable, str(regerar), str(vd / "blocos" / nn), "--item", nn], capture_output=True,
+                               text=True, env={**os.environ, "SM_CANAL": str(vd.parent.parent), "SM_DADOS": str(DADOS)})
+                if plano.read_text() == antes:
+                    os.utime(plano, (mt, mt))       # nada mudou: o bloco já desenhado continua valendo
             if plano.exists() and not (alvo.exists() and alvo.stat().st_mtime >= plano.stat().st_mtime):
                 _marcar(vd, etapa=f"renderizando o bloco {nn} em 1920×1080 ({k}/{len(blocos)})")
                 r = subprocess.run([sys.executable, str(MOTOR / "edicao_ff" / "compor.py"), str(vd / "blocos" / nn),

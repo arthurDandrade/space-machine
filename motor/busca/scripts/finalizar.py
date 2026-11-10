@@ -29,12 +29,15 @@ from comum import arquivo_elenco, caminhos, config, gravar_json, iter_assets, le
 _sessao_rembg = [None]
 
 
-def tirar_fundo_liso(im, tol=24):
+def tirar_fundo_liso(im):
     """Desenho de contorno fechado em fundo liso (cartum: formato.json › ilustracao.recorte = "fundo_liso").
     - Fundo de COR-CHAVE (saturado, ex. magenta: o estilo do formato pede uma cor que não existe no desenho): sai tudo
-      o que tem essa cor, em qualquer lugar da imagem — também os vãos fechados (entre as traves de um poço, dentro
-      da alça de um balde), que ficavam com o fundo quando ele era branco (2026-11-09). A borda é desmisturada da cor
-      do fundo para não sobrar contorno rosado.
+      o que tem essa cor, em qualquer lugar da imagem — também os vãos fechados (entre as traves de um poço, entre as
+      pernas), que ficavam com o fundo quando ele era branco (2026-11-09). A medida é "o quanto é da cor-chave":
+      o menor dos canais altos da chave menos o maior dos baixos (magenta: min(R, B) − G), que não muda com a
+      claridade — o gerador nem sempre entrega um magenta uniforme, e medindo a distância até a cor da borda um
+      fundo um pouco mais escuro reprovava e o recorte caía no rembg, que deixava mancha rosa (o treinador do teste
+      de futebol). A borda do desenho é desmisturada da cor do fundo para não sobrar contorno rosado.
     - Fundo branco ou cinza: só sai o que está ligado à borda da imagem, para o branco de dentro do desenho (camisa,
       papel) ficar; vão fechado continua com o fundo.
     Devolve None quando a borda não é lisa (foto, cenário): aí o recorte é o do rembg."""
@@ -43,13 +46,17 @@ def tirar_fundo_liso(im, tol=24):
     rgb = np.asarray(im.convert("RGB")).astype(np.float32)
     borda = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
     cor = np.median(borda, axis=0)
-    if (np.abs(borda - cor).max(axis=1) <= tol).mean() < 0.97:
-        return None
-    if cor.max() - cor.min() > 80:
-        dist = np.sqrt(((rgb - cor) ** 2).sum(axis=2))
-        alfa = np.clip((dist - 60) / 90, 0, 1)[..., None]
+    altos = cor >= cor.max() - 60
+    if cor.max() - cor.min() > 80 and not altos.all():
+        chave = lambda px: px[..., altos].min(axis=-1) - px[..., ~altos].max(axis=-1)
+        k_fundo = float(np.median(chave(borda)))
+        if (chave(borda) >= 0.7 * k_fundo).mean() < 0.97:
+            return None
+        alfa = (1 - np.clip((chave(rgb) - 0.18 * k_fundo) / (0.32 * k_fundo), 0, 1))[..., None]
         limpo = np.where(alfa > 0.02, (rgb - (1 - alfa) * cor) / np.maximum(alfa, 0.02), rgb)
         return Image.fromarray(np.dstack([np.clip(limpo, 0, 255), alfa * 255]).astype(np.uint8), "RGBA")
+    if (np.abs(borda - cor).max(axis=1) <= 24).mean() < 0.97:
+        return None
     perto = (np.abs(rgb - cor).max(axis=2) <= 14).astype(np.uint8)
     _, rot = cv2.connectedComponents(perto, connectivity=4)
     ligados = np.unique(np.concatenate([rot[0], rot[-1], rot[:, 0], rot[:, -1]]))

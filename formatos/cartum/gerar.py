@@ -9,10 +9,15 @@ palavra dita, EM CORTE SECO (nada de fusão, deslize ou zoom: medido quadro a qu
 seguinte. Um estado do cenas.json = uma tela; os cards vão em colunas, na ordem em que foram escritos.
 O que cada card pode levar: acima, legenda, sticker, troca e opcoes {balao, x, seta, circulo, tamanho}; no estado,
 textos = a data embaixo do nome do tópico. Está tudo em storyboard.md.
+O bloco abre com a GRADE de todos os tópicos do vídeo (o desenho-símbolo e o nome de cada um, lidos dos blocos
+irmãos), que aproxima no tópico que vai começar. Tópico cujo símbolo ainda não existe aparece só com o nome: por
+isso o vídeo final manda gerar de novo (formato.json › edicao.regerar_no_final).
 """
 import argparse
 import json
 import math
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -37,6 +42,11 @@ MINI = (1836, 82, 150, 130)       # miniatura do tópico no canto (cx, cy, largu
 TITULO_IMG = (W / 2, 470, 760, 600)
 TITULO_NOME = (W / 2, 880)
 VIRA = 0.35                       # o cartão do tópico encolhe para o cabeçalho
+# grade de abertura (medido na referência: a grade com todos os tópicos fica 0,8 s, aproxima em 0,5 s para o tópico
+# que vai começar e corta para ele; entre tópicos ela volta por ~0,7 s). Aqui: no 1º tópico segura 0,8 s, nos outros
+# 0,45 s, e aproxima em 0,5 s; depois corta para o cartão do tópico.
+GRADE_SEGURA_1, GRADE_SEGURA, GRADE_ZOOM, GRADE_AUMENTO = 0.8, 0.45, 0.5, 2.6
+GRADE_AREA = (70, 50, 1850, 1040)
 EASE_OUT = [0, 0.1, 0, 80]
 EASE_IN = [0, 80, 0, 0.1]
 CAMADAS = {"fundo": 0, "conteudo": 1, "ui": 2}
@@ -265,6 +275,70 @@ def tela(M, e, fim):
         anterior = (cx, cy)
 
 
+def topicos_do_video(proj):
+    """[(nn, nome, arquivo do desenho-símbolo | None)] de todos os tópicos do vídeo, na ordem. O símbolo é o asset do
+    título do bloco (manifesto) ou, se o bloco ainda não foi feito, o elenco do título dele em <vídeo>/elenco/."""
+    out = []
+    for b in sorted(d for d in proj.parent.iterdir() if d.is_dir() and d.name.isdigit() and (d / "roteiro.txt").exists()):
+        linhas = (b / "roteiro.txt").read_text().splitlines()
+        if not linhas or not linhas[0].startswith("#") or any(ln.startswith("#! cold open") for ln in linhas[:3]):
+            continue
+        arq = None
+        try:
+            man = {m["id"]: m for m in json.loads((b / "manifesto.json").read_text())["assets"]}
+            if f"{b.name}-titulo" in man:
+                arq = b / man[f"{b.name}-titulo"]["arquivo"]
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
+            pass
+        if not (arq and arq.exists()):
+            try:
+                tit = json.loads((b / "cenas.json").read_text())["itens"][0].get("titulo") or {}
+                el = proj.parent.parent / "elenco" / (re.sub(r"[^a-z0-9]+", "-", str(tit.get("elenco", "")).lower()).strip("-") + ".png")
+                arq = el if tit.get("elenco") and el.exists() else None
+            except (FileNotFoundError, KeyError, IndexError, json.JSONDecodeError):
+                arq = None
+        out.append((b.name, linhas[0].lstrip("# ").strip(), arq))
+    return out
+
+
+def grade(M, proj, topicos, atual, fim):
+    """A grade com todos os tópicos (desenho + nome): parada, depois aproximando no tópico `atual`, até `fim`."""
+    n = len(topicos)
+    x0, y0, x1, y1 = GRADE_AREA
+    cols = max(2, min(n, math.ceil(math.sqrt(n * (x1 - x0) / (y1 - y0) * 0.85))))
+    lins = math.ceil(n / cols)
+    cw, ch = (x1 - x0) / cols, (y1 - y0) / lins
+    tam = max(22, min(54, cw * 0.105))
+    centros = []
+    for k in range(n):
+        li, co = divmod(k, cols)
+        na_linha = cols if li < lins - 1 else n - cols * (lins - 1)       # a última linha fica centrada
+        centros.append((x0 + (x1 - x0 - na_linha * cw) / 2 + (co + 0.5) * cw, y0 + (li + 0.5) * ch))
+    alvo = centros[atual]
+    t1 = fim - GRADE_ZOOM
+    # aproxima até o desenho do tópico ocupar ~60% da altura da tela: muito com 24 tópicos, quase nada com 2
+    aumento = max(1.15, min(GRADE_AUMENTO, H * 0.62 / (ch * 0.60)))
+
+    def anima(pos, esc):
+        """Chaves de posição e escala: parado até t1, depois aproxima em volta do tópico atual até o meio da tela."""
+        depois = [W / 2 + aumento * (pos[0] - alvo[0]), H / 2 + aumento * (pos[1] - alvo[1])]
+        return dict(pos_keys=[[t1, list(pos), EASE_OUT], [fim, depois, EASE_IN]],
+                    scale_keys=[[t1, [esc, esc], EASE_OUT], [fim, [esc * aumento, esc * aumento], EASE_IN]])
+
+    for (nn, nome, arq), (cx, cy) in zip(topicos, centros):
+        iy = cy - ch * 0.12
+        if arq:
+            dst, sw, sh, _ = M.preparar({"arquivo": os.path.relpath(arq, proj)})
+            esc = min(cw * 0.78 / sw, ch * 0.60 / sh) * 100
+            M.add(kind="footage", file=str(dst), src=[sw, sh], start=0, name=f"grade {nn}", camada="ui",
+                  **anima((cx, iy), esc), **{"in": 0, "out": fim})
+        txt = quebrar(nome, tam, M.fonte, cw - 16)
+        M.add(kind="text", text=txt, size=tam, color=M.cor_texto, font=M.fonte, justify="center", tracking=0,
+              max_w=cw - 10, anchor_mode="center", name=f"grade {nome[:30]}", camada="ui",
+              **anima((cx, cy + ch * 0.33), 100), **{"in": 0, "out": fim})
+    M.reg("card", "grade de tópicos", 0, fim, [x0, y0, x1, y1])
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("projeto")
@@ -285,10 +359,19 @@ def main():
     primeiro = estados[0]["ini"] if estados else fim_bloco
     vira = max(0.0, min((tt or {}).get("fim", primeiro), primeiro))
     tam_nome = 78
+    # a grade de todos os tópicos abre o bloco e aproxima no que vai começar; o cartão do tópico entra no corte
+    topicos = topicos_do_video(proj)
+    eu = next((k for k, tp in enumerate(topicos) if tp[0] == proj.name), None)
+    t_cartao = 0.0
+    if tt and eu is not None and len(topicos) >= 2:
+        t_grade = (GRADE_SEGURA_1 if eu == 0 else GRADE_SEGURA) + GRADE_ZOOM
+        if vira - t_grade >= 0.8:           # sobra pelo menos 0,8 s de cartão do tópico depois da grade
+            grade(M, proj, topicos, eu, t_grade)
+            t_cartao = t_grade
     if tt and vira > 0.3:
         grande = 120 if largura(nome, 120, M.fonte_titulo) < 1500 else 96
         esc = tam_nome / grande * 100
-        M.texto(quebrar(nome, grande, M.fonte_titulo, 1600), 0, fim_bloco, TITULO_NOME, grande, M.fonte_titulo,
+        M.texto(quebrar(nome, grande, M.fonte_titulo, 1600), t_cartao, fim_bloco, TITULO_NOME, grande, M.fonte_titulo,
                 max_w=1700, tipo="cabecalho",
                 pos_keys=[[vira, list(TITULO_NOME), EASE_OUT], [vira + VIRA, list(TOPO_NOME), EASE_IN]],
                 scale_keys=[[vira, [100, 100], EASE_OUT], [vira + VIRA, [esc, esc], EASE_IN]])
@@ -300,11 +383,11 @@ def main():
         if arq:
             s0 = min(TITULO_IMG[2] / sw, TITULO_IMG[3] / sh) * 100
             s1 = min(MINI[2] / sw, MINI[3] / sh) * 100
-            M.add(kind="footage", file=str(arq), src=[sw, sh], start=0, name="símbolo do tópico", camada="ui",
+            M.add(kind="footage", file=str(arq), src=[sw, sh], start=t_cartao, name="símbolo do tópico", camada="ui",
                   pos_keys=[[vira, list(TITULO_IMG[:2]), EASE_OUT], [vira + VIRA, list(MINI[:2]), EASE_IN]],
                   scale_keys=[[vira, [s0, s0], EASE_OUT], [vira + VIRA, [s1, s1], EASE_IN]],
-                  **{"in": 0, "out": fim_bloco})
-            M.reg("card", "símbolo do tópico", 0, vira, [TITULO_IMG[0] - TITULO_IMG[2] / 2, TITULO_IMG[1] - TITULO_IMG[3] / 2,
+                  **{"in": t_cartao, "out": fim_bloco})
+            M.reg("card", "símbolo do tópico", t_cartao, vira, [TITULO_IMG[0] - TITULO_IMG[2] / 2, TITULO_IMG[1] - TITULO_IMG[3] / 2,
                                                          TITULO_IMG[0] + TITULO_IMG[2] / 2, TITULO_IMG[1] + TITULO_IMG[3] / 2])
     else:
         M.texto(nome, 0, fim_bloco, TOPO_NOME, tam_nome, M.fonte_titulo, max_w=1400, tipo="cabecalho")

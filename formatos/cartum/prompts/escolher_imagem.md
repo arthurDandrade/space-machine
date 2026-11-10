@@ -14,7 +14,7 @@ Sempre:
 
 Respostas possíveis (só o JSON):
 - Escolha: {"n": <número>, "conferir": "<motivo curto, só se houver dúvida real>"}
-- Nada serve e outra busca pode achar: {"nova_busca": ["<consulta em inglês>", "<outra>"]} — consultas novas, diferentes das já feitas.
+- Nada serve e outra busca pode achar (SÓ para "foto"/"historica"): {"nova_busca": ["<consulta em inglês>", "<outra>"]} — consultas novas, diferentes das já feitas. Para "recorte" NÃO peça nova busca: o desenho é gerado à mão, pedido a pedido, e um pedido novo perderia o personagem; escolha a melhor das opções com "conferir", ou pule.
 - Nada serve e não vale buscar de novo: escolha a mais próxima com "conferir" explicando, ou {"pular": true, "motivo": "..."}.
 Nunca invente número que não está na folha.
 

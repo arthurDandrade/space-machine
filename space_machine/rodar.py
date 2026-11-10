@@ -301,7 +301,9 @@ class Rodada:
         for aid in so_yt:
             self.script("buscar", "buscar.py", self.p, "--refazer", "--asset", aid, timeout=3600)
         sem = [aid for aid in falta + so_yt if not (ler_json(cand / aid / "candidatos.json") or {}).get("candidatos")]
-        fila = self._esperando_flow()
+        # só para se ESTE bloco ficou com asset sem candidato: a fila é do canal inteiro, e pedido solto de outro bloco
+        # (uma "nova busca" da escolha que ninguém gerou) segurava um bloco que não esperava nada (2026-11-09)
+        fila = self._esperando_flow() if sem else 0
         if fila:
             # desenho pedido ao Google Flow (motor/busca/scripts/flow.py): quem gera é uma sessão do Claude, no
             # navegador do app. Os assets sem candidato voltam para a busca quando a etapa rodar de novo.
@@ -314,9 +316,12 @@ class Rodada:
     def _esperando_flow(self):
         """Quantos desenhos deste canal estão na fila do Flow sem imagem e sem recusa."""
         slug = Path(self.c["raiz"]).name
-        return sum(1 for arq in (motor.DADOS / "cache" / "flow" / "pedidos").glob("*/pedido.json")
-                   if (ler_json(arq) or {}).get("canal") == slug and not list(arq.parent.glob("[0-9][0-9].jpg"))
-                   and not (arq.parent / "recusado.txt").exists())
+        base = motor.DADOS / "cache" / "flow"
+        fichas = sum(1 for arq in (base / "personagens" / slug).glob("*/ficha.json")
+                     if not (arq.parent / "referencia.jpg").exists())       # personagem ainda sem a imagem de referência
+        return fichas + sum(1 for arq in (base / "pedidos").glob("*/pedido.json")
+                            if (ler_json(arq) or {}).get("canal") == slug and not list(arq.parent.glob("[0-9][0-9].jpg"))
+                            and not (arq.parent / "recusado.txt").exists())
 
     def escolher(self):
         b = BlocoEscolha(self.p)

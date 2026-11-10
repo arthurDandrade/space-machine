@@ -31,7 +31,7 @@ Medido em 2026-11-09 em 4 vídeos de um mesmo canal de listas em desenho (os arq
 
 ## O que o Space Machine faz diferente (2026-11-09)
 - O layout é automático (colunas na ordem dos cards), não desenhado à mão tela a tela.
-- A grade de abertura e a passagem entre tópicos ainda não existem; o tópico abre com o desenho-símbolo grande e o nome.
+- A grade de abertura existe (2026-11-09): cada tópico abre com a grade de todos (0,8 s parada no 1º, 0,45 s nos outros), aproxima em 0,5 s no tópico que vai começar e corta para o desenho-símbolo grande com o nome. Na referência a grade aproxima e o próprio desenho vira o cabeçalho; aqui há um corte entre a grade e o cartão.
 - Pessoa real nunca é desenhada (regra do Space Machine): entra como foto, e o desenho ao lado é genérico.
 - Sem pixelado: o que precisaria dele não é desenhado.
 
@@ -51,3 +51,11 @@ Dois tópicos ("The Quarterback" e "The Long Snapper", 55 s no total) no canal `
 - Os dois tópicos passaram no QA na 2ª versão, depois de uma correção automática cada.
 - Ajustes de layout que o teste pediu: com círculo em volta do card, o nome e a legenda vão para fora dele (o traço passava por cima do texto); o adesivo fica abaixo do cabeçalho (encostava na miniatura do canto).
 - O que continua aparecendo: o mesmo personagem muda de rosto e de proporção entre poses (o quarterback de 4 telas são 4 desenhos diferentes). Falta a imagem de referência no pedido do Flow.
+
+## Terceiro teste (2026-11-09): personagem com referência e grade de abertura
+Os mesmos dois tópicos de futebol, refazendo só os desenhos de quem aparece em mais de uma pose:
+- 4 personagens (quarterback, treinador, long snapper, punter): 4 fichas + 10 poses no Flow, ~14 min de sessão. Com a ficha anexada como referência, as poses saem com o mesmo rosto, corpo, roupa e cores.
+- A referência fica presa à caixa do Flow entre uma geração e outra, então o custo a mais é uma geração (a ficha) por personagem.
+- A etapa de escolha pediu "outra busca" para 2 desenhos gerados e isso criou 6 pedidos soltos, sem personagem, que seguraram o outro tópico. Corrigido: o prompt de escolha não pede nova busca para desenho, e a busca só para pelo Flow se o PRÓPRIO bloco ficou com asset sem candidato.
+- Mancha rosa entre as pernas do treinador: o magenta do fundo veio um pouco irregular, o teste de "borda lisa" reprovou e o recorte caiu no rembg. Corrigido medindo "o quanto é da cor-chave" (min(R, B) − G), que não muda com a claridade: os 18 recortes dos dois tópicos passaram, nenhum pelo rembg.
+- Grade de abertura: com 2 tópicos a aproximação é pequena (1,15×); com 24 chega a 2,6×, como na referência.

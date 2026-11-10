@@ -27,6 +27,8 @@ formatos/<nome>/
 Chaves opcionais da ficha (o `bestiario` usa todas):
 - `edicao.gerador`: o script Python que monta o `montar_NN_v2.jsx` (sem ele, o `motor/edicao_ae/gerar_ae2.py`, que é
   do layout do explained). Formato com gerador próprio ainda não faz Reels.
+- `edicao.regerar_no_final`: true = o vídeo final roda o gerador de cada bloco de novo antes de desenhar (cartum: a grade
+  de abertura mostra o símbolo de todos os tópicos, e um bloco feito cedo ainda não tinha os dos outros).
 - `qa.checagens`: o que o `qa_bloco.py` confere — `render` (detector de cards sobre papel), `tela_vazia` (fundo
   escuro: tela preta > 0,5 s), `vazio_layout` (fundo desenhado: só o fundo na tela > 0,5 s, pelo layout_NN.json), `layout` (texto por cima de imagem + texto rápido), `layout_tempo` (só texto rápido),
   `origem`. Sem a lista: `render`, `layout`, `origem`.

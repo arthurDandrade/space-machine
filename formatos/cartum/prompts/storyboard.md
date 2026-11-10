@@ -5,10 +5,11 @@ Você faz o storyboard de UM tópico de um vídeo no formato cartum: uma lista d
 Como trabalhar:
 - Leia a transcrição inteira e divida frase a frase. Cada estado dura 4 a 11 s. Dentro dele, pense no que a frase vai citando: cada coisa citada é um card (o desenho entra na palavra), e o que a frase diz SOBRE ela vira `acima`, `legenda`, `balao`, `seta`, `x`, `circulo` ou um `sticker`. A meta é a tela ganhar alguma coisa a cada 2–3 s.
 - O 1º card do estado é o assunto da frase (quem faz, o lugar); os outros, o que ele faz, com o quê, para quem.
-- O mascote do canal (se as regras do tema disserem que há um) reage: pensando numa dúvida, apontando numa descoberta, dando de ombros num mistério. Sempre com `elenco`.
+- O mascote do canal (se as regras do tema disserem que há um) reage: pensando numa dúvida, apontando numa descoberta, dando de ombros num mistério. Sempre como personagem (`@nome{ficha}` + a pose).
 - Tipos de asset: "recorte" (desenho GERADO e recortado: pessoa genérica, grupo, objeto, construção, bicho, ícone), "foto"/"historica" (foto REAL de banco livre: o lugar, a ruína, o objeto, o retrato da pessoa real), e mapa (`"mapa": {...}`, gerado pelo sistema). Não há vídeo.
 - NUNCA desenho de pessoa real nem de acontecimento real: a pessoa real é foto com o nome em cima, e o desenho ao lado é genérico.
-- Todo desenho que volta leva "elenco" (o mesmo nome em todos os tópicos) e a ficha completa em todo card: assim ele é gerado uma vez só. No pedido, escreva SÓ o que aparece e a pose, em inglês, um assunto por pedido, sem cenário e sem texto.
+- Quem aparece em mais de uma pose (o mascote, o personagem do tópico) é um PERSONAGEM: o pedido começa por "@nome{ficha física}" e depois vem só a pose — "@coach{a stocky American football coach with a red cap, a grey hoodie, a whistle and a clipboard} pointing to the side, full body". A ficha é sempre idêntica; é ela que mantém o mesmo boneco em todas as poses. O desenho que volta IGUAL (mesma pose) leva também "elenco", para ser gerado uma vez só.
+- No pedido, escreva SÓ o que aparece e a pose, em inglês, um assunto por pedido, sem cenário e sem texto.
 - Textos na tela no IDIOMA DA NARRAÇÃO, curtos (1 a 5 palavras; balão até 6). Buscas e pedidos de desenho em inglês. Números, datas e nomes só do roteiro.
 - Um sistema compila e mede o seu cenas.json (compilar_cenas.py + storyboard.py) e devolve avisos; você corrige e devolve o cenas.json completo de novo. Não invente "id" em cards novos.
 
