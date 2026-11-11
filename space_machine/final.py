@@ -10,7 +10,7 @@ final sai de um render só, sem comprimir de novo os MP4s dos blocos, e o que vo
 no final. O edicao/bloco N.mp4 continua marcando o bloco como entregue (é a prévia de rascunho, em meia resolução) e
 só entra na montagem quando o bloco não tem .aep.
 O After roda um script de cada vez: usa a mesma trava dos blocos (<dados>/trava_after) e, como a montagem dos blocos,
-fecha o projeto que estiver aberto sem salvar. O final.aep (e o MP4) de uma montagem anterior vai para final/anteriores/. O painel lança este comando solto (lancar) e acompanha por
+fecha o projeto que estiver aberto sem salvar. O final.aep (e o MP4) de uma montagem anterior vai para o Lixo do Mac. O painel lança este comando solto (lancar) e acompanha por
 <vídeo>/final/estado.json.
 """
 import argparse
@@ -162,13 +162,10 @@ def trilha(vd, fim_dir, blocos=(), total=None):
 
 
 def _guardar_anterior(arq):
-    """Projeto ou MP4 de uma montagem anterior (que você pode ter editado) vai para final/anteriores/, nunca é
-    sobrescrito."""
-    arq = Path(arq)
-    if arq.exists():
-        guarda = arq.parent / "anteriores"
-        guarda.mkdir(exist_ok=True)
-        arq.rename(guarda / f"{arq.stem}_{time.strftime('%Y%m%d-%H%M%S', time.localtime(arq.stat().st_mtime))}{arq.suffix}")
+    """Projeto ou MP4 de uma montagem anterior: sai da pasta e vai para o Lixo do Mac (limpeza.versao_anterior).
+    Nunca é sobrescrito no lugar: se você editou o projeto à mão, ele está no Lixo até você esvaziar."""
+    from .limpeza import versao_anterior
+    versao_anterior(arq)
 
 
 def _motor(vd):

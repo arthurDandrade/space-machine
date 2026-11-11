@@ -5,7 +5,7 @@
 gerar_ae2.py --vertical monta o blocos/NN/edicao/bloco_NN_vertical.aep (cards em coluna ou grade, card único quadrado
 na largura da tela, rótulo e citação embaixo do card, frase longa em linhas, sem o botão de inscrição do CTA) e o
 After renderiza <vídeo>/reels/bloco N.mp4. Escolhido em 2026-10-17 entre dois testes: o bloco 16:9 inteiro numa
-moldura vertical deixava a imagem pequena. O Reels anterior vai para reels/anteriores/.
+moldura vertical deixava a imagem pequena. O Reels anterior vai para o Lixo do Mac.
 Usa a trava do After (<dados>/trava_after) como os blocos e o vídeo final. O painel lança solto (lancar) e acompanha
 por <vídeo>/reels/estado_NN.json.
 """

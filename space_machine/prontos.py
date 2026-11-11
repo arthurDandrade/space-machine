@@ -2,7 +2,7 @@
 
 Toda entrega de vídeo inteiro (rodar_video.entregar e final.py) termina aqui: o MP4 sai de <vídeo>/final/ e vai para
 a pasta do canal, com a thumbnail do vídeo ao lado, no mesmo nome. Um vídeo tem UM arquivo aqui; entregar de novo
-troca o arquivo (o anterior vai para <vídeo>/final/anteriores/, como sempre foi).
+troca o arquivo (o anterior vai para o Lixo do Mac: limpeza.versao_anterior).
 
 O número é do vídeo e não muda: é dado na primeira entrega, em sequência dentro do canal, e fica em
 estudio_video.json › numero (junto de `pronto`, o nome do arquivo na pasta). Vídeo excluído leva o número com ele,
@@ -10,7 +10,6 @@ então restaurar não embaralha a ordem.
 """
 import re
 import shutil
-import time
 from pathlib import Path
 
 from .sistema import gravar_json, ler_json
@@ -78,13 +77,6 @@ def _capas(mp4):
     return [f for ext in CAPAS if (f := Path(mp4).with_suffix(ext)).is_file()]
 
 
-def _para_anteriores(vd, arq):
-    guarda = Path(vd) / "final" / "anteriores"
-    guarda.mkdir(parents=True, exist_ok=True)
-    quando = time.strftime("%Y%m%d-%H%M%S", time.localtime(arq.stat().st_mtime))
-    shutil.move(str(arq), str(guarda / f"{arq.stem}_{quando}{arq.suffix}"))
-
-
 def capa(vd):
     """A thumbnail do vídeo ao lado do MP4 pronto, com o mesmo nome (é uma cópia: a que vale continua na pasta do
     vídeo). Sem MP4 pronto, não faz nada."""
@@ -104,6 +96,7 @@ def capa(vd):
 
 def guardar(vd, mp4):
     """O MP4 que acabou de ser entregue vai para a pasta do canal com o nome numerado. Devolve onde ficou."""
+    from .limpeza import versao_anterior
     vd, mp4 = Path(vd), Path(mp4)
     destino = pasta(vd) / f"{nome(vd)}.mp4"
     destino.parent.mkdir(exist_ok=True)
@@ -111,9 +104,9 @@ def guardar(vd, mp4):
     if antigo and antigo != mp4:
         for f in _capas(antigo):
             f.unlink()
-        _para_anteriores(vd, antigo)
-    if destino.exists() and destino != mp4:      # um arquivo com este nome que não era deste vídeo: não some
-        _para_anteriores(vd, destino)
+        versao_anterior(antigo)
+    if destino.exists() and destino != mp4:      # um arquivo com este nome que não era deste vídeo: vai para o Lixo
+        versao_anterior(destino)
     if mp4 != destino:
         shutil.move(str(mp4), str(destino))
     anotar(vd, pronto=destino.name)

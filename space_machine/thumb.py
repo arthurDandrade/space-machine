@@ -17,7 +17,7 @@ O que acontece, em <vídeo>/thumb/<modelo>/ (uma pasta com a cara da de um bloco
                de novo.
   3. escolher  a mesma escolha da produção (com a regra de imagem real certa ou nenhuma, se o formato tiver).
   4. compor    motor/thumb/compor_thumb.py desenha em 1280×720 e a imagem vira a thumbnail do vídeo
-               (<vídeo>/thumbnail.png; a anterior vai para thumbnails_anteriores/).
+               (<vídeo>/thumbnail.png; a anterior vai para o Lixo do Mac).
 
 O plano pede alguns itens de reserva: se uma imagem não for achada, a grade fecha com o seguinte.
 A cor do fundo é sua: a do formato, uma das sugeridas ou qualquer outra (--fundo; no painel, as bolinhas de cor). A que

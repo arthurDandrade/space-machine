@@ -203,6 +203,20 @@ def mandar_para_o_lixo(itens, raiz=None):
     return total, feitos, destino
 
 
+def versao_anterior(arq):
+    """Uma versão só de cada coisa (2026-11-11): o vídeo, o projeto, a thumbnail ou o Reels que vai ser trocado sai
+    da pasta e vai para o Lixo do Mac, com a data dele no nome (duas trocas no mesmo minuto não se atropelam lá).
+    Antes ficava em pastas `anteriores/` que nenhuma limpeza olhava: 14 MP4 antigos num vídeo só, 2,4 GB em outro.
+    Dá para recuperar até você esvaziar o Lixo. Devolve para onde foi, ou None se não havia arquivo."""
+    arq = Path(arq)
+    if not arq.exists():
+        return None
+    quando = time.strftime("%Y%m%d-%H%M%S", time.localtime(arq.stat().st_mtime))
+    datado = arq.with_name(f"{arq.stem}_{quando}{arq.suffix}")
+    arq.rename(datado)
+    return mandar_para_o_lixo([(datado, "anterior")])[2]
+
+
 def limpar(slug=None, categorias=("previas", "candidatos", "after"), cache=False):
     itens = []
     for s in canais():

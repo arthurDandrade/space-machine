@@ -53,12 +53,11 @@ def thumbnail(video_dir):
 
 
 def _guardar_thumbnail(vd):
-    """A thumbnail atual vai para <vídeo>/thumbnails_anteriores/ (trocar ou remover nunca apaga)."""
+    """A thumbnail atual vai para o Lixo do Mac (trocar ou remover não apaga: dá para tirar de lá)."""
+    from .limpeza import versao_anterior
     t = thumbnail(vd)
     if t:
-        guarda = vd / "thumbnails_anteriores"
-        guarda.mkdir(exist_ok=True)
-        t.rename(guarda / f"thumbnail_{time.strftime('%Y%m%d-%H%M%S', time.localtime(t.stat().st_mtime))}{t.suffix}")
+        versao_anterior(t)
     (vd / "thumbnail.json").unlink(missing_ok=True)
 
 

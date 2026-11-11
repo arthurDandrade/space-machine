@@ -674,7 +674,7 @@ def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Bo
 
 @api.post("/c/{slug}/v/{video}/thumbnail")
 async def enviar_thumbnail(slug: str, video: str, arquivo: UploadFile = File(...)):
-    """A thumbnail do vídeo (a que vai para o YouTube): vira a capa do vídeo no painel. A anterior é guardada."""
+    """A thumbnail do vídeo (a que vai para o YouTube): vira a capa do vídeo no painel. A anterior vai para o Lixo do Mac."""
     vd = _video_dir(slug, video)
     dados = await arquivo.read()
     if len(dados) > 30 * 1024 * 1024:

@@ -1,5 +1,5 @@
 // Thumbnail do vídeo: enviar (clique, arrastar ou colar), e os botões que aparecem sobre a capa ao passar o mouse
-// (ampliar, enviar/trocar, baixar, remover), como no Dark Planner. Trocar ou remover guarda a anterior.
+// (ampliar, enviar/trocar, baixar, remover), como no Dark Planner. Trocar ou remover manda a anterior para o Lixo do Mac.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
