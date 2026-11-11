@@ -1,6 +1,7 @@
 // Peças das telas de canal: cartão de vídeo, item "esperando você", rodada em andamento e anel de consumo.
 import { Link } from "react-router-dom";
 import { ChevronRight, Square } from "lucide-react";
+import { IconeEtapa } from "./AoVivo";
 import { EstadoBloco, Esperando, Rodando, rota, urlCapa, Video } from "../api";
 import { compacto, haQuanto, useT } from "../textos";
 import { TituloCopiavel } from "./Copiar";
@@ -71,7 +72,7 @@ export function LinhaRodando({ canal, r, parar }: { canal: string; r: Rodando; p
       <Link to={r.nn ? rota.bloco(canal, r.video, r.nn) : rota.video(canal, r.video)}><Capa className="th" src={urlCapa(canal, r.video, r.nn || undefined)} existe={r.tem_capa} /></Link>
       <div className="t">
         <Link to={r.nn ? rota.bloco(canal, r.video, r.nn) : rota.video(canal, r.video)}><b>{r.nn ? `${r.nn} · ${r.topico}` : r.video_titulo}</b></Link>
-        <span>{r.etapa ? t(`app.etapa.${r.etapa}`, undefined, r.etapa) : t("app.rodando.comecando")}{r.detalhe ? ` · ${r.detalhe}` : ""}</span>
+        <span><IconeEtapa etapa={r.etapa} size={12} /> {r.etapa ? t(`app.etapa.${r.etapa}`, undefined, r.etapa) : t("app.rodando.comecando")}{r.detalhe ? ` · ${r.detalhe}` : ""}</span>
         <div className="passos">
           {Array.from({ length: r.total }, (_, i) => (
             <i key={i} className={i + 1 < r.indice ? "ok" : i + 1 === r.indice ? "run" : ""} />

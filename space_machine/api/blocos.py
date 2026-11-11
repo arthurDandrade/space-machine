@@ -38,7 +38,7 @@ def detalhe_bloco(slug: str, video: str, nn: str):
         "feito": info["feito"], "atual": info["atual"], "rodando": info["rodando"], "parado": info["parado"],
         "aprovado": info["aprovado"], "travar_conferir": info["travar_conferir"],
         "etapa_atual": est.get("atual") or "",
-        "etapas": [{"id": e, **{k: _curto(vd, (est.get("etapas", {}).get(e) or {}).get(k, "")) for k in ("status", "detalhe", "quando")}}
+        "etapas": [{"id": e, **{k: _curto(vd, (est.get("etapas", {}).get(e) or {}).get(k, "")) for k in ("status", "detalhe", "quando", "inicio")}}
                    for e in ETAPAS_RODAR],
         "previas": [{"v": int(re.search(r"_v(\d+)\.mp4$", p).group(1)), "url": _arquivo(p)} for p in info["previas"]],
         "entregue": _arquivo(entregue) if entregue.exists() else None,

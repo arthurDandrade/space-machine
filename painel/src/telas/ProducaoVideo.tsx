@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, ExternalLink, FolderOpen, Loader, Mic, Play, Square, Wrench, X } from "lucide-react";
+import { AoVivo, IconeEtapa, motivoLimpo, resumoEtapa } from "../componentes/AoVivo";
 import { DetalheVideo, enviar, ProducaoVideo as Producao } from "../api";
 import { Markdown } from "../componentes/Markdown";
 import { useT } from "../textos";
@@ -78,8 +79,8 @@ export function AndamentoVideo({ canal, v }: { canal: string; v: DetalheVideo })
           })}
         </div>
         <div className="selos">
-          {p.rodando && <span className="selo run"><span className="pulso" />{etapa ? `${etapa.rotulo}${etapa.detalhe ? ` · ${etapa.detalhe}` : ""}` : t("app.rodando.comecando")}</span>}
-          {!p.rodando && p.parado && <span className="selo wait" title={p.parado.motivo}>{t("app.bloco.parado_em", { etapa: p.etapas.find((e) => e.id === p.parado?.etapa)?.rotulo || p.parado.etapa || "" })}</span>}
+          {p.rodando && <span className="selo run"><span className="pulso" />{etapa ? etapa.rotulo : t("app.rodando.comecando")}</span>}
+          {!p.rodando && p.parado && <span className="selo wait" title={motivoLimpo(p.parado.motivo)}>{t("app.bloco.parado_em", { etapa: p.etapas.find((e) => e.id === p.parado?.etapa)?.rotulo || p.parado.etapa || "" })}</span>}
           {p.feito.entregar && <span className="selo ok"><Check size={12} />{t("app.pv.pronto")}</span>}
         </div>
       </div>
@@ -97,7 +98,7 @@ export function AndamentoVideo({ canal, v }: { canal: string; v: DetalheVideo })
             {p.mp4 && <a className="bt pequeno" href={p.mp4} target="_blank" rel="noreferrer"><Play size={14} />{t("app.final.assistir", { gb: (p.mp4_tamanho / 1e9).toFixed(1).replace(".", ",") })}</a>}
             {p.mp4 && <button className="bt pequeno" onClick={() => enviar(`/api/c/${canal}/v/${v.slug}/abrir`, { sub: "final" })}><FolderOpen size={14} />{t("app.final.pasta")}</button>}
           </div>
-          <p className="sub">{t("app.pv.explica")}</p>
+          {!p.atual && !p.rodando && <p className="sub">{t("app.pv.explica")}</p>}
           {acao.isError && <p className="erro">{acao.error.message}</p>}
         </div>
       </div>
@@ -116,28 +117,48 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
   const base = `/api/c/${canal}/v/${v.slug}/produzir`;
   const comQa = p.capitulos.filter((c) => c.qa);
   const qaAberto = comQa.find((c) => c.nn === qaDe) ?? comQa.find((c) => !c.aprovado) ?? comQa[0];
+  const pronto = p.feito.entregar;                // vídeo entregue: o que foi conferência e QA vira histórico, recolhido
+  const qaTodoOk = comQa.length > 0 && comQa.every((c) => c.aprovado);
+  const agora = p.etapas.find((e) => e.id === p.etapa_atual);
+  // quanto da etapa já foi: o motor diz no detalhe ("(3/10)"); onde não diz, os arquivos dizem
+  const medida = !agora ? null
+    : agora.id === "narracao" ? { feito: p.capitulos.filter((c) => c.narrado).length, total: p.capitulos.length }
+    : agora.id === "transcrever" ? { feito: p.capitulos.filter((c) => c.transcrito).length, total: p.capitulos.length }
+    : agora.id === "escolher" && p.assets_total ? { feito: p.assets_prontos, total: p.assets_total }
+    : null;
+  const motivo = p.parado?.motivo ?? "";
 
   return (
     <>
+      {p.rodando && agora && (
+        <AoVivo etapa={agora.id} rotulo={agora.rotulo} indice={p.etapas.indexOf(agora) + 1} total={p.etapas.length}
+                detalhe={agora.detalhe} inicio={agora.inicio} progresso={medida && medida.total ? medida : null}
+                log={p.log_etapa?.texto || p.log_rodar} corrigindo={agora.status === "corrigindo"}
+                parar={() => acao.mutate(`${base}/parar`)} parando={acao.isPending} />
+      )}
       {p.parado && !p.rodando && (
         <div className="aviso-parado">
           <AlertTriangle size={20} />
-          <div><b>{t("app.bloco.parado_em", { etapa: p.etapas.find((e) => e.id === p.parado?.etapa)?.rotulo || p.parado.etapa || "" })}</b><span>{p.parado.motivo}</span></div>
+          <div>
+            <b>{t("app.bloco.parado_em", { etapa: p.etapas.find((e) => e.id === p.parado?.etapa)?.rotulo || p.parado.etapa || "" })}</b>
+            <span>{motivoLimpo(motivo)}</span>
+            {motivoLimpo(motivo) !== motivo.trim() && <details className="tecnico"><summary>{t("app.aovivo.detalhe_tecnico")}</summary><pre>{motivo}</pre></details>}
+          </div>
           <button className="bt pequeno" onClick={() => setRodarDe(p.parado?.etapa && p.feito[p.parado.etapa] !== undefined ? p.parado.etapa : "")}>{t("app.bloco.rodar_de_novo")}</button>
         </div>
       )}
 
       <div className="trilha">
-        {p.etapas.map((e, i) => {
+        {p.etapas.map((e) => {
           const s = statusEtapa(p, e);
           return (
             <button key={e.id} className={`passo ${s}`} disabled={p.rodando} onClick={() => setRodarDe(e.id)}
-                    title={[e.detalhe, e.quando, p.rodando ? "" : t("app.bloco.rodar_daqui")].filter(Boolean).join("\n")}>
+                    title={[motivoLimpo(e.detalhe), e.quando, p.rodando ? "" : t("app.bloco.rodar_daqui")].filter(Boolean).join("\n")}>
               <span className="bolinha">
-                {s === "ok" ? <Check size={14} /> : s === "rodando" ? <Loader size={14} className="gira" /> : s === "parado" ? <AlertTriangle size={13} /> : s === "corrigindo" ? <Wrench size={13} /> : i + 1}
+                {s === "ok" ? <Check size={14} /> : s === "rodando" ? <Loader size={14} className="gira" /> : s === "parado" ? <AlertTriangle size={13} /> : s === "corrigindo" ? <Wrench size={13} /> : <IconeEtapa etapa={e.id} />}
               </span>
               <span className="nome">{e.rotulo}</span>
-              {e.detalhe && <span className="detalhe">{e.detalhe}</span>}
+              <span className="detalhe">{resumoEtapa(t, s, e)}</span>
             </button>
           );
         })}
@@ -157,10 +178,11 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
           </div>
 
           {p.conferir.length > 0 && (
-            <div className="cartao conferir">
-              <div className="titulo-secao">
+            <details className="cartao conferir recolhe" open={!pronto || undefined}>
+              <summary>
                 <h3>{t(p.travar_conferir ? "app.bloco.conferir_trava" : "app.bloco.conferir")}<span className="contador">{p.conferir.length}</span></h3>
-              </div>
+                {pronto && <span className="sub">{t("app.aovivo.conferir_entregue")}</span>}
+              </summary>
               <div className="lista-conferir">
                 {p.conferir.map((c) => (
                   <div className="conf" key={c.id}>
@@ -179,7 +201,7 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
                   <button className="bt pequeno" onClick={() => setRodarDe("escolher")}>{t("app.bloco.algo_errado")}</button>
                 </div>
               )}
-            </div>
+            </details>
           )}
           {!p.conferir.length && p.conferidos > 0 && <p className="sub">{t("app.bloco.conferidos", { n: p.conferidos })}</p>}
 
@@ -208,9 +230,13 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
 
         <div className="coluna-dir">
           {qaAberto && (
-            <div className="cartao qa">
+            <details className="cartao qa recolhe" open={!(pronto && qaTodoOk) || undefined}>
+              <summary>
+                <h3>{t("app.aovivo.qa_titulo")}</h3>
+                <span className={`selo ${qaTodoOk ? "ok" : "bad"}`}>{qaTodoOk ? <Check size={12} /> : <X size={12} />}{t("app.aovivo.qa_resumo", { ok: comQa.filter((c) => c.aprovado).length, n: comQa.length })}</span>
+              </summary>
               <div className="titulo-secao">
-                <h3>QA · {qaAberto.nn} {qaAberto.topico}</h3>
+                <h4>{qaAberto.nn} · {qaAberto.topico}</h4>
                 {qaAberto.folha && <a href={qaAberto.folha} target="_blank" rel="noreferrer">{t("app.bloco.folha")} <ExternalLink size={12} /></a>}
               </div>
               {comQa.length > 1 && (
@@ -219,10 +245,10 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
                 </div>
               )}
               <Markdown texto={qaAberto.qa.split("\n").filter((l) => !l.startsWith("# ")).join("\n")} />
-            </div>
+            </details>
           )}
-          <details className="cartao recolhe" open={p.rodando || undefined}>
-            <summary><h3>{t("app.bloco.detalhes")}</h3><span className="sub">{p.log_etapa?.nome ?? "log_rodar.txt"}</span></summary>
+          <details className="cartao recolhe">
+            <summary><h3>{t("app.bloco.detalhes")}</h3><span className="sub">{t("app.aovivo.logs")}</span></summary>
             {p.log_rodar && <><h4>log_rodar.txt</h4><pre>{p.log_rodar}</pre></>}
             {p.log_etapa && <><h4>{p.log_etapa.nome}</h4><pre>{p.log_etapa.texto}</pre></>}
             {!p.log_rodar && !p.log_etapa && <p className="sub">{t("app.bloco.sem_log")}</p>}

@@ -178,11 +178,41 @@ export function ProducaoCanal() {
   });
   if (!data) return null;
   const c = data.canal;
+  // com algo rodando (ou na fila), isso é o que você veio ver: sobe para o topo da tela, em toda a largura
+  const ativo = data.rodando.length > 0 || data.filas.length > 0;
+  const rodandoCartao = (
+      <div className={`cartao ${ativo ? "vivo" : ""}`}>
+        <div className="titulo-secao"><h3>{ativo && <span className="pulso" />}{t("app.rodando.titulo")}</h3></div>
+        {data.rodando.length ? (
+          <div className="fila">
+            {data.rodando.map((r) => (
+              <LinhaRodando key={r.video + r.nn} canal={canal} r={r}
+                            parar={() => parar.mutate(r.nn ? `/api/c/${canal}/v/${r.video}/b/${r.nn}/parar` : `/api/c/${canal}/v/${r.video}/produzir/parar`)} />
+            ))}
+          </div>
+        ) : (
+          <div className="vazio"><Sparkles size={18} />{t("app.rodando.nada")}</div>
+        )}
+        {data.filas.map((f) => (
+          <div className="resumo-fila" key={f.video}>
+            <ListOrdered size={16} />
+            <span>
+              <b>{t("app.fila.na_fila", { n: f.esperando?.length ?? 0 })}</b> · {t("app.fila.max", { n: f.max })}
+              {f.parados?.length ? ` · ${t("app.esperando_n", { n: f.parados.length })}` : ""}
+              {data.filas.length > 1 && <> · {f.video_titulo}</>}
+              {f.status === "pausada" && f.motivo && <em> · {f.motivo}</em>}
+            </span>
+            <button onClick={() => parar.mutate(`/api/c/${canal}/v/${f.video}/fila/parar`)}>{t("app.fila.parar")}</button>
+          </div>
+        ))}
+      </div>
+  );
 
   return (
     <>
       <Cabecalho titulo={c.nome} sub={resumoCanal(t, data)} />
 
+      {ativo && <div className="rodando-topo">{rodandoCartao}</div>}
       <div className="g1">
         <Heroi canal={canal} v={data.destaque} />
         <div>
@@ -204,32 +234,8 @@ export function ProducaoCanal() {
 
       <Processo canal={canal} dados={data} />
 
-      <div className="g3">
-        <div className="cartao">
-          <div className="titulo-secao"><h3>{t("app.rodando.titulo")}</h3></div>
-          {data.rodando.length ? (
-            <div className="fila">
-              {data.rodando.map((r) => (
-                <LinhaRodando key={r.video + r.nn} canal={canal} r={r}
-                              parar={() => parar.mutate(r.nn ? `/api/c/${canal}/v/${r.video}/b/${r.nn}/parar` : `/api/c/${canal}/v/${r.video}/produzir/parar`)} />
-              ))}
-            </div>
-          ) : (
-            <div className="vazio"><Sparkles size={18} />{t("app.rodando.nada")}</div>
-          )}
-          {data.filas.map((f) => (
-            <div className="resumo-fila" key={f.video}>
-              <ListOrdered size={16} />
-              <span>
-                <b>{t("app.fila.na_fila", { n: f.esperando?.length ?? 0 })}</b> · {t("app.fila.max", { n: f.max })}
-                {f.parados?.length ? ` · ${t("app.esperando_n", { n: f.parados.length })}` : ""}
-                {data.filas.length > 1 && <> · {f.video_titulo}</>}
-                {f.status === "pausada" && f.motivo && <em> · {f.motivo}</em>}
-              </span>
-              <button onClick={() => parar.mutate(`/api/c/${canal}/v/${f.video}/fila/parar`)}>{t("app.fila.parar")}</button>
-            </div>
-          ))}
-        </div>
+      <div className={`g3 ${ativo ? "dois" : ""}`}>
+        {!ativo && rodandoCartao}
         <div className="cartao">
           <div className="titulo-secao"><h3>{t("app.producao.publicacoes")}</h3><Link to={rota.calendario(canal)}>{t("app.nav.calendario")}</Link></div>
           <Semana dados={data} />

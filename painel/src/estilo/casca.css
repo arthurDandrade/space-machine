@@ -156,3 +156,14 @@
   .topo-produtor { gap: 8px; }
   .topo-produtor .chip:not([title]) { display: none; }
 }
+
+/* barra lateral: o que está rodando, visível de qualquer tela (componentes/AoVivo.tsx › RodandoNaBarra) */
+.rodando-barra { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--run-bg); border: 1px solid color-mix(in oklab, var(--run) 28%, transparent); color: var(--ink); text-decoration: none; min-width: 0; }
+.rodando-barra:hover { border-color: var(--run); }
+.rodando-barra .topo { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--run); }
+.rodando-barra b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rodando-barra .etapa { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink2); }
+.rodando-barra .passos { display: flex; gap: 3px; margin-top: 4px; }
+.rodando-barra .passos i { flex: 1; height: 4px; border-radius: 3px; background: color-mix(in oklab, var(--run) 18%, var(--card)); }
+.rodando-barra .passos i.ok { background: var(--ok); }
+.rodando-barra .passos i.run { background: var(--run); animation: pisca 1.4s ease-in-out infinite; }

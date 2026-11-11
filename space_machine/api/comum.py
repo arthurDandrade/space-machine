@@ -88,6 +88,9 @@ def _video(slug, v):
     blocos = [{"nn": b["nn"], "topico": b["topico"], "estado": _estado_capitulo(prod) if prod else _estado_bloco(b, f)}
               for b in v["blocos"]]
     conta = lambda e: sum(1 for b in blocos if b["estado"] == e)
+    if prod:        # fluxo "video": os capítulos andam juntos, então é UMA coisa rodando ou esperando, não uma por capítulo
+        um = "run" if prod["rodando"] else "wait" if prod["parado"] else ""
+        conta = lambda e: 1 if e == um else 0
     return {
         "slug": v["slug"], "titulo": v["titulo"], "titulo_pub": g.get("titulo_pub") or "",
         "coluna": gestao.coluna_do_video(v, g), "n_blocos": v["n_blocos"], "entregues": v["entregues"],

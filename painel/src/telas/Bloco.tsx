@@ -8,6 +8,7 @@ import {
   Wrench, X,
 } from "lucide-react";
 import { DetalheBloco, enviar, pegar, rota } from "../api";
+import { AoVivo, IconeEtapa, motivoLimpo, resumoEtapa } from "../componentes/AoVivo";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { TituloCopiavel } from "../componentes/Copiar";
@@ -161,6 +162,7 @@ export function BlocoTela() {
   const fontes = [...b.previas.map((p) => ({ id: `v${p.v}`, rot: `v${p.v}`, url: p.url })),
     ...(b.entregue ? [{ id: "entregue", rot: t("app.estado.ok"), url: b.entregue }] : [])];
   const atual = fontes.find((f) => f.id === versao) ?? fontes[b.previas.length ? b.previas.length - 1 : 0];
+  const agora = b.etapas.find((e) => e.id === b.etapa_atual);
 
   return (
     <>
@@ -183,25 +185,36 @@ export function BlocoTela() {
         {!b.rodando && <><span className="separa" /><ApagarBloco canal={canal} b={b} /></>}
       </Cabecalho>
 
+      {b.rodando && agora && (
+        <AoVivo etapa={agora.id} rotulo={t(`app.etapa.${agora.id}`)} indice={b.etapas.indexOf(agora) + 1} total={b.etapas.length}
+                detalhe={agora.detalhe} inicio={agora.inicio}
+                progresso={agora.id === "escolher" && b.assets_total ? { feito: b.assets_prontos, total: b.assets_total } : null}
+                log={b.log_etapa?.texto || b.log_rodar} corrigindo={agora.status === "corrigindo"}
+                parar={() => acao.mutate(`${base}/parar`)} parando={acao.isPending} />
+      )}
       {b.parado && !b.rodando && (
         <div className="aviso-parado">
           <AlertTriangle size={20} />
-          <div><b>{t("app.bloco.parado_em", { etapa: t(`app.etapa.${b.parado.etapa}`, undefined, b.parado.etapa || "") })}</b><span>{b.parado.motivo}</span></div>
+          <div>
+            <b>{t("app.bloco.parado_em", { etapa: t(`app.etapa.${b.parado.etapa}`, undefined, b.parado.etapa || "") })}</b>
+            <span>{motivoLimpo(b.parado.motivo)}</span>
+            {motivoLimpo(b.parado.motivo) !== (b.parado.motivo ?? "").trim() && <details className="tecnico"><summary>{t("app.aovivo.detalhe_tecnico")}</summary><pre>{b.parado.motivo}</pre></details>}
+          </div>
           <button className="bt pequeno" onClick={() => setRodarDe(b.parado?.etapa && FEITO[b.parado.etapa] ? b.parado.etapa : "")}>{t("app.bloco.rodar_de_novo")}</button>
         </div>
       )}
 
       <div className="trilha">
-        {b.etapas.map((e, i) => {
+        {b.etapas.map((e) => {
           const s = statusEtapa(b, e);
           return (
             <button key={e.id} className={`passo ${s}`} disabled={b.rodando} onClick={() => setRodarDe(e.id)}
-                    title={[e.detalhe, e.quando, b.rodando ? "" : t("app.bloco.rodar_daqui")].filter(Boolean).join("\n")}>
+                    title={[motivoLimpo(e.detalhe), e.quando, b.rodando ? "" : t("app.bloco.rodar_daqui")].filter(Boolean).join("\n")}>
               <span className="bolinha">
-                {s === "ok" ? <Check size={14} /> : s === "rodando" ? <Loader size={14} className="gira" /> : s === "parado" ? <AlertTriangle size={13} /> : s === "corrigindo" ? <Wrench size={13} /> : i + 1}
+                {s === "ok" ? <Check size={14} /> : s === "rodando" ? <Loader size={14} className="gira" /> : s === "parado" ? <AlertTriangle size={13} /> : s === "corrigindo" ? <Wrench size={13} /> : <IconeEtapa etapa={e.id} />}
               </span>
               <span className="nome">{t(`app.etapa.${e.id}`)}</span>
-              {e.detalhe && <span className="detalhe">{e.detalhe}</span>}
+              <span className="detalhe">{resumoEtapa(t, s, e)}</span>
             </button>
           );
         })}
@@ -274,8 +287,8 @@ export function BlocoTela() {
               <p className="texto-roteiro">{b.roteiro}</p>
             </details>
           )}
-          <details className="cartao recolhe" open={b.rodando || undefined}>
-            <summary><h3>{t("app.bloco.detalhes")}</h3><span className="sub">{b.log_etapa?.nome ?? "log_rodar.txt"}</span></summary>
+          <details className="cartao recolhe">
+            <summary><h3>{t("app.bloco.detalhes")}</h3><span className="sub">{t("app.aovivo.logs")}</span></summary>
             {b.log_rodar && <><h4>log_rodar.txt</h4><pre>{b.log_rodar}</pre></>}
             {b.log_etapa && <><h4>{b.log_etapa.nome}</h4><pre>{b.log_etapa.texto}</pre></>}
             {!b.log_rodar && !b.log_etapa && <p className="sub">{t("app.bloco.sem_log")}</p>}

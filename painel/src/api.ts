@@ -205,7 +205,7 @@ export interface ProducaoVideo {
   etapa_atual: string;
   feito: Record<string, boolean>;
   atual: string;
-  etapas: { id: string; rotulo: string; status: string; detalhe: string; quando: string }[];
+  etapas: { id: string; rotulo: string; status: string; detalhe: string; quando: string; inicio: string }[];
   capitulos: { nn: string; topico: string; narrado: boolean; transcrito: boolean; qa: string; aprovado: boolean; folha: string | null }[];
   conferir: { id: string; texto: string; tipo: string; descricao: string; arquivo: string | null }[];
   conferidos: number;
@@ -349,7 +349,7 @@ export interface DetalheBloco {
   aprovado: boolean;
   travar_conferir: boolean;
   etapa_atual: string;
-  etapas: { id: string; status: string; detalhe: string; quando: string }[];
+  etapas: { id: string; status: string; detalhe: string; quando: string; inicio: string }[];
   previas: { v: number; url: string }[];
   entregue: string | null;
   qa: string;

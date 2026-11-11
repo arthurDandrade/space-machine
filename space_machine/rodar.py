@@ -82,8 +82,12 @@ class Rodada:
         return self.p / "_estudio" / f"log_{etapa}.txt"
 
     def marcar(self, etapa, status, detalhe=""):
-        self.estado["etapas"][etapa] = {"status": status, "detalhe": detalhe,
-                                        "quando": time.strftime("%Y-%m-%d %H:%M:%S")}
+        agora = time.strftime("%Y-%m-%d %H:%M:%S")
+        antes = self.estado["etapas"].get(etapa) or {}
+        # inicio = quando esta passada pela etapa começou (o painel mostra há quanto tempo ela roda); quando = a
+        # última vez que algo foi anotado nela
+        inicio = antes.get("inicio") if antes.get("status") in ("rodando", "corrigindo") and antes.get("inicio") else agora
+        self.estado["etapas"][etapa] = {"status": status, "detalhe": detalhe, "quando": agora, "inicio": inicio}
         self.estado["atual"] = etapa
         gravar_json(self.arq_estado, self.estado)
         print(f"[{self.nn}] {etapa}: {status}{(' — ' + detalhe) if detalhe else ''}", flush=True)

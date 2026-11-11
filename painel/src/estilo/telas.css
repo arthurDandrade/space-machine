@@ -771,3 +771,49 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 pre.saida { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--raised); font-size: 11.5px; line-height: 1.5; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
 .girando { animation: gira 1.1s linear infinite; }
 .chip.atualizar { color: var(--accent); }
+
+/* ---------- acontecendo agora (componentes/AoVivo.tsx) ---------- */
+.ao-vivo { display: flex; gap: 18px; align-items: flex-start; padding: 18px 20px; margin-bottom: 16px; border-radius: 22px; background: var(--run-bg); border: 1px solid color-mix(in oklab, var(--run) 28%, transparent); }
+.ao-vivo.corrigindo { background: var(--wait-bg); border-color: color-mix(in oklab, var(--wait) 30%, transparent); }
+.ao-vivo .icone { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; flex: none; background: var(--run); color: #fff; }
+.ao-vivo.corrigindo .icone { background: var(--wait); }
+.ao-vivo .meio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ao-vivo .rotulo { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--run); }
+.ao-vivo.corrigindo .rotulo { color: var(--wait); }
+.ao-vivo .meio > b { font-size: 21px; font-weight: 800; line-height: 1.2; }
+.ao-vivo .meio > p { margin: 0; color: var(--ink2); font-size: 14px; }
+.ao-vivo .medida { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.ao-vivo .medida span { font-size: 13px; font-weight: 600; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ao-vivo .barra { flex: 0 0 min(320px, 45%); height: 8px; border-radius: 999px; background: color-mix(in oklab, var(--run) 18%, var(--card)); overflow: hidden; }
+.ao-vivo .barra i { display: block; height: 100%; border-radius: 999px; background: var(--run); transition: width 0.6s ease; }
+.ao-vivo .barra.solta i { width: 35%; animation: vaivem 1.6s ease-in-out infinite; }
+.ao-vivo.corrigindo .barra i { background: var(--wait); }
+@keyframes vaivem { 0% { transform: translateX(-100%); } 100% { transform: translateX(290%); } }
+.ao-vivo .motor { margin-top: 10px; font-size: 12px; color: var(--ink3); }
+.ao-vivo .motor summary { cursor: pointer; font-weight: 600; }
+.ao-vivo .motor code { display: block; margin-top: 4px; font-size: 11.5px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ao-vivo .lado-direito { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; flex: none; }
+.ao-vivo .tempo { text-align: right; font-size: 12px; color: var(--ink2); }
+.ao-vivo .tempo b { display: block; font-size: 20px; font-weight: 800; color: var(--run); font-variant-numeric: tabular-nums; }
+.ao-vivo.corrigindo .tempo b { color: var(--wait); }
+@media (max-width: 700px) { .ao-vivo { flex-wrap: wrap; } .ao-vivo .lado-direito { flex-direction: row; align-items: center; width: 100%; justify-content: space-between; } }
+
+.passo .detalhe:empty { display: none; }
+.aviso-parado .tecnico { margin-top: 6px; font-size: 12px; color: var(--ink2); }
+.aviso-parado .tecnico summary { cursor: pointer; font-weight: 600; }
+.aviso-parado .tecnico pre { margin: 6px 0 0; padding: 10px; border-radius: 10px; background: color-mix(in oklab, var(--card) 70%, transparent); font-size: 11px; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+
+/* seções que viram histórico quando o vídeo já saiu */
+.cartao.recolhe.conferir summary, .cartao.recolhe.qa summary { align-items: center; }
+.cartao.recolhe.conferir[open] summary, .cartao.recolhe.qa[open] summary { margin-bottom: 12px; }
+.cartao.recolhe.qa .titulo-secao h4 { margin: 0; font-size: 14px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+
+/* tela do canal: o que roda fica no topo */
+.rodando-topo { margin-bottom: 20px; }
+.cartao.vivo { border: 1px solid color-mix(in oklab, var(--run) 28%, transparent); }
+.cartao.vivo .titulo-secao h3 { display: inline-flex; align-items: center; gap: 10px; }
+.g3.dois { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+.rod .t span svg { vertical-align: -1px; }
+.abas button { display: inline-flex; align-items: center; gap: 7px; }
+.abas button svg { color: var(--ink3); }
+.abas button.on svg { color: var(--accent-text); }

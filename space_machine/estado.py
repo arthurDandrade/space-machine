@@ -200,7 +200,7 @@ def producao_video(vd):
         "rodando": rodando, "parado": None if rodando else est.get("parado"), "etapa_atual": est.get("atual") or "",
         "feito": feito, "atual": atual,
         "etapas": [{"id": e, "rotulo": r, **{k: (est.get("etapas", {}).get(e) or {}).get(k, "")
-                                            for k in ("status", "detalhe", "quando")}} for e, r in ETAPAS_VIDEO],
+                                            for k in ("status", "detalhe", "quando", "inicio")}} for e, r in ETAPAS_VIDEO],
         "capitulos": [{"nn": c.name, "topico": topico(c), "narrado": any(c.glob("narracao.*")),
                        "transcrito": (c / "_work" / "palavras.json").exists(), "qa": qa[c.name]} for c in caps],
         "assets_total": n_assets, "assets_prontos": len(man),

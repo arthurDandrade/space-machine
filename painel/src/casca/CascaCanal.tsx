@@ -8,6 +8,7 @@ import {
   BookOpen, CalendarDays, Check, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, LayoutGrid, Lightbulb,
   ListChecks, ScrollText, Palette, PenLine, Plus, Sparkles,
 } from "lucide-react";
+import { RodandoNaBarra } from "../componentes/AoVivo";
 import { Link } from "react-router-dom";
 import { Canais, PainelCanal, pegar, rota } from "../api";
 import { LogoCanal } from "../componentes/Imagens";
@@ -130,6 +131,7 @@ export function CascaCanal() {
           )}
         </nav>
         <div className="pe">
+          {data && <RodandoNaBarra canal={canal} rodando={data.rodando} />}
           <Link className="bt escuro" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
           <Link className="conta" to="/config">
             <img className="av" src="/icone-128.png" alt="" />

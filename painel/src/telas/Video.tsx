@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Archive, Check, Clapperboard, Copy, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Archive, Check, Clapperboard, Copy, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Send, Trash2, Wand2 } from "lucide-react";
 import { BlocoDoVideo, DetalheVideo, enviar, pegar, Publicacao, rota, urlCapa } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
@@ -430,15 +430,15 @@ export function VideoTela() {
           <VideoFinal canal={canal} v={v} />
           </>}
           <p className="sub rodape-andamento">
-            {t("app.video.claude", { n: v.consumo_detalhe.chamadas ?? 0, tokens: compacto(v.consumo_detalhe.equivalente ?? 0) })}
-            {" · "}{t("app.video.mexido", { quando: haQuanto(t, v.mudou) })}
+            {(v.consumo_detalhe.chamadas ?? 0) > 0 && <>{t("app.video.claude", { n: v.consumo_detalhe.chamadas ?? 0, tokens: compacto(v.consumo_detalhe.equivalente ?? 0) })}{" · "}</>}
+            {t("app.video.mexido", { quando: haQuanto(t, v.mudou) })}
           </p>
         </div>
       </div>
 
       <div className="abas">
-        {!arquivado && <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}>{t(inteiro ? "app.video.aba_producao" : "app.video.aba_blocos")}{!inteiro && <span>{v.n_blocos}</span>}</button>}
-        <button className={aba === "publicacao" ? "on" : ""} onClick={() => setParams({ aba: "publicacao" })}>{t("app.video.aba_publicacao")}</button>
+        {!arquivado && <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}><Clapperboard size={15} />{t(inteiro ? "app.video.aba_producao" : "app.video.aba_blocos")}{!inteiro && <span>{v.n_blocos}</span>}</button>}
+        <button className={aba === "publicacao" ? "on" : ""} onClick={() => setParams({ aba: "publicacao" })}><Send size={15} />{t("app.video.aba_publicacao")}</button>
       </div>
 
       {aba === "blocos" && inteiro ? (
