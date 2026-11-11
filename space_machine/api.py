@@ -132,8 +132,9 @@ def _thumb_sistema(c, vd):
     except (ValueError, OSError):
         return None
     est = thumb_mod.ler_estado(vd)
-    return {"modelos": ms, "estado": {k: est.get(k) or "" for k in ("status", "etapa", "modelo", "modelo_nome", "erro",
-                                                                    "aviso", "atualizado")} | {"rodando": est["rodando"]}}
+    return {"modelos": ms, "fundos": thumb_mod.fundos(c),
+            "estado": {k: est.get(k) or "" for k in ("status", "etapa", "modelo", "modelo_nome", "erro", "aviso",
+                                                     "atualizado", "fundo")} | {"rodando": est["rodando"]}}
 
 
 def _thumb(vd):
@@ -693,7 +694,7 @@ def previa_modelo_thumbnail(slug: str, modelo: str):
 
 @api.post("/c/{slug}/v/{video}/thumbnail/fazer")
 def fazer_thumbnail(slug: str, video: str, modelo: str = Body(..., embed=True), refazer: bool = Body(False, embed=True),
-                    obs: str = Body("", embed=True)):
+                    obs: str = Body("", embed=True), fundo: str = Body("", embed=True)):
     """O sistema monta a thumbnail do vídeo no modelo escolhido (space_machine/thumb.py). Roda solto do painel."""
     vd = _video_dir(slug, video)
     c = _canal(slug)
@@ -701,7 +702,9 @@ def fazer_thumbnail(slug: str, video: str, modelo: str = Body(..., embed=True), 
         raise HTTPException(404, "o formato deste canal não tem esse modelo de thumbnail")
     if thumb_mod.ler_estado(vd)["rodando"]:
         raise HTTPException(409, "a thumbnail já está sendo feita")
-    thumb_mod.lancar(vd, modelo, refazer, obs.strip()[:500])
+    if fundo and not thumb_mod.cor_valida(fundo):
+        raise HTTPException(400, "a cor do fundo precisa ser no formato #RRGGBB")
+    thumb_mod.lancar(vd, modelo, refazer, obs.strip()[:500], thumb_mod.cor_valida(fundo))
     return {"ok": True}
 
 

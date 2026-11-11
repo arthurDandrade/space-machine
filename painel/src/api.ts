@@ -315,7 +315,9 @@ export interface ModeloThumb {
 }
 export interface ThumbSistema {
   modelos: ModeloThumb[];
-  estado: { status: "" | "rodando" | "ok" | "erro" | "esperando_flow"; etapa: string; modelo: string; modelo_nome: string; erro: string; aviso: string; atualizado: string; rodando: boolean };
+  // cores de fundo: as sugeridas pelo formato, a que vale agora para o canal (a última usada) e a do formato
+  fundos: { cores: string[]; atual: string; do_formato: string };
+  estado: { status: "" | "rodando" | "ok" | "erro" | "esperando_flow"; etapa: string; modelo: string; modelo_nome: string; erro: string; aviso: string; atualizado: string; fundo: string; rodando: boolean };
 }
 
 export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {

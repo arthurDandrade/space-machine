@@ -40,3 +40,11 @@ A referência usa caricaturas de jogadores reais nos círculos e nas duplas. O s
 - Retrato em pé num quadro deitado perdia quase metade da altura (o queixo ou o cabelo): quando sobraria menos de 62% da foto, ela entra menor, com 85% da altura à vista, sobre ela mesma desfocada nos lados.
 - Ajustes que o teste pediu: foto de corpo inteiro sem rosto achado era cortada pelo meio e decapitava (agora o corte fica perto do topo); retrato fechado cortava o cabelo (o detector marca das sobrancelhas ao queixo); pedido de desenho só com a descrição era descartado.
 - A observação de quem produz muda o plano ("use só desenhos", "um dos círculos tem que ser...").
+
+## Cor do fundo (2026-11-11, pedido de quem usa: "alguns usam outro tom de cor")
+- No painel, embaixo dos modelos, há as cores sugeridas pelo formato (`modelos.json › fundos`) e um seletor para qualquer outra. Na linha de comando, `--fundo "#RRGGBB"`.
+- A cor que você usa fica como a do canal (`canal.json › thumbnail.fundo`): o próximo vídeo já começa nela. Branco volta ao padrão do formato.
+- Trocar só a cor de uma thumbnail pronta não pede outro plano: redesenha (botão "Trocar a cor", ~3 s).
+- O texto acompanha: sobre fundo escuro (luminância abaixo de 140) a legenda e as bordas saem brancas; se o vermelho do destaque ficar perto do fundo, o destaque vira amarelo, branco ou preto, o mais distante. Testado com amarelo, azul-claro, vermelho e preto.
+- Na faixa com foto a cor pinta só a faixa do título; a foto vai de lado a lado mesmo sendo um retrato em pé (ali ela é o fundo).
+

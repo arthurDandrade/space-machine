@@ -671,6 +671,11 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .modelo-thumb:hover:not(:disabled) { border-color: var(--ink3); transform: translateY(-1px); }
 .modelo-thumb.on { border-color: var(--accent); }
 .modelo-thumb:disabled { opacity: 0.6; }
+.cores-thumb { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cor-thumb { width: 28px; height: 28px; border-radius: 999px; border: 2px solid var(--line); box-shadow: inset 0 0 0 2px var(--card); display: grid; place-items: center; color: var(--ink2); cursor: pointer; position: relative; overflow: hidden; transition: transform 0.15s, border-color 0.15s; }
+.cor-thumb:hover { transform: scale(1.08); }
+.cor-thumb.on { border-color: var(--accent); }
+.cor-thumb.outra input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 .obs-thumb { width: 100%; max-width: 560px; margin-bottom: 0; }
 .aviso-thumb { display: inline-flex; align-items: center; gap: 6px; color: var(--wait); font-size: 12.5px; font-weight: 600; }
 

@@ -69,11 +69,12 @@ def _rosto(im):
     return None
 
 
-def cobrir(im, w, h):
+def cobrir(im, w, h, inteiro=True):
     """A imagem cortada para encher w×h: centrada no rosto, se houver; sem rosto achado, pelo meio na largura e
     perto do topo na altura (num retrato de corpo inteiro a cabeça está em cima: cortar pelo meio decapitava).
     Retrato em pé num quadro deitado perderia quase metade da altura (o queixo ou o cabelo): aí a foto entra menor,
-    com 85% da altura à vista, sobre ela mesma desfocada nos lados."""
+    com 85% da altura à vista, sobre ela mesma desfocada nos lados (inteiro=False: corta mesmo assim — na faixa a
+    foto é o fundo da thumbnail inteira e tem de ir de lado a lado)."""
     im = im.convert("RGBA")
     chapado = Image.new("RGBA", im.size, (255, 255, 255, 255))      # foto com a borda esfumada: sobre branco
     chapado.alpha_composite(im)
@@ -81,7 +82,7 @@ def cobrir(im, w, h):
     rosto = _rosto(im)
     esc = max(w / im.width, h / im.height)
     nw, nh = max(w, round(im.width * esc)), max(h, round(im.height * esc))
-    if h / nh < 0.62:
+    if inteiro and h / nh < 0.62:
         from PIL import ImageEnhance, ImageFilter
         fundo = im.resize((nw, nh), Image.BILINEAR).crop((0, (nh - h) // 2, w, (nh - h) // 2 + h))
         fundo = ImageEnhance.Brightness(fundo.filter(ImageFilter.GaussianBlur(max(6, w // 28)))).enhance(0.82)
@@ -259,7 +260,7 @@ class Tela:
         if im is None:
             self._vazio(0, alt, W, H - alt, it)
         else:
-            self.im.paste(cobrir(im, W * S, round((H - alt) * S)).convert("RGB"), (0, round(alt * S)))
+            self.im.paste(cobrir(im, W * S, round((H - alt) * S), inteiro=False).convert("RGB"), (0, round(alt * S)))
         f_tam = alt * 0.78
         f = fonte(self.e["fonte_titulo"], f_tam * S)
         asc, desc = f.getmetrics()

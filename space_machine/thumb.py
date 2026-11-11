@@ -4,7 +4,7 @@ Os modelos são do FORMATO do canal (formato.json › thumbnail.modelos → form
 grade de fotos, grade de logos, grade de círculos, dupla com título, faixa e foto... Formato sem modelos não mostra
 a opção no painel.
 
-  python -m space_machine thumb <pasta do vídeo> --modelo grade_logos [--refazer] [--obs "..."]
+  python -m space_machine thumb <pasta do vídeo> --modelo grade_logos [--refazer] [--obs "..."] [--fundo "#FFE14D"]
   python -m space_machine thumb <pasta do vídeo> --modelos          # lista os modelos do formato do canal
 
 O que acontece, em <vídeo>/thumb/<modelo>/ (uma pasta com a cara da de um bloco, para o motor rodar nela igual):
@@ -20,11 +20,14 @@ O que acontece, em <vídeo>/thumb/<modelo>/ (uma pasta com a cara da de um bloco
                (<vídeo>/thumbnail.png; a anterior vai para thumbnails_anteriores/).
 
 O plano pede alguns itens de reserva: se uma imagem não for achada, a grade fecha com o seguinte.
+A cor do fundo é sua: a do formato, uma das sugeridas ou qualquer outra (--fundo; no painel, as bolinhas de cor). A que
+você usar fica como a do canal (canal.json › thumbnail.fundo). Trocar só a cor não refaz o plano: redesenha.
 Nunca desenho de pessoa real: pessoa real entra por foto (regra do sistema, repetida no prompt).
 """
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -62,6 +65,54 @@ def _modelo(c, modelo_id):
     if not m:
         raise ValueError(f"o formato não tem o modelo de thumbnail \"{modelo_id}\"")
     return m, cfg.get("estilo") or {}
+
+
+def _rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def cor_valida(cor):
+    """"#RRGGBB" em maiúsculas, ou "" se não for uma cor."""
+    cor = str(cor or "").strip()
+    return cor.upper() if re.fullmatch(r"#[0-9a-fA-F]{6}", cor) else ""
+
+
+def estilo_com_fundo(estilo, fundo):
+    """O estilo do formato com outra cor de fundo. O texto e as bordas continuam legíveis: sobre fundo escuro saem
+    brancos; e o destaque, se ficar parecido com o fundo (vermelho sobre vermelho), vira amarelo ou branco."""
+    fundo = cor_valida(fundo)
+    if not fundo or fundo == cor_valida(estilo.get("fundo") or "#FFFFFF"):
+        return dict(estilo)
+    r, g, b = _rgb(fundo)
+    escuro = (0.299 * r + 0.587 * g + 0.114 * b) < 140
+    e = {**estilo, "fundo": fundo}
+    if escuro:
+        e.update(cor_texto="#FFFFFF", cor_borda="#FFFFFF")
+    longe = lambda c: sum((x - y) ** 2 for x, y in zip(_rgb(c), (r, g, b))) ** 0.5
+    if longe(e.get("cor_destaque") or "#E3120B") < 150:
+        e["cor_destaque"] = max((x for x in ("#FFD400", "#FFFFFF", "#111111") if x != e.get("cor_texto")), key=longe)
+    return e
+
+
+def fundos(c):
+    """As cores de fundo que o painel oferece e a que vale agora para o canal (a última que você usou nele; sem
+    nenhuma, a do formato)."""
+    cfg = _config(c.get("formato")) or {}
+    do_formato = cor_valida((cfg.get("estilo") or {}).get("fundo")) or "#FFFFFF"
+    lista = [x for x in (cor_valida(f) for f in cfg.get("fundos") or []) if x] or [do_formato]
+    cj = ler_json(Path(c["raiz"]) / "canal.json", {}) or {}
+    atual = cor_valida((cj.get("thumbnail") or {}).get("fundo")) or do_formato
+    return {"cores": lista, "atual": atual, "do_formato": do_formato}
+
+
+def _guardar_fundo(c, fundo):
+    """A cor que você usou fica como a do canal (canal.json › thumbnail.fundo): o próximo vídeo já começa nela."""
+    arq = Path(c["raiz"]) / "canal.json"
+    cj = ler_json(arq, {}) or {}
+    if (cj.get("thumbnail") or {}).get("fundo") != fundo:
+        cj.setdefault("thumbnail", {})["fundo"] = fundo
+        gravar_json(arq, cj)
 
 
 def _compor(pedido, arq_pedido, c=None):
@@ -308,11 +359,13 @@ def _escolher(p):
 
 
 # ---------------- tudo ----------------
-def fazer(vd, modelo_id, refazer=False, obs=""):
+def fazer(vd, modelo_id, refazer=False, obs="", fundo=""):
     vd = Path(vd).resolve()
     _, c = canal_do_bloco(vd / "thumb")
     try:
         m, estilo = _modelo(c, modelo_id)
+        fundo = cor_valida(fundo) or fundos(c)["atual"]
+        estilo = estilo_com_fundo(estilo, fundo)
         p = pasta(vd) / modelo_id
         if refazer and p.exists():
             import shutil
@@ -356,13 +409,14 @@ def fazer(vd, modelo_id, refazer=False, obs=""):
                          "saida": str(p / "thumbnail.png")}, p / "pedido_compor.json", c)
         capas.salvar_thumbnail(vd, feita.read_bytes(), f"thumbnail {m.get('nome', modelo_id).lower()}{feita.suffix}")
         info = ler_json(vd / "thumbnail.json", {}) or {}
-        info.update(modelo=modelo_id, modelo_nome=m.get("nome", modelo_id), feita_pelo_sistema=True)
+        info.update(modelo=modelo_id, modelo_nome=m.get("nome", modelo_id), feita_pelo_sistema=True, fundo=fundo)
         gravar_json(vd / "thumbnail.json", info)
         # um dos primeiros ficou sem imagem e uma reserva entrou no lugar: avisa qual
         fora = [it["legenda"] or it["titulo"] for it in plano["itens"][:n]
                 if not any(pr is not None and pr.get("legenda") == it["legenda"] and pr.get("titulo") == it["titulo"]
                            for pr in prontos[:n])]
-        _marcar(vd, status="ok", etapa="", fim=time.strftime("%Y-%m-%d %H:%M:%S"),
+        _guardar_fundo(c, fundo)
+        _marcar(vd, status="ok", etapa="", fundo=fundo, fim=time.strftime("%Y-%m-%d %H:%M:%S"),
                 aviso=("Ficou de fora, sem a imagem certa: " + ", ".join(fora)[:200]) if fora else "")
         return 0
     except (ValueError, SystemExit) as e:
@@ -372,13 +426,14 @@ def fazer(vd, modelo_id, refazer=False, obs=""):
         (pasta(vd) / "pid").unlink(missing_ok=True)
 
 
-def lancar(vd, modelo_id, refazer=False, obs=""):
+def lancar(vd, modelo_id, refazer=False, obs="", fundo=""):
     """Lança o `thumb` solto do painel (como o Reels e o vídeo final): fechar o painel não para nada."""
     vd = Path(vd)
     pasta(vd).mkdir(exist_ok=True)
     cmd = [sys.executable, "-m", "space_machine", "thumb", str(vd), "--modelo", modelo_id]
     cmd += ["--refazer"] if refazer else []
     cmd += ["--obs", obs] if obs else []
+    cmd += ["--fundo", fundo] if cor_valida(fundo) else []
     _marcar(vd, status="rodando", modelo=modelo_id, etapa="começando", erro="", aviso="")
     sh = subprocess.run(["/bin/sh", "-c", '"$@" </dev/null >>"$LOG_THUMB" 2>&1 & echo $!', "sh", *cmd],
                         cwd=Path(__file__).resolve().parent.parent, capture_output=True, text=True,
@@ -396,6 +451,7 @@ def main(argv=None):
     ap.add_argument("--modelos", action="store_true", help="lista os modelos do formato do canal")
     ap.add_argument("--refazer", action="store_true", help="joga fora o plano e as imagens deste modelo e faz de novo")
     ap.add_argument("--obs", default="", help="um pedido seu para o plano (ex.: \"use só os times de Ohio\")")
+    ap.add_argument("--fundo", default="", help="cor do fundo, #RRGGBB (sem ela, a última usada no canal ou a do formato)")
     a = ap.parse_args(argv)
     vd = Path(a.video).resolve()
     _, c = canal_do_bloco(vd / "thumb")
@@ -403,7 +459,7 @@ def main(argv=None):
         for m in modelos(c):
             print(f"{m['id']:<16} {m['nome']} — {m['descricao']}")
         return
-    cod = fazer(vd, a.modelo, a.refazer, a.obs)
+    cod = fazer(vd, a.modelo, a.refazer, a.obs, a.fundo)
     est = ler_estado(vd)
     print({0: f"OK → {capas.thumbnail(vd)}", 2: est.get("aviso", "")}.get(cod, "ERRO: " + est.get("erro", "")))
     if est.get("aviso") and cod == 0:
