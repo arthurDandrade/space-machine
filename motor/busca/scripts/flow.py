@@ -195,8 +195,64 @@ def guardar(chave, urls):
         k += 1
         (pasta / f"{k:02d}.jpg").write_bytes(_baixar(url))
         print(pasta / f"{k:02d}.jpg")
+    _anotar(chave, len(urls))
+    r = ritmo()
+    log(f"ritmo: {r['no_lote']} de {r['lote']} neste lote" + (f"; lote cheio, o próximo a partir de {r['esperar_ate']}"
+                                                              if not r["pode"] else f"; espere {r['espaco_s']} s antes do próximo"))
+
+
+# O ritmo das gerações (2026-11-10). O Flow é a conta de uma pessoa: 108 pedidos seguidos, um a cada ~40 s, passaram
+# na hora, mas horas depois o Google respondeu "atividade incomum" ao 1º pedido de uma fila nova. Agora a fila sai em
+# LOTES pequenos com pausa entre eles; quem gera pergunta `--lote` e só faz o que ele devolver. Os números são de
+# <dados>/space_machine.json › flow (lote, pausa_min, espaco_s, por_dia; por_dia = 0 não limita o dia).
+RITMO = {"lote": 10, "pausa_min": 15, "espaco_s": 20, "por_dia": 0}
+
+
+def _ritmo_cfg():
+    return {**RITMO, **(caminhos.config_sistema().get("flow") or {})}
+
+
+def _geracoes():
+    """Os horários (epoch) de todas as gerações guardadas, em ordem."""
+    arq = pedidos().parent / "geracoes.jsonl"
+    out = []
+    for linha in arq.read_text().splitlines() if arq.exists() else []:
+        try:
+            out.append(time.mktime(time.strptime(json.loads(linha)["quando"], "%Y-%m-%d %H:%M:%S")))
+        except (ValueError, KeyError, json.JSONDecodeError):
+            continue
+    return sorted(out)
+
+
+def ritmo(agora=None):
+    """Quantos pedidos dá para gerar AGORA sem virar rajada: {"pode": n, "no_lote": feitos no lote atual, "hoje":
+    gerações nas últimas 24 h, "esperar_ate": "HH:MM" quando o lote encheu (ou o dia), "espaco_s": pausa entre um
+    pedido e o seguinte}. Um lote são gerações seguidas, sem um intervalo de pausa_min entre elas."""
+    cfg, agora, ts = _ritmo_cfg(), agora or time.time(), _geracoes()
+    pausa = cfg["pausa_min"] * 60
+    hoje = [t for t in ts if agora - t < 86400]
+    no_lote = 0
+    if ts and agora - ts[-1] < pausa:
+        no_lote = 1
+        for k in range(len(ts) - 1, 0, -1):
+            if ts[k] - ts[k - 1] >= pausa:
+                break
+            no_lote += 1
+    pode, ate = max(0, cfg["lote"] - no_lote), None
+    if pode == 0:
+        ate = ts[-1] + pausa
+    if cfg["por_dia"] and len(hoje) >= cfg["por_dia"]:
+        pode, ate = 0, max(ate or 0, hoje[len(hoje) - cfg["por_dia"]] + 86400)
+    elif cfg["por_dia"]:
+        pode = min(pode, cfg["por_dia"] - len(hoje))
+    return {"pode": pode, "no_lote": no_lote, "lote": cfg["lote"], "hoje": len(hoje), "por_dia": cfg["por_dia"],
+            "pausa_min": cfg["pausa_min"], "espaco_s": cfg["espaco_s"],
+            "esperar_ate": time.strftime("%Y-%m-%d %H:%M", time.localtime(ate)) if ate else None}
+
+
+def _anotar(chave, imagens):
     with open(pedidos().parent / "geracoes.jsonl", "a") as f:
-        f.write(json.dumps({"quando": time.strftime("%Y-%m-%d %H:%M:%S"), "chave": chave, "imagens": len(urls)}) + "\n")
+        f.write(json.dumps({"quando": time.strftime("%Y-%m-%d %H:%M:%S"), "chave": chave, "imagens": imagens}) + "\n")
 
 
 def referencia(canal, nome, url):
@@ -210,12 +266,15 @@ def referencia(canal, nome, url):
     f = json.loads(arq.read_text())
     f["flow_id"] = urlparse(url).path.rsplit("/", 1)[-1]
     arq.write_text(json.dumps(f, ensure_ascii=False, indent=1))
+    _anotar(f"ficha:{canal}:{nome}", 1)        # a ficha também é uma geração: conta no ritmo
     print(pasta / "referencia.jpg", f["flow_id"])
 
 
 def main():
     ap = argparse.ArgumentParser(description="Fila de desenhos do Google Flow (sem argumento: lista o que espera).")
     ap.add_argument("--canal", help="só os pedidos deste canal (slug)")
+    ap.add_argument("--lote", action="store_true",
+                    help="o que dá para gerar AGORA sem rajada: {fila, agora: [pedidos deste lote], ritmo}")
     ap.add_argument("--guardar", nargs="+", metavar=("CHAVE", "URL"), help="baixa as imagens geradas para o pedido")
     ap.add_argument("--recusado", nargs=2, metavar=("CHAVE", "MOTIVO"), help="o Flow não gerou: tira o pedido da fila")
     ap.add_argument("--referencia", nargs=3, metavar=("CANAL", "NOME", "URL"),
@@ -232,6 +291,9 @@ def main():
         if not (pasta / "pedido.json").exists():
             sys.exit(f"flow: não existe o pedido {a.recusado[0]}")
         (pasta / "recusado.txt").write_text(a.recusado[1] + "\n")
+    elif a.lote:
+        fila, r = pendentes(a.canal), ritmo()
+        print(json.dumps({"fila": len(fila), "agora": fila[:r["pode"]], "ritmo": r}, ensure_ascii=False, indent=1))
     else:
         print(json.dumps(pendentes(a.canal), ensure_ascii=False, indent=1))
 

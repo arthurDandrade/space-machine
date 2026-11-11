@@ -16,3 +16,9 @@
 
 ## Mapa
 - Gerado pelo `gerar_mapa.py` (`"mapa": {...}` no card): o país com o ponto marcado.
+
+## Ritmo das gerações no Flow (2026-11-10)
+- O que aconteceu: 147 pedidos (~440 imagens) em 24 h, 108 deles seguidos, um a cada ~40 s. Passaram na hora; nove horas depois o 1º pedido de uma fila nova voltou com "Notamos uma atividade incomum".
+- Regra de quem usa: maneirar, nunca a fila toda de uma vez. O sistema solta a fila em lotes de 10 com 15 min de pausa (`python -m space_machine flow --lote`) e ~20 s entre um pedido e o outro. Os números são um começo cauteloso, não um limite medido do Google: se o aviso voltar, pare e aumente a pausa.
+- O que mais reduz pedidos é o storyboard do vídeo inteiro com elenco (um desenho pedido uma vez e repetido pelo nome).
+
