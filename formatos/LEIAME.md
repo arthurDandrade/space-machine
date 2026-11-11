@@ -34,6 +34,13 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   imagem escolhida contra o título da fonte (`prompts/conferir_identidade.md`), e o card pulado sai do `cenas.json` em vez de
   ir para o resgate por imagem parecida; a lista fica em `<projeto>/_estudio/sem_imagem.json`. O card único de uma tela e o
   título do tópico não saem. Sem o campo, vale o comportamento de sempre (a menos ruim, com "conferir").
+- `audio.ambiente_dbfs`: sem trilha no canal, um ruído de fundo bem baixo por baixo da voz no vídeo inteiro (o cartum usa −50),
+  para a pausa entre as frases não cair no silêncio absoluto. O volume da voz é do sistema (`voz_lufs` no
+  `config_padrao.json`, −16 LUFS); o canal troca os dois em `canal.json › audio`.
+- `storyboard.titulo_min_s`: quanto tempo o compilador exige entre o nome falado e a 1ª tela (padrão 1 s). O cartum usa 0:
+  a 1ª frase já tem tela, e a abertura (grade + cartão do tópico, ~2 s) é do gerador.
+- `mapa.estilo`: `"desenho"` = todo card de mapa sai como silhueta recortada (contorno preto, `mapa.cor_base`, região
+  destacada, pino com nome, rótulo embaixo), em PNG transparente. Sem o campo, o mapa claro com fronteiras do explained.
 - `producao.fluxo`: `"video"` = o vídeo novo nasce como um projeto só (`space_machine/video.py`, `rodar_video.py`): narração por
   capítulo, storyboard do vídeo todo numa conversa (plano + um capítulo por resposta), uma busca, uma escolha e um MP4. O que
   o formato diz sobre o vídeo inteiro fica em `biblioteca_cenas.json › metas_video`: as regras de distribuição das variações

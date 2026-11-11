@@ -45,7 +45,12 @@ VIRA = 0.35                       # o cartão do tópico encolhe para o cabeçal
 # grade de abertura (medido na referência: a grade com todos os tópicos fica 0,8 s, aproxima em 0,5 s para o tópico
 # que vai começar e corta para ele; entre tópicos ela volta por ~0,5 s). Aqui: no 1º tópico segura 0,8 s, nos outros
 # 0,5 s, e em 0,6 s a câmera aproxima e o tópico vira o cartão dele, sem corte.
-GRADE_SEGURA_1, GRADE_SEGURA, GRADE_ZOOM = 0.8, 0.5, 0.6
+GRADE_SEGURA_1, GRADE_SEGURA, GRADE_ZOOM = 0.6, 0.3, 0.5
+CARTAO_TOPICO = 1.2               # s do cartão do tópico (símbolo grande + nome) depois da aproximação
+# A abertura inteira dura ~2 s (grade 0,3 s + aproximação 0,5 s + cartão 1,2 s; no 1º tópico a grade fica
+# 0,6 s), como na referência: grade inteira ~0,25 s, aproximação, ~1,75 s parada no tópico e já entra o
+# conteúdo, com a 1ª frase ainda sendo dita. Até 2026-11-10 o cartão ficava parado a 1ª frase inteira (6,3 s
+# em média num vídeo de 10 tópicos).
 GRADE_AREA = (70, 50, 1850, 1040)
 TEXTO_MIN = 1.0             # s que um rótulo, legenda ou balão precisa ficar na tela para dar para ler
 EASE_OUT = [0, 0.1, 0, 80]
@@ -410,6 +415,14 @@ def main():
     primeiro = estados[0]["ini"] if estados else fim_bloco
     vira = max(0.0, min((tt or {}).get("fim", primeiro), primeiro))
     tam_nome = 78
+    topicos = topicos_do_video(proj) if tt else []
+    eu = next((k for k, tp in enumerate(topicos) if tp[0] == (a.item if proj.name == "producao" else proj.name)), None)
+    com_grade = eu is not None and len(topicos) >= 2
+    t_grade = ((GRADE_SEGURA_1 if eu == 0 else GRADE_SEGURA) + GRADE_ZOOM) if com_grade else 0.0
+    if tt:
+        # a 1ª tela pode começar logo depois do nome (a 1ª frase já tem tela): a abertura segura os cards dela até
+        # a grade e o cartão do tópico passarem
+        vira = max(vira, t_grade + CARTAO_TOPICO)
     if tt and vira > 0.3:
         grande = 120 if largura(nome, 120, M.fonte_titulo) < 1500 else 96
         esc = tam_nome / grande * 100
@@ -425,13 +438,9 @@ def main():
         # a grade de todos os tópicos abre o bloco; o desenho e o nome deste tópico saem do lugar deles na grade e
         # crescem até o cartão (as mesmas camadas, sem corte), ficam enquanto a 1ª frase é dita e encolhem para o
         # cabeçalho quando a 1ª tela entra
-        topicos = topicos_do_video(proj)
-        eu = next((k for k, tp in enumerate(topicos) if tp[0] == (a.item if proj.name == "producao" else proj.name)), None)
         g = None
-        if eu is not None and len(topicos) >= 2:
-            t_grade = (GRADE_SEGURA_1 if eu == 0 else GRADE_SEGURA) + GRADE_ZOOM
-            if vira - t_grade >= 0.8:           # sobra pelo menos 0,8 s de cartão do tópico depois da grade
-                g = grade(M, proj, topicos, eu, t_grade, (sw, sh, s0) if arq else None, (txt_nome, grande))
+        if com_grade:
+            g = grade(M, proj, topicos, eu, t_grade, (sw, sh, s0) if arq else None, (txt_nome, grande))
 
         def caminho(na_grade, no_cartao, no_topo):
             """Chaves grade → cartão → cabeçalho (sem a grade, só cartão → cabeçalho)."""
@@ -455,7 +464,8 @@ def main():
 
     fins = [estados[i + 1]["ini"] if i + 1 < len(estados) else fim_bloco for i in range(len(estados))]
     for k, (e, fim) in enumerate(zip(estados, fins)):
-        tela(M, e, fim, VIRA if k == 0 and tt and vira > 0.3 else 0.0)
+        # a 1ª tela espera o cartão do tópico encolher para o cabeçalho (vira + VIRA), mesmo que a fala dela já tenha começado
+        tela(M, e, fim, max(0.0, vira + VIRA - e["ini"]) if k == 0 and tt and vira > 0.3 else 0.0)
 
     M.layers.sort(key=lambda L: CAMADAS[L["camada"]])
     dur = round(fim_bloco, 2)

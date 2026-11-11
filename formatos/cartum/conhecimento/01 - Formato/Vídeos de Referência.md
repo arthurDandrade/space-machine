@@ -108,3 +108,24 @@ Pedido de quem usa: nada de bloco a bloco; o vídeo inteiro evita retrabalho de 
 - O que continua aparecendo: foto ou logo real errada escolhida pela busca (a "foto" de Ralph Hay é um selo do time; o card do Chicago Bears é uma folha com seis logos de épocas diferentes), e os mapas pequenos com nomes sobrepostos.
 - Falta: um elenco do CANAL (as poses do mascote e os ícones servem a todos os vídeos; hoje o reaproveitamento entre vídeos é copiar a pasta `elenco/` à mão).
 
+## Nova comparação com as 4 referências (2026-11-10): o que estava igual e o que foi acertado
+Medido com o mesmo detector nas referências e no nosso vídeo de 10 tópicos (mudança de quadro a 10 qps; áudio em janelas de 50 ms):
+
+| Medida | Referências | Nosso antes | Nosso depois |
+|---|---|---|---|
+| Mudanças visuais por minuto | 32 a 35 | 39 | 41 |
+| Tempo em trechos ≥ 3 s sem mudar | 21% a 28% | 19% | 10% |
+| Entrada dos elementos | corte seco (1 quadro), sem efeito sonoro | igual | igual |
+| Volume integrado | −17,6 e −18,9 LUFS | −29,1 LUFS | −18,0 LUFS |
+| Som nas pausas da fala (p5) | −42 a −52 dBFS | −99,6 dBFS (silêncio absoluto) | −50,4 dBFS |
+| Do começo do tópico ao 1º conteúdo | ~2,3 s | 6,3 s em média | 2,4 s em média |
+
+- **Volume**: a voz sintética chega baixa (o outro canal do sistema também: −26,6 LUFS) e o YouTube não aumenta vídeo baixo. A entrega do vídeo inteiro agora sobe a narração para `voz_lufs` (−16 no `config_padrao.json`; com o teto de 3 dB de limitador deu −18,0 aqui), com um ganho só, sem comprimir.
+- **Pausas**: nas referências a pausa nunca é silêncio (em duas há uma música quase inaudível, com componente estéreo e picos tonais; nas outras duas, só o ar da gravação). Sem trilha no canal, entra um ruído marrom filtrado a −50 dBFS (`formato.json › audio.ambiente_dbfs`). Com `identidade/trilha.*`, a trilha faz esse papel.
+- **Abertura do tópico**: na referência a grade inteira aparece ~0,25 s, a câmera aproxima no tópico, fica ~1,75 s e o conteúdo entra com a 1ª frase ainda sendo dita. O nosso cartão de título ficava parado a 1ª frase inteira. Agora a abertura dura ~2 s (grade 0,3 s + aproximação 0,5 s + cartão 1,2 s) e a 1ª frase tem a tela dela (`storyboard.titulo_min_s = 0`; o gerador segura os cards dessa tela até o cartão virar cabeçalho).
+- **Mapa**: virou desenho (`mapa.estilo = "desenho"`): silhueta verde com contorno preto, a região em vermelho, pino com o nome e o rótulo embaixo, em PNG transparente. O mapa claro com fronteiras saía pequeno, esfumado como foto e com os nomes um por cima do outro.
+- O que a comparação mostrou e NÃO foi feito:
+  - **Composição**: a referência não põe tudo em colunas do mesmo tamanho. Tem um desenho grande com itens pequenos se acumulando em grade ao lado, balão de pensamento com um desenho dentro, miniatura circulada ligada por uma linha a um ponto do desenho grande, aproximação num desenho grande e depois afastamento, e o personagem maior, encostado na borda de baixo.
+  - **Cabeçalho**: o nome do tópico na referência é bem menor que o nosso (a olho, umas 3 vezes) e não há miniatura no canto nesse vídeo.
+  - **Traço**: a referência parece desenho à mão (linha fina e torta, bonecos brancos de cabeça redonda vestidos conforme a época, cada desenho com um pedaço de cenário); o nosso parece ilustração vetorial pronta. É escolha de identidade, não defeito.
+

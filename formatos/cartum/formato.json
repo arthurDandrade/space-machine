@@ -8,7 +8,8 @@
   "conhecimento": [
    "02 - Cenas/Biblioteca de Cenas.md",
    "03 - Assets/Desenhos e Fotos.md"
-  ]
+  ],
+  "titulo_min_s": 0
  },
  "cenas": "biblioteca_cenas.json",
  "edicao": {
@@ -131,5 +132,14 @@
  "escolha": {
   "sem_imagem_certa": "tirar_card",
   "_sobre": "Foto, histórica ou logo REAL sem candidato que seja claramente a coisa pedida: o card sai da tela (e fica anotado em _estudio/sem_imagem.json) em vez de entrar uma imagem parecida. No teste de 2026-11-10 a escolha ficou com a menos ruim e anotou a dúvida em \"conferir\" (um selo de time no lugar do retrato do dono, uma folha com seis logos, uma figurinha), e o vídeo saiu assim. Desenho gerado continua com o resgate de sempre."
+ },
+ "audio": {
+  "ambiente_dbfs": -50,
+  "_sobre": "Sem trilha no canal, um ruído de fundo bem baixo por baixo da voz (dBFS): nas 4 referências as pausas ficam em −46 a −52 dBFS (em duas, uma música quase inaudível; nas outras, o ar da gravação), e a voz sintética cai no silêncio absoluto entre as frases. Com identidade/trilha.* no canal, a trilha faz esse papel."
+ },
+ "mapa": {
+  "estilo": "desenho",
+  "cor_base": "#8FCB6B",
+  "_sobre": "Mapa do cartum: a silhueta do país (ou dos EUA) em verde com contorno preto, a região destacada na cor de destaque, um pino por ponto com o nome ao lado e o rótulo embaixo — PNG transparente, que entra como um desenho. O mapa claro com fronteiras (o do explained) saía pequeno, com a borda esfumada de foto e os nomes um por cima do outro."
  }
 }

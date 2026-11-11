@@ -76,8 +76,19 @@ def main():
     ap.add_argument("--silhueta", action="store_true", help="M6: só a silhueta do país (PNG transparente)")
     ap.add_argument("--regioes", nargs="*", default=[], help="estados/províncias do --pais a destacar (silhueta)")
     a = ap.parse_args()
+    # formato de desenho (formato.json › mapa.estilo = "desenho", o cartum): o mapa é sempre a silhueta recortada, com
+    # contorno preto, a região destacada, o pino e o nome — um PNG transparente que entra na tela como um desenho
+    a.desenho = (caminhos.ficha().get("mapa") or {}) if (caminhos.ficha().get("mapa") or {}).get("estilo") == "desenho" else None
+    if a.desenho and not a.globo:
+        a.silhueta = True
 
     paises = carregar("ne_50m_admin_0_countries.geojson")
+    # "pais": ["United States"] com o rótulo de um estado é o mapa dos EUA com aquele estado destacado (o storyboard
+    # escreve assim com frequência; sem isto saía o país com Alasca e Havaí e nenhum destaque)
+    if a.eua is None and a.pais and a.pais[0] in ("United States", "United States of America", "USA"):
+        nomes_est = {f["properties"]["name"] for f in carregar("ne_50m_admin_1_states_provinces.geojson")
+                     if f["properties"]["admin"] == "United States of America"}
+        a.eua, a.pais = ([a.rotulo] if a.rotulo in nomes_est else []), None
     eua = a.eua is not None
     if eua:
         estados = [f for f in carregar("ne_50m_admin_1_states_provinces.geojson")
@@ -315,21 +326,69 @@ def silhueta(a, alvo, estados):
     esc = W * SS / (max(xs) - min(xs))
     H = int((max(ys) - min(ys)) * esc / SS) + 2
     tela = lambda lon, lat: ((proj(lon, lat)[0] - min(xs)) * esc, (max(ys) - proj(lon, lat)[1]) * esc)
+    des = getattr(a, "desenho", None)
     im = Image.new("RGBA", (W * SS, H * SS), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     for f in base:
         for pol in aneis(f["geometry"]):
             ext = [tela(*pt) for pt in pol[0]]
             if len(ext) > 2:
-                d.polygon(ext, fill="#7F858F")
+                d.polygon(ext, fill=(des or {}).get("cor_base", "#7F858F"))
     cor = CORES[a.cor] if a.cor != "azul" or estados is not None else CORES["azul"]
+    if des:
+        cor = des.get("cor_destaque") or (caminhos.ficha().get("visual") or {}).get("cor_destaque") or cor
     for f in dest:
         for pol in aneis(f["geometry"]):
             ext = [tela(*pt) for pt in pol[0]]
             if len(ext) > 2:
                 d.polygon(ext, fill=cor)
-    im.resize((W, H), Image.LANCZOS).save(a.saida)
-    print(a.saida, W, H)
+    if not des:
+        im.resize((W, H), Image.LANCZOS).save(a.saida)
+        print(a.saida, W, H)
+        return
+    # mapa desenhado: contorno preto por fora (a máscara engordada, pintada por baixo), pino e nome de cada ponto e o
+    # rótulo embaixo — numa margem, para nada ficar por cima de nada
+    from PIL import ImageFilter
+    esp = max(3, int(W * SS * 0.0045))
+    m = int(W * SS * 0.05)
+    tem_rot = bool(a.rotulo) and not a.sem_rotulo
+    tam = int(W * SS * 0.085)          # o mapa ocupa ~1/3 da largura da tela: o nome precisa sair do tamanho dos outros rótulos
+    try:
+        import sys as _s
+        _s.path.insert(0, str(Path(__file__).resolve().parents[2] / "edicao_ff"))
+        from compor import fonte as _fonte
+        f_txt = _fonte((caminhos.ficha().get("visual") or {}).get("fonte_titulo", "ChalkboardSE-Bold"), tam)
+    except Exception:
+        f_txt = ImageFont.truetype(IMPACT, tam)
+    tela2 = Image.new("RGBA", (W * SS + 2 * m, H * SS + 2 * m + (int(tam * 1.5) if tem_rot else 0)), (0, 0, 0, 0))
+    alfa = im.getchannel("A")
+    gordo = alfa.filter(ImageFilter.MaxFilter(esp * 2 + 1))
+    tela2.paste((17, 17, 17, 255), (m, m), gordo)
+    tela2.alpha_composite(im, (m, m))
+    d2 = ImageDraw.Draw(tela2)
+    for f in dest:                                         # o contorno da região destacada
+        for pol in aneis(f["geometry"]):
+            ext = [(x + m, y + m) for x, y in (tela(*pt) for pt in pol[0])]
+            if len(ext) > 2:
+                d2.line(ext + [ext[0]], fill=(17, 17, 17, 255), width=esp, joint="curve")
+    r = int(W * SS * 0.022)
+    for ponto in a.ponto:
+        nome, lat, lon = ponto.rsplit(":", 2)
+        x, y = tela(float(lon), float(lat))
+        x, y = x + m, y + m
+        d2.ellipse((x - r, y - r, x + r, y + r), fill=(255, 255, 255, 255), outline=(17, 17, 17, 255), width=max(3, esp))
+        d2.ellipse((x - r * 0.45, y - r * 0.45, x + r * 0.45, y + r * 0.45), fill=(17, 17, 17, 255))
+        if nome.strip():
+            tw = d2.textlength(nome, font=f_txt)
+            tx = x + r * 1.6 if x + r * 1.6 + tw < tela2.width - 8 else x - r * 1.6 - tw
+            d2.text((tx, y - tam * 0.62), nome, font=f_txt, fill=(17, 17, 17, 255), stroke_width=max(4, esp), stroke_fill=(255, 255, 255, 255))
+    if tem_rot:
+        tw = d2.textlength(a.rotulo, font=f_txt)
+        d2.text(((tela2.width - tw) / 2, H * SS + 2 * m - tam * 0.2), a.rotulo, font=f_txt, fill=cor,
+                stroke_width=max(4, esp), stroke_fill=(255, 255, 255, 255))
+    tela2 = tela2.resize((tela2.width // SS, tela2.height // SS), Image.LANCZOS)
+    tela2.save(a.saida)
+    print(a.saida, tela2.width, tela2.height)
 
 
 if __name__ == "__main__":

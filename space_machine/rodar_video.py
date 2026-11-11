@@ -36,7 +36,7 @@ from . import video
 from .canal import gravar_json, ler_json
 from .estado import conferir_pendentes, titulo_video
 from .rodar import Parada, Rodada, _aprovado
-from .sistema import MOTOR, arquivo_formato
+from .sistema import MOTOR, arquivo_formato, ficha_formato
 
 sys.path.insert(0, str(MOTOR / "edicao_ff"))
 import render_video  # noqa: E402  (motor/edicao_ff/render_video.py)
@@ -653,8 +653,13 @@ class RodadaVideo(Rodada):
         total = sum(p["dur"] for p in pedacos)
         musica = final_mod.trilha(self.video, fim_dir, total=total)
         self.marcar("entregar", "rodando", "emendando os capítulos com a narração" + (" e a trilha" if musica else ""))
+        # o volume da voz é do sistema (config › voz_lufs) e o fundo das pausas é do formato (formato.json › audio);
+        # o canal troca os dois em canal.json › audio
+        som = {**(ficha_formato(self.c.get("formato")).get("audio") or {}),
+               **((ler_json(Path(self.c["raiz"]) / "canal.json", {}) or {}).get("audio") or {})}
         try:
-            render_video.emendar(self.p, pedacos, mp4, musica)
+            render_video.emendar(self.p, pedacos, mp4, musica, voz_lufs=som.get("voz_lufs", self.cfg.get("voz_lufs")),
+                                 ambiente_dbfs=None if musica else som.get("ambiente_dbfs"))
         except subprocess.CalledProcessError as e:
             raise Parada(f"o FFmpeg falhou ao emendar: {e}")
         final_mod._marcar(self.video, status="ok", etapa="pronto", mp4=str(mp4), fim=time.strftime("%Y-%m-%d %H:%M:%S"),

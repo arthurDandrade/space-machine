@@ -260,7 +260,9 @@ def main():
         elif not sem_titulo:
             p_item["titulo_asset"] = ta
             ed["titulo"] = {"texto": item["nome"], "asset": ta["id"], "t": rel(T(k_nome)), "fim": rel(primeiro - 0.05)}
-        if not sem_titulo and primeiro - T(k_nome) < 1.0:   # nas outras produções o título fica 1–2 s; menos que isso some rápido demais
+        # nas outras produções o título fica 1–2 s; menos que isso some rápido demais. No cartum a abertura é do
+        # gerador (grade + cartão, ~2 s) e a 1ª tela começa logo depois do nome: formato.json › storyboard.titulo_min_s = 0
+        if not sem_titulo and primeiro - T(k_nome) < float((caminhos.ficha().get("storyboard") or {}).get("titulo_min_s", 1.0)):
             R.avisos.append(f"item {iid}: título fica só {primeiro - T(k_nome):.1f}s na tela (mínimo ~1s). "
                             "Comece a 1ª cena numa frase seguinte.")
 

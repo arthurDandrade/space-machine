@@ -30,6 +30,8 @@
   },
   "storyboard_timeout_s": 2400,
   "storyboard_voltas": 4,
+  "_voz_lufs": "Volume em que a narração sai no vídeo inteiro (LUFS). A voz sintética chega baixa (−26 a −29 LUFS medidos) e o YouTube não aumenta vídeo baixo; as referências ficam em −17 a −19. null = deixa como veio. O canal troca em canal.json › audio › voz_lufs.",
+  "voz_lufs": -16,
   "_travar_conferir": "true = a entrega para até alguém aprovar os itens de \"conferir\" no painel.",
   "travar_conferir": false,
   "_after_app": "Nome do app do After Effects em /Applications (muda a cada versão anual).",

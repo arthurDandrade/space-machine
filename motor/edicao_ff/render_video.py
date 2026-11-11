@@ -16,12 +16,14 @@ import hashlib
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
+AMBIENTE_BASE_DB = -15.9        # RMS do ruído marrom do ffmpeg (amplitude 1) depois do filtro; medido, ver emendar
 
 
 def _ler(p, padrao=None):
@@ -129,8 +131,35 @@ def renderizar(proj, meia=False, processos=None, avisar=print):
     return pedacos
 
 
-def emendar(proj, pedacos, saida, trilha=None):
-    """Os pedaços emendados sem recomprimir + a narração emendada (desde o começo do 1º capítulo) + a trilha."""
+def medir_voz(audio, ini, total):
+    """(volume integrado em LUFS, pico em dBFS) do trecho da narração que entra no vídeo."""
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-ss", f"{ini:.3f}", "-t", f"{total:.3f}", "-i", str(audio),
+                        "-af", "ebur128=peak=true", "-f", "null", "-"], capture_output=True, text=True)
+    fim = r.stderr[r.stderr.rfind("Summary:"):]
+    i = re.search(r"I:\s*(-?[\d.]+) LUFS", fim)
+    pico = re.search(r"Peak:\s*(-?[\d.]+) dBFS", fim)
+    return (float(i.group(1)) if i else None), (float(pico.group(1)) if pico else None)
+
+
+def ganho_voz(audio, ini, total, alvo):
+    """Quantos dB a narração sobe para chegar ao volume-alvo (LUFS). A voz sintética chega baixa (medido em
+    2026-11-10: −29 e −26,6 LUFS em dois canais, contra −17,6 e −18,9 das referências; o YouTube abaixa vídeo alto,
+    mas não aumenta vídeo baixo). O ganho é o mesmo do começo ao fim (não comprime a fala); o limitador só segura os
+    picos, e o ganho para antes de pedir mais de 3 dB dele."""
+    lufs, pico = medir_voz(audio, ini, total)
+    if lufs is None or lufs < -60:
+        return 0.0
+    g = alvo - lufs
+    if pico is not None:
+        g = min(g, -1.5 - pico + 3.0)
+    return round(max(-12.0, min(24.0, g)), 2)
+
+
+def emendar(proj, pedacos, saida, trilha=None, voz_lufs=None, ambiente_dbfs=None):
+    """Os pedaços emendados sem recomprimir + a narração emendada (desde o começo do 1º capítulo) + a trilha.
+    voz_lufs: o volume em que a narração sai (None = como veio). ambiente_dbfs: sem trilha, um fundo de ruído bem
+    baixo por baixo da voz, para a pausa entre as frases não cair no silêncio absoluto (nas referências do cartum
+    as pausas ficam em −46 a −52 dBFS; a voz sintética vai a −99, e a fala soa mais picotada do que é)."""
     proj, saida = Path(proj), Path(saida)
     lista = proj / "edicao" / "pedacos.txt"
     lista.write_text("".join(f"file '{p['saida']}'\n" for p in pedacos))
@@ -141,10 +170,22 @@ def emendar(proj, pedacos, saida, trilha=None):
     ini = capitulos(proj)[0][1]
     audio = next(p for p in sorted(proj.iterdir()) if p.stem == "narracao")
     cmd = ["ffmpeg", "-v", "error", "-y", "-i", str(junto), "-ss", f"{ini:.3f}", "-t", f"{total:.3f}", "-i", str(audio)]
+    voz = "aresample=48000"
+    if voz_lufs is not None:
+        voz += f",volume={ganho_voz(audio, ini, total, float(voz_lufs))}dB,alimiter=limit=0.84:level=false"
     if trilha:
         cmd += ["-i", str(trilha), "-filter_complex",
-                "[1:a]aresample=48000[n];[n][2:a]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v",
+                f"[1:a]{voz}[n];[n][2:a]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v",
                 "-map", "[a]"]
+    elif ambiente_dbfs is not None:
+        # ruído marrom filtrado (parece o ar de uma sala): o anoisesrc com amplitude 1 tem −15,9 dBFS de RMS depois
+        # do passa-baixa; o volume leva ao nível pedido
+        cmd += ["-f", "lavfi", "-t", f"{total:.3f}", "-i", "anoisesrc=color=brown:amplitude=1:sample_rate=48000:seed=7",
+                "-filter_complex",
+                f"[1:a]{voz}[n];[2:a]highpass=f=80,lowpass=f=2500,volume={float(ambiente_dbfs) - AMBIENTE_BASE_DB:.1f}dB[r];"
+                "[n][r]amix=inputs=2:duration=first:normalize=0[a]", "-map", "0:v", "-map", "[a]"]
+    elif voz != "aresample=48000":
+        cmd += ["-filter_complex", f"[1:a]{voz}[a]", "-map", "0:v", "-map", "[a]"]
     else:
         cmd += ["-map", "0:v", "-map", "1:a"]
     cmd += ["-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-t", f"{total:.3f}", "-movflags", "+faststart",
