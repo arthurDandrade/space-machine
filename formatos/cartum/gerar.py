@@ -53,6 +53,7 @@ CARTAO_TOPICO = 1.2               # s do cartão do tópico (símbolo grande + n
 # em média num vídeo de 10 tópicos).
 GRADE_AREA = (70, 50, 1850, 1040)
 TEXTO_MIN = 1.0             # s que um rótulo, legenda ou balão precisa ficar na tela para dar para ler
+ZOOM, ZOOM_T = 2.0, 0.12        # a aproximação: 2× no ponto escolhido; abre para o desenho inteiro em ZOOM_T s
 EASE_OUT = [0, 0.1, 0, 80]
 EASE_IN = [0, 80, 0, 0.1]
 CAMADAS = {"fundo": 0, "conteudo": 1, "ui": 2}
@@ -214,16 +215,9 @@ class Montador:
         self.forma(itens, t_in, t_out, [bcx, bcy], "balão de pensamento")
         self.imagem(el, t_in, t_out, bcx, bcy, bw - 110, bh - 70, camada="ui")       # por cima do balão
 
-    def aponta(self, txt, t_in, t_out, cx, cy, larg, alt, base, onde):
-        """Número ou palavra acima do card com uma seta curva que termina DENTRO do desenho ("20,000" apontando
-        para as pessoas no abrigo). `onde` = (fx, fy) de −1 a 1 a partir do centro do desenho."""
-        tam = 56
-        tw = largura(txt, tam, self.fonte_titulo)
-        tx, ty = cx + min(larg * 0.2, 140), base - 40
-        self.texto(txt, t_in, t_out, [tx, ty], tam, self.fonte_titulo)
-        p0 = (tx - tw / 2 - 18, ty + 4)
-        p2 = (cx + onde[0] * larg / 2, cy + onde[1] * alt / 2)
-        p1 = (min(p0[0], p2[0]) - 90, p0[1] + 6)             # o ponto de controle: a seta sai para o lado e desce
+    def seta_curva(self, p0, p2, t_in, t_out, nome):
+        """Seta vermelha curva de p0 até p2 (sai para o lado e desce), com a ponta em p2."""
+        p1 = (min(p0[0], p2[0]) - 90, p0[1] + 6)
         pts = []
         for k in range(15):
             u = k / 14
@@ -236,7 +230,32 @@ class Montador:
         e1 = [b[0] - asa * (ux * 0.8 - uy * 0.6), b[1] - asa * (uy * 0.8 + ux * 0.6)]
         e2 = [b[0] - asa * (ux * 0.8 + uy * 0.6), b[1] - asa * (uy * 0.8 - ux * 0.6)]
         self.forma([{"t": "path", "pts": pts, "stroke": self.destaque, "sw": 9},
-                    {"t": "path", "pts": [e1, b, e2], "stroke": self.destaque, "sw": 9}], t_in, t_out, list(p0), "aponta")
+                    {"t": "path", "pts": [e1, b, e2], "stroke": self.destaque, "sw": 9}], t_in, t_out, list(p0), nome)
+
+    def aponta(self, txt, t_in, t_out, cx, cy, larg, alt, base, onde):
+        """Número ou palavra acima do card com uma seta curva que termina DENTRO do desenho ("20,000" apontando
+        para as pessoas no abrigo). `onde` = (fx, fy) de −1 a 1 a partir do centro do desenho."""
+        tam = 56
+        tw = largura(txt, tam, self.fonte_titulo)
+        tx, ty = cx + min(larg * 0.2, 140), base - 40
+        self.texto(txt, t_in, t_out, [tx, ty], tam, self.fonte_titulo)
+        self.seta_curva((tx - tw / 2 - 18, ty + 4), (cx + onde[0] * larg / 2, cy + onde[1] * alt / 2), t_in, t_out, "aponta")
+
+    def detalhe(self, el, txt, t_in, t_out, cx, cy, larg, alt, base, onde):
+        """Miniatura circulada: um detalhe (um desenho pequeno) dentro de um círculo vermelho acima do card, com o
+        número ou a palavra ao lado e uma seta curva do círculo até o ponto do desenho grande de onde ele vem.
+        `base` = y de baixo do círculo."""
+        r = 105
+        dcx = max(r + 30, cx - min(larg * 0.28, 220))
+        dcy = base - r - 14
+        self.forma([{"t": "ellipse", "size": [2 * r, 2 * r], "fill": self.cor_fundo, "stroke": self.destaque, "sw": 8,
+                     "trim": False}], t_in, t_out, [dcx, dcy], "círculo do detalhe")
+        self.imagem(el, t_in, t_out, dcx, dcy, 2 * r - 56, 2 * r - 56, camada="ui")
+        if txt:
+            tam = 52
+            self.texto(txt, t_in, t_out, [dcx + r + 22 + largura(txt, tam, self.fonte_titulo) / 2, dcy - 10], tam, self.fonte_titulo)
+        alvo = (cx + onde[0] * larg / 2, cy + onde[1] * alt / 2)
+        self.seta_curva((dcx - r * 0.55, dcy + r * 0.86), alvo, t_in, t_out, "detalhe")
 
     def xis(self, t_in, t_out, cx, cy, larg, alt):
         m = min(larg, alt) * 0.42
@@ -270,7 +289,9 @@ def caixas(cards, layout=None):
     hf = (y1 - y0 - VAO * (len(fileiras) - 1)) / len(fileiras)
     out = []
     for fi, fila in enumerate(fileiras):
-        pesos = [PESO.get((c.get("opcoes") or {}).get("tamanho"), 1.0) for c in fila]
+        # o desenho da aproximação é grande e cheio de detalhe: depois de abrir, fica com uma coluna mais larga
+        pesos = [max(PESO.get((c.get("opcoes") or {}).get("tamanho"), 1.0), 1.8 if (c.get("opcoes") or {}).get("zoom") else 0)
+                 for c in fila]
         util = min(x1 - x0, 1000 * len(fila)) - VAO * (len(fila) - 1)     # card sozinho não ocupa a tela toda
         x = (x0 + x1) / 2 - (util + VAO * (len(fila) - 1)) / 2
         for p in pesos:
@@ -292,9 +313,7 @@ def tela(M, e, fim, espera=0.0):
     cards = e.get("cards") or []
     ini = e["ini"] + espera
     # a data embaixo do nome: uma de cada vez (duas no mesmo estado ficavam uma por cima da outra)
-    datas = sorted(((ini if t is None else max(ini, t), txt) for txt, t in map(_par, e.get("textos") or [])), key=lambda d: d[0])
-    for k, (t, txt) in enumerate(datas):
-        M.texto(txt, t, datas[k + 1][0] if k + 1 < len(datas) else fim, TOPO_DATA, 50)
+    _datas = [(ini if t is None else max(ini, t), txt) for txt, t in map(_par, e.get("textos") or [])]
     # a tela nunca fica só com o fundo: o card que entra primeiro entra junto com a tela, mesmo que a
     # palavra dele venha depois (medido em 10 tópicos: 8 reprovavam no QA por 0,6 a 2 s de tela vazia)
     primeiro = min(cards, key=lambda c: c.get("t", ini)) if cards else None
@@ -304,24 +323,40 @@ def tela(M, e, fim, espera=0.0):
         return max(t0, min(t, fim - TEXTO_MIN))
     anterior = None
     boxes, pequenos = caixas(cards, e.get("layout"))
+    # aproximação ("opcoes": {"zoom": {...}} no 1º card): a tela abre com o desenho ampliado num ponto e, na palavra do
+    # gatilho, abre para o desenho inteiro em ZOOM_T s (medido na referência: ~1,5 s no detalhe e 3 quadros de
+    # passagem). Até lá, mais nada entra na tela — o desenho ampliado cobriria tudo.
+    zoom = (cards[0].get("opcoes") or {}).get("zoom") if cards else None       # vale também na lista: o desenho grande abre ampliado
+    t_abre = None
+    if isinstance(zoom, dict):
+        t_abre = min(max(ini + 1.0, zoom.get("t", ini + 1.5)), fim - 1.0)
+        if t_abre <= ini + 0.5:
+            zoom = t_abre = None
+    datas = sorted(((max(t, t_abre + ZOOM_T) if t_abre else t, txt) for t, txt in _datas), key=lambda d: d[0])
+    for k, (t, txt) in enumerate(datas):
+        M.texto(txt, t, datas[k + 1][0] if k + 1 < len(datas) else fim, TOPO_DATA, 50)
     for idx, (c, (bx, by, bw, bh)) in enumerate(zip(cards, boxes)):
         opc = c.get("opcoes") or {}
         mini = idx in pequenos                     # item pequeno da lista: texto menor e sem balão, seta ou plano
         tam, linha = (36, 52) if mini else (46, 68)
         t0 = ini if c is primeiro else max(ini, c.get("t", ini))
+        ampliado = bool(t_abre) and idx == 0
+        if t_abre and idx > 0:                     # os outros cards esperam o desenho abrir
+            t0 = max(t0, t_abre + ZOOM_T)
         acima, legenda, bal = c.get("acima"), c.get("legenda"), (None if mini else opc.get("balao"))
         st = c.get("sticker")
         if isinstance(st, (list, tuple)):       # o compilador entrega [asset, t]; do elenco, {"arquivo", "t"}
             st = {"asset": st[0], "t": st[1] if len(st) > 1 else t0}
         st = st if st and (st.get("asset") or st.get("arquivo")) else None
         pensa = bool(st) and bool(opc.get("pensa")) and not mini
+        det = opc.get("detalhe") if (st and not mini and not pensa and isinstance(opc.get("detalhe"), dict)) else None
         aponta = None if mini else opc.get("aponta")
         meio = opc.get("plano") == "meio" and not mini
         if meio and legenda:                       # em plano médio o pé do desenho sai da tela: a legenda sobe
             acima, legenda = (acima or legenda), None
         topo = (42 if opc.get("circulo") else 0) + (linha if acima else 0) \
             + (150 + (44 if len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0) \
-            + (250 if pensa else 0) + (80 if aponta else 0)
+            + (250 if pensa else 0) + (80 if aponta else 0) + (240 if det else 0)
         pe = (42 if opc.get("circulo") else 0) + (linha if legenda else 0)
         ih = bh - topo - pe
         cx, cy = bx + bw / 2, by + topo + ih / 2
@@ -338,8 +373,23 @@ def tela(M, e, fim, espera=0.0):
                 larg, alt = M.imagem(el, tv, sai, cx, cy, lw, ih)
                 if meio:                           # o QA mede o que está DENTRO do quadro
                     M.registro[-1]["box"][3] = min(float(H), M.registro[-1]["box"][3])
+                if ampliado and k == 0:
+                    L = next(x for x in reversed(M.layers) if x.get("kind") == "footage")
+                    fx, fy = ONDE.get(zoom.get("onde"), ONDE["centro"])
+                    alvo = (cx + fx * larg / 2, cy + fy * alt / 2)
+                    meio_tela = (W / 2, (AREA[1] + AREA[3]) / 2)
+                    # ampliado, o desenho ENCHE a tela (pelo menos 1,25× a largura dela): numa coluna estreita, 2× o
+                    # tamanho do card ainda era um desenho pequeno no meio da tela (1º render, 2026-11-11)
+                    rz = max(ZOOM, W * 1.25 / larg)
+                    perto = [meio_tela[0] - (alvo[0] - cx) * rz, meio_tela[1] - (alvo[1] - cy) * rz]
+                    perto[1] += max(0.0, (AREA[1] - 50) - (perto[1] - alt * rz / 2))     # nunca por cima do nome do tópico
+                    e0 = L["scale"][0]
+                    L["pos_keys"] = [[t_abre, perto, EASE_OUT], [t_abre + ZOOM_T, [cx, cy], EASE_IN]]
+                    L["scale_keys"] = [[t_abre, [e0 * rz, e0 * rz], EASE_OUT], [t_abre + ZOOM_T, [e0, e0], EASE_IN]]
         if not larg:
             continue
+        if ampliado:                               # o que vai em volta do desenho só aparece com ele inteiro
+            t0 = max(t0, t_abre + ZOOM_T)
         # com círculo em volta do card, o nome e a legenda vão para fora dele (o traço passava por cima do texto)
         folga = 42 if opc.get("circulo") else 0
         y_topo = cy - alt / 2 - folga
@@ -358,6 +408,9 @@ def tela(M, e, fim, espera=0.0):
             M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, cy + alt / 2 + linha / 2 + 4 + folga], tam, max_w=bw + VAO - 10)
         if pensa:
             M.pensamento(st, legivel(st.get("t", t0), t0), fim, cx, y_topo, larg)
+        elif det:
+            M.detalhe(st, str(det.get("texto") or ""), legivel(max(st.get("t", t0), det.get("t", t0)), t0), fim, cx, cy, larg, alt,
+                      y_topo, ONDE.get(det.get("onde"), ONDE["centro"]))
         elif st:
             lado = -1 if (bal or aponta) else 1         # com balão ou número com seta, o adesivo vai para o outro canto
             sx = min(W - 120, max(120, cx + lado * (larg / 2 - 10)))

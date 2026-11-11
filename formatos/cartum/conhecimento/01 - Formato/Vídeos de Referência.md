@@ -135,3 +135,9 @@ As quatro composições entraram no gerador (`gerar.py`: `caixas(..., "L1")`, `M
 - Ajustes que o 1º render pediu: item de lista com 2 ou 3 itens saía pequeno demais numa grade de 2 colunas (agora até 3 itens ficam numa fileira só, com célula de até 520 px de altura); o número com seta ficava por cima do nome do card e do adesivo (agora o número fica colado no desenho, o nome por cima dele e o adesivo vai para o outro canto).
 - Falta a 2ª leva: a miniatura circulada ligada por uma linha a um ponto do desenho grande, e a aproximação num desenho grande seguida do desenho inteiro. As duas dependem de desenhos novos (um detalhe em miniatura; um desenho grande e cheio de detalhe).
 
+## Composição, 2ª leva (2026-11-11): miniatura circulada e aproximação
+- Medido na referência: a aproximação fica ~1,5 s parada no detalhe e abre para o desenho inteiro em 3 quadros (0,12 s); é o único movimento de câmera dentro de um tópico.
+- No gerador: `Montador.detalhe` (o `sticker` num círculo vermelho, com o número ao lado e uma seta curva até o ponto do desenho grande) e `"opcoes": {"zoom": {...}}` no 1º card (o desenho abre ampliado 2×, sem passar por cima do nome do tópico, e os outros cards, a data e os rótulos só entram quando ele abre).
+- No vídeo de 10 tópicos: 7 aproximações e 7 miniaturas, em 7 capítulos. Em 3 capítulos (07, 08 e 10) a correção do storyboard mudou a fala de uma tela, não compilou e o capítulo ficou como estava. Cada aproximação pediu um desenho novo, grande e detalhado, em 16:9: 7 pedidos num lote só do Flow, nenhuma recusa.
+- A miniatura não precisou de desenho novo: usou o elenco.
+

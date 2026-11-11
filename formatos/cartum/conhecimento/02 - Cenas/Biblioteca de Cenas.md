@@ -21,7 +21,8 @@ Medido nos vídeos de referência: as telas não são só colunas do mesmo taman
 - **Balão de pensamento com desenho** (`sticker` + `"opcoes": {"pensa": true}`): o que o personagem imagina, dentro da nuvem.
 - **Seta com número para dentro do desenho** (`"opcoes": {"aponta": {...}}`): o número em cima e a seta curva terminando no ponto do desenho de que ele fala.
 - **Plano médio** (`"opcoes": {"plano": "meio"}`): o personagem maior, cortado pela borda de baixo; um por tela.
-- Ainda não feitas (2ª leva): a miniatura circulada ligada por uma linha a um ponto do desenho grande, e a aproximação num desenho grande seguida do desenho inteiro.
+- **Miniatura circulada** (`sticker` + `"opcoes": {"detalhe": {...}}`): um detalhe dentro de um círculo vermelho, com o número ao lado e uma seta até o ponto do desenho grande.
+- **Aproximação** (`"opcoes": {"zoom": {...}}` no 1º card): a tela abre ampliada 2× num ponto do desenho e, no gatilho, abre para o desenho inteiro em 0,12 s (na referência: ~1,5 s no detalhe e 3 quadros de passagem). Pede um desenho grande e detalhado, em paisagem.
 
 ## Tamanhos
 - Área dos cards: de x 70 a 1850 e de y 190 a 1040. Com `acima`, `balao` ou `sticker`, o card encolhe para caber o que vai em cima.
