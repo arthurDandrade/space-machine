@@ -18,12 +18,18 @@
 """
 import sys
 
+# os comandos de produção: se o Mac dorme no meio, eles congelam (sistema.manter_acordado)
+DEMORADOS = ("rodar", "fila", "escolher", "final", "reels", "thumb", "roteiro", "novo")
+
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__)
         return
     cmd, args = sys.argv[1], sys.argv[2:]
+    if cmd in DEMORADOS:        # o que roda por minutos ou horas segura o Mac acordado até terminar
+        from .sistema import manter_acordado
+        manter_acordado()
     if cmd == "escolher":
         from .escolher import main as m
         m(args)

@@ -51,5 +51,7 @@
   "_limpeza_automatica": "true = ao entregar um bloco, as prévias antigas, os candidatos baixados e o Auto-Save dele vão para o Lixo do Mac.",
   "limpeza_automatica": true,
   "_cache_dias": "Dias que uma imagem baixada fica no cache da busca sem ser usada. A busca apaga as vencidas sozinha quando começa (o cache só evita baixar de novo a mesma imagem).",
-  "cache_dias": 7
+  "cache_dias": 7,
+  "_manter_acordado": "true = enquanto uma produção roda (narração, storyboard, busca, render, roteiro, thumbnail), o Mac não dorme por inatividade; quando ela termina, volta ao normal. Mac dormindo congela a produção. false = deixa o Mac dormir (na bateria, a produção pausa em vez de gastar carga).",
+  "manter_acordado": true
 }

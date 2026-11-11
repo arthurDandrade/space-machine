@@ -135,6 +135,25 @@ def ordenar_canais(ordem):
     return nova
 
 
+def manter_acordado(pid=None):
+    """Impede o Mac de dormir por inatividade enquanto o processo `pid` (este, se não vier) estiver vivo.
+
+    Mac dormindo congela a produção: em 2026-11-11 um storyboard de 24 min levou 56 porque o Mac, na bateria e
+    configurado para dormir com 1 min parado, dormiu duas vezes no meio (16 e 15,5 min, pelo `pmset -g log`).
+    Usa o `caffeinate` do macOS: vale só enquanto o processo vive e não muda nenhum ajuste do sistema. A tela pode
+    apagar; fechar a tampa do notebook ainda faz dormir. Desliga com `manter_acordado: false` no space_machine.json.
+    Devolve o processo do caffeinate, ou None se não foi ligado (desligado, ou não é um Mac)."""
+    import shutil
+    import subprocess
+    if not config().get("manter_acordado", True) or not shutil.which("caffeinate"):
+        return None
+    try:
+        return subprocess.Popen(["caffeinate", "-i", "-w", str(pid or os.getpid())],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return None
+
+
 def ambiente_motor(c):
     """Variáveis que os scripts do motor usam para achar o canal e os dados (motor/caminhos.py)."""
     return {**os.environ, "SM_CANAL": c["raiz"], "SM_DADOS": str(DADOS), "SM_PYTHON": sys.executable,
