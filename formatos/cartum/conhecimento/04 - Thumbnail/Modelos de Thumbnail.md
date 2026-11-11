@@ -37,5 +37,6 @@ A referência usa caricaturas de jogadores reais nos círculos e nas duplas. O s
 - `grade_logos`, `grade_circulos`, `dupla`, `faixa_foto`: 4 a 8 s cada, só com o que o vídeo já tinha.
 - `grade_fotos`: 1 min 34 s; 5 fotos do vídeo e 1 buscada (o time de 1925 do Pottsville).
 - `grade_circulos` com um desenho novo pedido na observação (um troféu rachado): parou em "esperando o Flow" com 1 pedido; gerado no Flow, continuou e fechou em 9 s.
+- Retrato em pé num quadro deitado perdia quase metade da altura (o queixo ou o cabelo): quando sobraria menos de 62% da foto, ela entra menor, com 85% da altura à vista, sobre ela mesma desfocada nos lados.
 - Ajustes que o teste pediu: foto de corpo inteiro sem rosto achado era cortada pelo meio e decapitava (agora o corte fica perto do topo); retrato fechado cortava o cabelo (o detector marca das sobrancelhas ao queixo); pedido de desenho só com a descrição era descartado.
 - A observação de quem produz muda o plano ("use só desenhos", "um dos círculos tem que ser...").
