@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { DndContext, DragEndEvent, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, Clapperboard, GripVertical, Lightbulb, Plus, Trash2 } from "lucide-react";
 import { Coluna, enviar, pegar, rota, urlCapa, Video } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
@@ -13,7 +13,7 @@ import { Capa } from "../componentes/Imagens";
 import { useT } from "../textos";
 
 type Ideia = { id: number; titulo: string; notas: string; criado: string };
-const useIdeias = (canal: string) =>
+export const useIdeias = (canal: string) =>
   useQuery({ queryKey: ["ideias", canal], queryFn: () => pegar<{ ideias: Ideia[] }>(`/api/c/${canal}/ideias`) });
 
 function FormIdeia({ canal, compacto = false }: { canal: string; compacto?: boolean }) {
@@ -35,7 +35,7 @@ function FormIdeia({ canal, compacto = false }: { canal: string; compacto?: bool
   );
 }
 
-function CartaoIdeia({ canal, i }: { canal: string; i: Ideia }) {
+export function CartaoIdeia({ canal, i }: { canal: string; i: Ideia }) {
   const t = useT();
   const qc = useQueryClient();
   const [confirmar, setConfirmar] = useState(false);
@@ -86,18 +86,41 @@ export function IdeiasTela() {
 // ---------------- quadro ----------------
 const MOVEIS: Coluna[] = ["edicao_final", "agendado", "publicado"];
 
-function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
+// O conteúdo de um card do quadro. Em Publicado (e Agendado) o card é uma linha baixa, com a capa pequena ao lado:
+// são as colunas que só crescem, e com a capa grande cada vídeo publicado empurrava a página para baixo.
+function ConteudoCard({ canal, v, compacto }: { canal: string; v: Video; compacto: boolean }) {
   const t = useT();
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: v.slug, data: { coluna: v.coluna } });
-  const estilo = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)`, zIndex: 20 } : undefined;
-  return (
-    <div ref={setNodeRef} style={estilo} className={`card-quadro ${isDragging ? "arrastando" : ""}`} {...attributes} {...listeners}>
+  const data = v.data_pub ? `${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : "";
+  const capa = <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={compacto ? 14 : 20} /></span>} />;
+  if (compacto)
+    return (
       <Link to={rota.video(canal, v.slug)} draggable={false}>
-        <Capa className="cv" src={urlCapa(canal, v.slug, undefined, v.capa_v)} existe={v.tem_capa} vazio={<span className="sem-capa"><Clapperboard size={20} /></span>} />
-        <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
-        <span className="sub">{v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos }) : t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{v.data_pub ? ` · ${v.data_pub.slice(8, 10)}/${v.data_pub.slice(5, 7)}` : ""}</span>
-        <div className="progresso"><i style={{ width: `${v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0}%` }} /></div>
+        {capa}
+        <span className="t">
+          <b>{v.titulo_pub || v.titulo}</b>
+          <span className="sub">{[v.numero ? `nº ${v.numero}` : "", data || t("app.quadro.sem_data"), v.arquivado ? t("app.arquivar.selo").toLowerCase() : ""].filter(Boolean).join(" · ")}</span>
+        </span>
       </Link>
+    );
+  return (
+    <Link to={rota.video(canal, v.slug)} draggable={false}>
+      {capa}
+      <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
+      <span className="sub">{v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos }) : t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })}{data ? ` · ${data}` : ""}</span>
+      <div className="progresso"><i style={{ width: `${v.n_blocos ? (100 * v.entregues) / v.n_blocos : 0}%` }} /></div>
+    </Link>
+  );
+}
+
+const COMPACTAS: Coluna[] = ["agendado", "publicado"];
+
+function CartaoQuadro({ canal, v }: { canal: string; v: Video }) {
+  // quem se mexe na tela ao arrastar é a cópia do DragOverlay: a coluna tem rolagem própria e cortaria o card
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: v.slug, data: { coluna: v.coluna } });
+  const compacto = COMPACTAS.includes(v.coluna);
+  return (
+    <div ref={setNodeRef} className={`card-quadro ${compacto ? "compacto" : ""} ${isDragging ? "arrastando" : ""}`} {...attributes} {...listeners}>
+      <ConteudoCard canal={canal} v={v} compacto={compacto} />
       <span className="pega"><GripVertical size={14} /></span>
     </div>
   );
@@ -150,15 +173,25 @@ export function QuadroTela() {
     mutationFn: ({ video, coluna }: { video: string; coluna: Coluna }) => enviar(`/api/c/${canal}/v/${video}/coluna`, { coluna }),
     onSettled: () => qc.invalidateQueries(),
   });
+  const [arrastando, setArrastando] = useState<string | null>(null);
   if (!dc) return null;
+  // Agendado: a data mais próxima em cima. Publicado: o mais recente em cima (sem data, pelo número do vídeo).
+  const daColuna = (id: Coluna) => {
+    const vs = dc.videos.filter((v) => v.coluna === id);
+    if (id === "agendado") return [...vs].sort((a, b) => (a.data_pub || "9999").localeCompare(b.data_pub || "9999"));
+    if (id === "publicado") return [...vs].sort((a, b) => (b.data_pub || "").localeCompare(a.data_pub || "") || b.numero - a.numero);
+    return vs;
+  };
+  const noAr = dc.videos.find((v) => v.slug === arrastando);
   const soltar = (e: DragEndEvent) => {
+    setArrastando(null);
     const para = e.over?.id as Coluna | undefined;
     if (para && para !== "ideia" && para !== e.active.data.current?.coluna) mover.mutate({ video: String(e.active.id), coluna: para });
   };
   return (
     <>
       <Cabecalho titulo={t("app.quadro.titulo")} sub={t("app.quadro.explica")} />
-      <DndContext sensors={sensores} onDragEnd={soltar}>
+      <DndContext sensors={sensores} onDragStart={(e) => setArrastando(String(e.active.id))} onDragEnd={soltar} onDragCancel={() => setArrastando(null)}>
         <div className="quadro" ref={quadro}>
           {dc.colunas.map((c) => (
             <ColunaQuadro key={c.id} id={c.id} n={c.id === "ideia" ? (di?.ideias.length ?? 0) : dc.videos.filter((v) => v.coluna === c.id).length}>
@@ -172,11 +205,14 @@ export function QuadroTela() {
                   ))}
                 </>
               ) : (
-                dc.videos.filter((v) => v.coluna === c.id).map((v) => <CartaoQuadro key={v.slug} canal={canal} v={v} />)
+                daColuna(c.id).map((v) => <CartaoQuadro key={v.slug} canal={canal} v={v} />)
               )}
             </ColunaQuadro>
           ))}
         </div>
+        <DragOverlay dropAnimation={null}>
+          {noAr && <div className={`card-quadro flutuando ${COMPACTAS.includes(noAr.coluna) ? "compacto" : ""}`}><ConteudoCard canal={canal} v={noAr} compacto={COMPACTAS.includes(noAr.coluna)} /></div>}
+        </DragOverlay>
       </DndContext>
       {mover.isError && <p className="erro">{mover.error.message}</p>}
     </>

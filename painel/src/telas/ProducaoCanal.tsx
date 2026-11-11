@@ -13,6 +13,7 @@ import { TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { AnelConsumo, CartaoVideo, ItemEsperando, LinhaRodando, Segmentos } from "../componentes/Pecas";
 import { useT } from "../textos";
+import { CartaoIdeia, useIdeias } from "./Planejamento";
 
 const ICONES: Record<Coluna, typeof Cog> = {
   ideia: Lightbulb, roteiro: FileText, producao: Cog, edicao_final: Scissors, agendado: CalendarClock, publicado: CircleCheck,
@@ -99,7 +100,14 @@ function Heroi({ canal, v }: { canal: string; v: Video | null }) {
 function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
   const t = useT();
   const [filtro, setFiltro] = useState<Coluna | null>(null);
+  const [tudo, setTudo] = useState(false);
+  const { data: di } = useIdeias(canal);
+  const ideias = di?.ideias ?? [];
   const lista = filtro ? dados.videos.filter((v) => v.coluna === filtro) : dados.videos;
+  // na tela do canal cabem os mais recentes; o resto abre com um clique (a lista inteira mora em Vídeos)
+  const LIMITE = 8;
+  const n = filtro === "ideia" ? ideias.length : lista.length;
+  const corta = !tudo && n > LIMITE;
   return (
     <section className="processo">
       <div className="titulo-secao"><h3>{t("app.producao.processo")}</h3><Link to={rota.quadro(canal)}>{t("app.producao.abrir_quadro")}</Link></div>
@@ -108,7 +116,7 @@ function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
           const Icone = ICONES[c.id];
           return (
             <button key={c.id} className={`etapa ${c.n ? "" : "vazia"} ${filtro === c.id ? "on" : ""}`}
-                    onClick={() => setFiltro(filtro === c.id ? null : c.id)}>
+                    onClick={() => { setFiltro(filtro === c.id ? null : c.id); setTudo(false); }}>
               <div className="n">{c.n}</div>
               <div className="r"><Icone size={15} />{t(`app.coluna.${c.id}`)}</div>
             </button>
@@ -116,16 +124,22 @@ function Processo({ canal, dados }: { canal: string; dados: PainelCanal }) {
         })}
       </div>
       <div className="filtros">
-        <h4>{filtro ? `${t(`app.coluna.${filtro}`)} · ${lista.length}` : t("app.producao.todos_videos", { n: lista.length })}</h4>
+        <h4>{filtro ? `${t(`app.coluna.${filtro}`)} · ${n}` : t("app.producao.todos_videos", { n })}</h4>
         {filtro && <button className="bt pequeno" onClick={() => setFiltro(null)}>{t("app.producao.ver_todos")}</button>}
+        {filtro === "ideia" && <Link className="bt pequeno" to={rota.ideias(canal)}><Lightbulb size={14} />{t("app.producao.nova_ideia")}</Link>}
       </div>
       {filtro === "ideia" ? (
-        <div className="vazio"><Lightbulb size={18} />{t("app.producao.ideias_no_quadro")}<Link className="bt pequeno" to={rota.ideias(canal)}>{t("app.nav.ideias")}</Link></div>
+        ideias.length ? (
+          <div className="lista-ideias">{(corta ? ideias.slice(0, LIMITE) : ideias).map((i) => <CartaoIdeia key={i.id} canal={canal} i={i} />)}</div>
+        ) : (
+          <div className="vazio"><Lightbulb size={18} />{t("app.ideias.nenhuma")}<Link className="bt pequeno" to={rota.ideias(canal)}>{t("app.nav.ideias")}</Link></div>
+        )
       ) : lista.length ? (
-        <div className="videos">{lista.map((v, i) => <CartaoVideo key={v.slug} canal={canal} v={v} atraso={i * 40} />)}</div>
+        <div className="videos">{(corta ? lista.slice(0, LIMITE) : lista).map((v, i) => <CartaoVideo key={v.slug} canal={canal} v={v} atraso={i * 40} />)}</div>
       ) : (
         <div className="vazio"><Clapperboard size={18} />{t("app.producao.nada_nesta_etapa")}</div>
       )}
+      {corta && <div className="mostrar-mais"><button className="bt pequeno" onClick={() => setTudo(true)}>{t("app.producao.mostrar_todos", { n })}</button></div>}
     </section>
   );
 }

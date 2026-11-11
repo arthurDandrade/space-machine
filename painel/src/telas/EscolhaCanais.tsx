@@ -58,9 +58,11 @@ function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
 /** Os três números do momento, ao lado da saudação (antes se repetiam no rodapé da tela). */
 function Agora({ data }: { data?: Canais }) {
   const t = useT();
+  // o número leva ao canal onde aquilo está acontecendo (o primeiro, se for mais de um): antes era só um número
+  const onde = (campo: "rodando" | "esperando") => data?.canais.find((c) => c[campo] > 0)?.slug;
   const itens = [
-    { ic: <Loader size={16} />, cls: "run", n: data?.rodando ?? 0, rot: "app.canais.stat_rodando", para: "" },
-    { ic: <Hand size={16} />, cls: "wait", n: data?.esperando ?? 0, rot: "app.canais.stat_esperando", para: "" },
+    { ic: <Loader size={16} />, cls: "run", n: data?.rodando ?? 0, rot: "app.canais.stat_rodando", para: onde("rodando") ? `/c/${onde("rodando")}` : "" },
+    { ic: <Hand size={16} />, cls: "wait", n: data?.esperando ?? 0, rot: "app.canais.stat_esperando", para: onde("esperando") ? `/c/${onde("esperando")}/esperando` : "" },
     { ic: <Sparkles size={16} />, cls: "ok", n: compacto(data?.consumo_7d ?? 0), rot: "app.canais.stat_tokens", para: "/config/consumo" },
   ];
   return (
