@@ -53,7 +53,7 @@ def lancar_rodada(b, de="", ate="", obs=""):
         cmd += ["--ate", ate]
     if obs.strip():
         cmd += ["--obs", obs.strip()]
-    (b / "_estudio").mkdir(exist_ok=True)
+    (b / "_estudio").mkdir(parents=True, exist_ok=True)   # vídeo novo do fluxo "video": <vídeo>/producao ainda não existe
     log = b / "_estudio" / "log_rodar.txt"
     with open(log, "a") as f:
         f.write(f"\n===== {estado.quando(time.time())} · {' '.join(cmd[3:])}\n")
