@@ -91,7 +91,14 @@ class RodadaVideo(Rodada):
             # narração refeita depois do storyboard: os tempos vêm das palavras, então basta compilar de novo
             ok, ret = self._compilar_e_medir()
             if ret.startswith("O compilador recusou"):
-                raise Parada("a narração mudou e o storyboard não acha mais as falas: " + ret[-300:])
+                # a voz nova é transcrita com algumas palavras diferentes: os gatilhos e as falas do storyboard são
+                # realinhados às palavras novas (video.realinhar) antes de desistir
+                n = video.realinhar(self.video)
+                if n:
+                    ok, ret = self._compilar_e_medir()
+                    det += f" · storyboard realinhado à voz nova ({n} gatilhos e falas)"
+                if ret.startswith("O compilador recusou"):
+                    raise Parada("a narração mudou e o storyboard não acha mais as falas: " + ret[-300:])
             det += " · storyboard recompilado"
         return det
 

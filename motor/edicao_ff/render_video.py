@@ -141,17 +141,41 @@ def medir_voz(audio, ini, total):
     return (float(i.group(1)) if i else None), (float(pico.group(1)) if pico else None)
 
 
+def pico_do_corpo(audio, ini, total):
+    """O nível (dBFS) que só 0,01% das amostras da narração passam: o pico da fala, sem os estalos isolados.
+    None se não deu para medir."""
+    try:
+        import numpy as np
+    except ImportError:
+        return None
+    r = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{ini:.3f}", "-t", f"{total:.3f}", "-i", str(audio),
+                        "-f", "s16le", "-ac", "1", "-ar", "48000", "-"], capture_output=True)
+    x = np.abs(np.clip(np.frombuffer(r.stdout, dtype=np.int16), -32767, 32767))
+    if not len(x):
+        return None
+    k = min(len(x) - 1, int(len(x) * 0.9999))
+    v = float(np.partition(x, k)[k]) / 32768
+    return 20 * math.log10(v) if v > 0 else None
+
+
 def ganho_voz(audio, ini, total, alvo):
     """Quantos dB a narração sobe para chegar ao volume-alvo (LUFS). A voz sintética chega baixa (medido em
     2026-11-10: −29 e −26,6 LUFS em dois canais, contra −17,6 e −18,9 das referências; o YouTube abaixa vídeo alto,
     mas não aumenta vídeo baixo). O ganho é o mesmo do começo ao fim (não comprime a fala); o limitador só segura os
-    picos, e o ganho para antes de pedir mais de 3 dB dele."""
+    picos, e o ganho para antes de pedir mais de 3 dB dele no pico mais alto. Voz com picos soltos muito acima da
+    fala (2026-11-11, Dark Planner: −26,5 LUFS com pico em −3,8 dBFS, mas só 0,01% das amostras acima de −8) ficava
+    presa em −21 LUFS por causa de um estalo: aí o teto é o pico da FALA (o nível que 0,01% das amostras passam)
+    chegar a 0 dBFS, com o limitador agindo em ~2% do tempo; vale o maior dos dois tetos."""
     lufs, pico = medir_voz(audio, ini, total)
     if lufs is None or lufs < -60:
         return 0.0
     g = alvo - lufs
     if pico is not None:
-        g = min(g, -1.5 - pico + 3.0)
+        teto = -1.5 - pico + 3.0
+        corpo = pico_do_corpo(audio, ini, total)
+        if corpo is not None:
+            teto = max(teto, -corpo)
+        g = min(g, teto)
     return round(max(-12.0, min(24.0, g)), 2)
 
 

@@ -205,6 +205,13 @@ def main():
         falado = item.get("nome_fala") or item["nome"]
         k_nome = R.achar(" ".join(falado.split()[:3]), cursor, len(palavras), f"item {iid} (nome)")
         k_nome = cursor if k_nome is None else k_nome
+        if k_nome >= len(palavras):         # o nome não está na transcrição e a narração já acabou: erro, não exceção
+            R.erros.append(f"item {iid}: o nome \"{falado}\" não está na transcrição (se ela escreve de outro jeito, "
+                           "ponha a forma dela em \"nome_fala\")")
+            log("\nCORRIGIR no cenas.json (a palavra tem que estar escrita como na transcrição):")
+            for er in R.erros:
+                log("  - " + er)
+            sys.exit(1)
         offset = max(0.0, T(k_nome) - 0.04)
         rel = lambda t: round(t - offset, 2)
 
