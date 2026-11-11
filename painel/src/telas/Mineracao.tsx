@@ -272,9 +272,9 @@ export function Mineracao() {
           <footer>
             <span title={t("app.mina.cota_sub")}>{t("app.mina.cota", { usada: data.cota.usada, limite: data.cota.limite })}</span>
             <span>{t("app.mina.custo", { n: data.custo_nicho })}</span>
-            <span>{t("app.mina.sem_shorts", { s: data.filtros.duracao_min_s, p: data.filtros.shorts_max_pct })}</span>
+            <span>{t("app.mina.sem_shorts", { min: Math.round(data.filtros.duracao_min_s / 60), p: data.filtros.shorts_max_pct })}</span>
             <span>{data.ultimo
-              ? t("app.mina.ultimo", { quando: data.ultimo.quando, olhados: data.ultimo.olhados, aprovados: data.ultimo.aprovados, novos: data.ultimo.novos })
+              ? t("app.mina.ultimo", { quando: data.ultimo.quando.replace(/^(\d{4})-(\d\d)-(\d\d) (\d\d:\d\d).*$/, "$3/$2/$1 às $4"), olhados: data.ultimo.olhados, aprovados: data.ultimo.aprovados, novos: data.ultimo.novos })
               : t("app.mina.nunca")}</span>
             <label className="liga" title={t("app.mina.automatico_sub")}>
               <input type="checkbox" checked={data.automatico} onChange={(e) => auto.mutate(e.target.checked)} />

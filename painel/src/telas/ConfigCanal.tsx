@@ -243,6 +243,8 @@ const CAMPOS_REGRAS: { k: keyof Regras; rot: string; ex?: string; linhas: number
   { k: "trocas", rot: "regras.trocas", ex: "regras.trocas_ex", linhas: 2 },
 ];
 
+const AVANCADAS: (keyof Regras)[] = ["proibidos", "permitido_se", "trocas"];
+
 export function RegrasTela() {
   const { canal = "" } = useParams();
   const { data: dc } = useCanal(canal);
@@ -261,6 +263,14 @@ export function RegrasTela() {
     onSuccess: (r) => { setRegras(r.regras); setSugerido(true); },
   });
   if (!dc || !regras) return null;
+  const preenchidas = AVANCADAS.filter((k) => regras[k].trim()).length;
+  const campo = (c: (typeof CAMPOS_REGRAS)[number]) => (
+    <label key={c.k} className={`campo ${c.linhas > 2 ? "" : "curto"}`}>{t(c.rot)}
+      {c.linhas > 1
+        ? <textarea rows={c.linhas} value={regras[c.k]} placeholder={c.ex ? t(c.ex) : undefined} onChange={(e) => setRegras({ ...regras, [c.k]: e.target.value })} />
+        : <input value={regras[c.k]} onChange={(e) => setRegras({ ...regras, [c.k]: e.target.value })} />}
+    </label>
+  );
   return (
     <>
       <Cabecalho titulo={t("regras.titulo")} sub={t("regras.sub")}>
@@ -271,15 +281,12 @@ export function RegrasTela() {
       {sugerido && <div className="aviso-ok"><Sparkles size={16} />{t("regras.sugeridas")}</div>}
       {sugerir.isError && <p className="erro">{sugerir.error.message}</p>}
       <form className="cartao" onSubmit={(e) => { e.preventDefault(); salvar.mutate(); }}>
-        <div className="regras-grade">
-          {CAMPOS_REGRAS.map((c) => (
-            <label key={c.k} className={`campo ${c.linhas > 2 ? "" : "curto"}`}>{t(c.rot)}
-              {c.linhas > 1
-                ? <textarea rows={c.linhas} value={regras[c.k]} placeholder={c.ex ? t(c.ex) : undefined} onChange={(e) => setRegras({ ...regras, [c.k]: e.target.value })} />
-                : <input value={regras[c.k]} onChange={(e) => setRegras({ ...regras, [c.k]: e.target.value })} />}
-            </label>
-          ))}
-        </div>
+        <div className="regras-grade">{CAMPOS_REGRAS.filter((c) => !AVANCADAS.includes(c.k)).map(campo)}</div>
+        {/* expressão regular e JSON: quase ninguém mexe, e quem mexe sabe onde está */}
+        <details className="recolhe avancado">
+          <summary><h3>{t("regras.avancado")}</h3><span className="sub">{t(preenchidas ? "regras.avancado_tem" : "regras.avancado_sub", { n: preenchidas })}</span></summary>
+          <div className="regras-grade">{CAMPOS_REGRAS.filter((c) => AVANCADAS.includes(c.k)).map(campo)}</div>
+        </details>
         <div className="rodape-form">
           <button className="bt primario" disabled={salvar.isPending}><Save size={16} />{t("regras.salvar")}</button>
           {salvar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.salvo")}</span>}
@@ -297,10 +304,35 @@ export function AprendizadosTela() {
   const { data } = useQuery({ queryKey: ["aprendizados", canal], queryFn: () => pegar<{ texto: string }>(`/api/c/${canal}/aprendizados`) });
   const t = useT();
   if (!dc || !data) return null;
+  // o arquivo é uma nota da pasta de conhecimento: sai o cabeçalho dela (frontmatter, título, "Voltar: [[índice]]")
+  // e os [[links]] viram texto; cada "## data — assunto" vira uma entrada que abre e fecha
+  const limpo = data.texto.replace(/^---[\s\S]*?---\n/, "").replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, "$1");
+  const entradas = limpo.split(/\n(?=## )/).filter((b) => b.startsWith("## ")).map((b) => {
+    const [cabeca, ...resto] = b.split("\n");
+    const m = /^##\s+(\d{4})-(\d\d)-(\d\d)\s*[—–-]\s*(.*)$/.exec(cabeca);
+    return {
+      data: m ? `${m[3]}/${m[2]}/${m[1]}` : "",
+      titulo: m ? m[4] : cabeca.replace(/^##\s+/, ""),
+      corpo: resto.join("\n").replace(/\n---\s*$/, "").trim(),
+    };
+  });
   return (
     <>
       <Cabecalho titulo={t("app.aprendizados.titulo")} sub={t("app.aprendizados.explica")} />
-      {data.texto ? <div className="cartao leitura"><Markdown texto={data.texto.replace(/^---[\s\S]*?---\n/, "")} /></div>
+      {entradas.length ? (
+        <div className="aprendizados leitura">
+          {entradas.map((e, i) => (
+            <details key={i} className="cartao recolhe entrada" open={i === 0 || undefined}>
+              <summary>
+                <h3>{e.titulo}</h3>
+                {e.data && <span className="sub">{e.data}</span>}
+                {i < 4 && <span className="selo run" title={t("app.aprendizados.no_storyboard_dica")}>{t("app.aprendizados.no_storyboard")}</span>}
+              </summary>
+              <Markdown texto={e.corpo} />
+            </details>
+          ))}
+        </div>
+      ) : data.texto.trim() ? <div className="cartao leitura"><Markdown texto={limpo} /></div>
         : <div className="vazio">{t("app.aprendizados.vazio")}</div>}
     </>
   );

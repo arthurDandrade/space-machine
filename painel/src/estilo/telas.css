@@ -819,3 +819,13 @@ pre.saida { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background
 .abas button { display: inline-flex; align-items: center; gap: 7px; }
 .abas button svg { color: var(--ink3); }
 .abas button.on svg { color: var(--accent-text); }
+
+/* Log de Aprendizados: uma entrada por cartão */
+.aprendizados { display: flex; flex-direction: column; gap: 10px; }
+.aprendizados .entrada summary { align-items: center; flex-wrap: wrap; }
+.aprendizados .entrada summary h3 { font-size: 15px; flex: 1; min-width: 240px; }
+.aprendizados .entrada[open] summary { margin-bottom: 12px; }
+/* Regras do tema: o avançado */
+.recolhe.avancado { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.recolhe.avancado summary h3 { font-size: 14px; }
+.recolhe.avancado[open] summary { margin-bottom: 12px; }
