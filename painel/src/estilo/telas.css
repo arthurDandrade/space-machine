@@ -403,7 +403,9 @@ button.nicho { padding: 7px 14px; }      /* o chip "Todos os nichos" é o botão
 .mini-asset { width: 84px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--raised); flex: none; display: grid; place-items: center; font-size: 11px; color: var(--ink3); }
 .mini-asset img, .mini-asset video { width: 100%; height: 100%; object-fit: contain; }
 .conf .t { display: flex; flex-direction: column; font-size: 13px; min-width: 0; }
-.conf .t b { font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, monospace; }
+.conf .t b { font-size: 12.5px; font-weight: 700; color: var(--ink2); }
+.conf .t b i { font-style: normal; font-weight: 600; color: var(--ink3); margin-left: 8px; }
+.mini-asset > svg { opacity: 0.5; }
 .conf .t em { font-style: normal; color: var(--ink3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .recolhe summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; list-style: none; }
 .recolhe summary::-webkit-details-marker { display: none; }

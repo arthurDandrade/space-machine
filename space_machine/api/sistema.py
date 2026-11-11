@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile
 
-from .. import atualizar, configuracao, limpeza, primeiros_passos, textos
+from .. import atualizar, configuracao, estado, fichas, limpeza, primeiros_passos, textos
 from ..motor_claude import _banco, canais
 from ..sistema import DADOS, FORMATO_PADRAO, REPO, config, formatos
 from .comum import IMAGENS, _cache_falta, _consumo_7d
@@ -32,11 +32,24 @@ def consumo():
                             limit 300""").fetchall()
     con.close()
     nomes = {s: c["nome"] for s, c in canais().items()}
+    titulos = {}
+
+    def titulo(canal, video):
+        """O título do vídeo (se ele ainda existe); senão, a pasta dele como estava."""
+        if not video:
+            return ""
+        if (canal, video) not in titulos:
+            c = canais().get(canal)
+            vd = Path(c["producoes"]) / video if c else None
+            existe = vd and (vd.is_dir() or fichas.existe(vd))
+            # vídeo que não existe mais (excluído ou de um canal apagado): a pasta dele, em palavras
+            titulos[canal, video] = estado.titulo_video(vd) if existe else f"{video.replace('-', ' ').capitalize()} (excluído)"
+        return titulos[canal, video]
     return {"total_7d": _consumo_7d()["total"],
             "por_etapa": [{"etapa": e, "chamadas": n, "tokens": t or 0, "media": round(m or 0)} for e, n, t, m in por_etapa],
-            "por_video": [{"canal": nomes.get(c, c), "video": v or "", "chamadas": n, "tokens": t or 0, "ultima": q}
+            "por_video": [{"canal": nomes.get(c, c), "video": titulo(c, v), "chamadas": n, "tokens": t or 0, "ultima": q}
                           for c, v, n, t, q in por_video],
-            "linhas": [{"canal": nomes.get(c, c), "video": v or "", "bloco": b or "", "etapa": e, "modelo": m,
+            "linhas": [{"canal": nomes.get(c, c), "video": titulo(c, v), "bloco": b or "", "etapa": e, "modelo": m,
                         "chamadas": n, "tokens": t or 0, "falhas": f or 0, "ultima": q}
                        for c, v, b, e, m, n, t, f, q in linhas]}
 

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { DetalheBloco, enviar, pegar, rota } from "../api";
 import { AoVivo, IconeEtapa, motivoLimpo, resumoEtapa } from "../componentes/AoVivo";
+import { ItemConferir } from "../componentes/Conferir";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
 import { TituloCopiavel } from "../componentes/Copiar";
@@ -251,12 +252,7 @@ export function BlocoTela() {
               </div>
               <div className="lista-conferir">
                 {b.conferir.map((c) => (
-                  <div className="conf" key={c.id}>
-                    <div className="mini-asset">
-                      {c.arquivo ? (c.arquivo.endsWith(".mp4") ? <video src={`${c.arquivo}#t=1`} preload="metadata" muted /> : <img src={c.arquivo} alt="" loading="lazy" />) : <span>{c.tipo}</span>}
-                    </div>
-                    <div className="t"><b>{c.id}</b><span>{c.texto}</span>{c.descricao && <em>{c.descricao}</em>}</div>
-                  </div>
+                  <ItemConferir key={c.id} c={c} />
                 ))}
               </div>
               {!b.rodando && (

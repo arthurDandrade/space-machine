@@ -129,6 +129,9 @@ export function CanaisConfigTela() {
   );
 }
 
+// "2026-11-11 16:40:40" → "11/11 16:40"
+const diaHora = (q: string) => (/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(q) ? `${q.slice(8, 10)}/${q.slice(5, 7)} ${q.slice(11, 16)}` : q);
+
 interface Consumo {
   total_7d: number;
   por_etapa: { etapa: string; chamadas: number; tokens: number; media: number }[];
@@ -153,7 +156,7 @@ export function ConsumoTela() {
           <div className="rola-x"><table className="tabela">
             <thead><tr><th>{t("app.consumo.etapa")}</th><th className="n">{t("app.consumo.chamadas")}</th><th className="n">{t("app.consumo.tokens_col")}</th><th className="n">{t("app.consumo.media")}</th></tr></thead>
             <tbody>{data.por_etapa.map((e) => (
-              <tr key={e.etapa}><td>{t(`app.consumo.${e.etapa}`, undefined, e.etapa)}</td><td className="n">{e.chamadas}</td><td className="n">{compacto(e.tokens)}</td><td className="n">{compacto(e.media)}</td></tr>
+              <tr key={e.etapa}><td>{t(`app.consumo.${e.etapa}`, undefined, e.etapa)}</td><td className="n">{e.chamadas}</td><td className="n">{compacto(e.tokens)}</td><td className="n">{e.media ? compacto(e.media) : "—"}</td></tr>
             ))}</tbody>
           </table></div>
         </div>
@@ -163,7 +166,7 @@ export function ConsumoTela() {
         <div className="rola-x"><table className="tabela">
           <thead><tr><th>{t("app.consumo.canal")}</th><th>{t("app.consumo.video")}</th><th className="n">{t("app.consumo.chamadas")}</th><th className="n">{t("app.consumo.tokens_col")}</th><th>{t("app.consumo.ultima")}</th></tr></thead>
           <tbody>{data.por_video.map((v) => (
-            <tr key={v.canal + v.video}><td>{v.canal}</td><td>{v.video || "—"}</td><td className="n">{v.chamadas}</td><td className="n">{compacto(v.tokens)}</td><td className="sub">{v.ultima}</td></tr>
+            <tr key={v.canal + v.video}><td>{v.canal}</td><td>{v.video || <span className="sub">{t("app.consumo.sem_video")}</span>}</td><td className="n">{v.chamadas}</td><td className="n">{compacto(v.tokens)}</td><td className="sub">{diaHora(v.ultima)}</td></tr>
           ))}</tbody>
         </table></div>
       </div>
@@ -173,7 +176,7 @@ export function ConsumoTela() {
           <table className="tabela">
             <thead><tr><th>{t("app.consumo.video")}</th><th>{t("app.consumo.bloco")}</th><th>{t("app.consumo.etapa")}</th><th>{t("app.consumo.modelo")}</th><th className="n">{t("app.consumo.chamadas")}</th><th className="n">{t("app.consumo.tokens_col")}</th><th className="n">{t("app.consumo.falhas")}</th><th>{t("app.consumo.ultima")}</th></tr></thead>
             <tbody>{data.linhas.map((l, i) => (
-              <tr key={i}><td>{l.video}</td><td>{l.bloco}</td><td>{t(`app.consumo.${l.etapa}`, undefined, l.etapa)}</td><td className="sub">{l.modelo.replace("claude-", "")}</td><td className="n">{l.chamadas}</td><td className="n">{compacto(l.tokens)}</td><td className="n">{l.falhas || ""}</td><td className="sub">{l.ultima}</td></tr>
+              <tr key={i}><td>{l.video}</td><td>{l.bloco}</td><td>{t(`app.consumo.${l.etapa}`, undefined, l.etapa)}</td><td className="sub">{l.modelo.replace("claude-", "")}</td><td className="n">{l.chamadas}</td><td className="n">{compacto(l.tokens)}</td><td className="n">{l.falhas || ""}</td><td className="sub">{diaHora(l.ultima)}</td></tr>
             ))}</tbody>
           </table>
         </div>

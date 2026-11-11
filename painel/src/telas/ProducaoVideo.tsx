@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, ExternalLink, FolderOpen, Loader, Mic, Play, Square, Wrench, X } from "lucide-react";
 import { AoVivo, IconeEtapa, motivoLimpo, resumoEtapa } from "../componentes/AoVivo";
+import { ItemConferir } from "../componentes/Conferir";
 import { DetalheVideo, enviar, ProducaoVideo as Producao } from "../api";
 import { Markdown } from "../componentes/Markdown";
 import { useT } from "../textos";
@@ -185,12 +186,7 @@ export function ProducaoVideo({ canal, v }: { canal: string; v: DetalheVideo }) 
               </summary>
               <div className="lista-conferir">
                 {p.conferir.map((c) => (
-                  <div className="conf" key={c.id}>
-                    <div className="mini-asset">
-                      {c.arquivo ? (c.arquivo.includes(".mp4") ? <video src={`${c.arquivo}#t=1`} preload="metadata" muted /> : <img src={c.arquivo} alt="" loading="lazy" />) : <span>{c.tipo}</span>}
-                    </div>
-                    <div className="t"><b>{c.id}</b><span>{c.texto}</span>{c.descricao && <em>{c.descricao}</em>}</div>
-                  </div>
+                  <ItemConferir key={c.id} c={c} />
                 ))}
               </div>
               {!p.rodando && (
