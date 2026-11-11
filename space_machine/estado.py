@@ -252,12 +252,16 @@ def video(canal_slug, video_slug, com_blocos=True):
     n = len(blocos)
     entregues = sum(1 for b in blocos if b["feito"]["entregue"])
     from .video import fluxo_video
-    prod = producao_video(vd) if fluxo_video(vd) else None
+    ficha = _json(vd / "estudio_video.json", {}) or {}
+    arquivado = ficha.get("arquivado") or ""        # só a ficha ficou (gestao.arquivar_video): não há o que medir
+    prod = producao_video(vd) if fluxo_video(vd) and not arquivado else None
     if prod:            # fluxo "video": os capítulos não são entregues um a um; o vídeo inteiro é
         entregues = n if prod["feito"]["entregar"] else 0
     return {"canal": canal_slug, "slug": video_slug, "titulo": titulo_video(vd), "pasta": str(vd),
             "blocos": blocos, "n_blocos": n, "entregues": entregues,
             "fluxo": "video" if prod else "blocos", "producao": prod,
+            "arquivado": arquivado, "numero": ficha.get("numero") or 0, "pronto": ficha.get("pronto") or "",
+            "duracao_s": ficha.get("duracao_s") or 0, "n_blocos_ficha": ficha.get("n_blocos") or 0,
             "mudou": max([vd.stat().st_mtime] + [b["mudou"] for b in blocos] + [prod["mudou"] if prod else 0]),
             "consumo": consumo(canal=canal_slug, video=video_slug), "fila": _fila(vd)}
 

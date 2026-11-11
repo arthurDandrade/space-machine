@@ -23,6 +23,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
 from .motor_claude import _banco, canais
 from . import video as video_mod
 from . import thumb as thumb_mod
+from . import prontos
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
@@ -107,6 +108,8 @@ def _video(slug, v):
         "coluna": gestao.coluna_do_video(v, g), "n_blocos": v["n_blocos"], "entregues": v["entregues"],
         "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
         "fluxo": v.get("fluxo", "blocos"),
+        "arquivado": v.get("arquivado") or "", "numero": v.get("numero") or 0, "pronto": v.get("pronto") or "",
+        "duracao_s": v.get("duracao_s") or 0, "n_blocos_ficha": v.get("n_blocos_ficha") or 0,
         "mudou": v["mudou"], "data_pub": (g.get("data_pub") or "")[:10], "link": g.get("link") or "",
         "fila": _resumo_fila(f), "consumo": (v.get("consumo") or {}).get("equivalente") or 0,
         "tem_capa": bool(capas.fontes(v["pasta"])), "capa_v": _versao_capa(v["pasta"]), "thumb": _thumb(v["pasta"]),
@@ -286,8 +289,8 @@ def detalhe_video(slug: str, video: str):
               for b, info in zip(v["blocos"], resumo["blocos"])]
     fim = final.ler_estado(vd)
     aep, mp4 = vd / "final" / "final.aep", Path(fim.get("mp4") or vd / "final" / "-")
-    if not mp4.is_file():      # MP4 renderizado antes (ou à mão): o mais novo da pasta final/
-        mp4 = max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=mp4)
+    if not mp4.is_file():      # o da pasta de prontos do canal; senão, um renderizado antes (ou à mão) em final/
+        mp4 = prontos.atual(vd) or max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=mp4)
     fim.update(tem_aep=aep.exists(), mp4_url=_arquivo(mp4) if mp4.is_file() else None,
                mp4_tamanho=mp4.stat().st_size if mp4.is_file() else 0, entregues=len(final.entregues(vd)))
     thumb = capas.info_thumbnail(vd)
@@ -756,6 +759,24 @@ def excluir_video(slug: str, video: str):
         raise HTTPException(409, str(e))
 
 
+@api.post("/c/{slug}/v/{video}/arquivar")
+def arquivar_video(slug: str, video: str, com_mp4: bool = Body(False, embed=True)):
+    """A produção vai para o Lixo do Mac e a ficha do vídeo fica (gestao.arquivar_video)."""
+    try:
+        return {"ok": True, **gestao.arquivar_video(_canal(slug), video, com_mp4)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@api.post("/c/{slug}/prontos/abrir")
+def abrir_prontos(slug: str):
+    """Mostra no Finder a pasta dos vídeos prontos do canal (<canal>/videos)."""
+    pasta = Path(_canal(slug)["raiz"]) / prontos.PASTA
+    pasta.mkdir(exist_ok=True)
+    subprocess.run(["open", str(pasta)], check=False)
+    return {"ok": True}
+
+
 @api.post("/c/{slug}/v/{video}/b/{nn}/limpar")
 def limpar_bloco(slug: str, video: str, nn: str):
     """Zera o bloco (só o que a produção fez vai para o Lixo); o bloco continua no vídeo, com o roteiro."""
@@ -790,6 +811,10 @@ def restaurar_video(slug: str, nome: str):
 def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True), sub: str = Body("", embed=True)):
     """Mostra a pasta do vídeo (do bloco, ou a final/ ou reels/) no Finder: o painel roda no próprio Mac."""
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
+    pronto = prontos.atual(pasta) if sub == "final" and not nn else None
+    if pronto:      # o vídeo pronto mora na pasta do canal: mostra o arquivo lá
+        subprocess.run(["open", "-R", str(pronto)], check=False)
+        return {"ok": True}
     if sub in ("final", "reels") and (pasta / sub).is_dir():
         pasta = pasta / sub
     subprocess.run(["open", str(pasta)], check=False)

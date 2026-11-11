@@ -13,7 +13,7 @@ Uso:
   buscar, escolher       todos os assets do vídeo de uma vez
   montar                 gerar_ae2 por capítulo → compositor sem After (render_video: os capítulos em paralelo, só o
                          que mudou) → QA de cada capítulo; uma correção automática dos que reprovarem
-  entregar               emenda tudo com a narração e a trilha em <vídeo>/final/<título>.mp4
+  entregar               emenda tudo com a narração e a trilha e guarda em <canal>/videos/NN - <título>.mp4
 
 Cada etapa vê pelos arquivos se já foi feita e pula. Parou: o motivo fica em <vídeo>/producao/_estudio/estado.json.
 """
@@ -30,6 +30,7 @@ import uuid
 from pathlib import Path
 
 from . import final as final_mod
+from . import prontos
 from . import limpeza
 from . import motor_claude as motor
 from . import video
@@ -654,8 +655,9 @@ class RodadaVideo(Rodada):
         nome = re.sub(r'[/:"\\]', "-", titulo_video(self.video)).strip() or self.video.name
         mp4 = fim_dir / f"{nome}.mp4"
         mais_novo = max(Path(p["saida"]).stat().st_mtime for p in pedacos)
-        if mp4.exists() and mp4.stat().st_mtime >= mais_novo and self.de != "entregar":
-            return f"já entregue ({mp4.relative_to(self.video)})"
+        pronto = prontos.atual(self.video) or (mp4 if mp4.exists() else None)   # em final/: entregue antes da pasta do canal
+        if pronto and pronto.stat().st_mtime >= mais_novo and self.de != "entregar":
+            return f"já entregue ({pronto.name})"
         final_mod._guardar_anterior(mp4)
         total = sum(p["dur"] for p in pedacos)
         musica = final_mod.trilha(self.video, fim_dir, total=total)
@@ -669,9 +671,11 @@ class RodadaVideo(Rodada):
                                  ambiente_dbfs=None if musica else som.get("ambiente_dbfs"))
         except subprocess.CalledProcessError as e:
             raise Parada(f"o FFmpeg falhou ao emendar: {e}")
+        # o vídeo pronto mora na pasta do canal, numerado na ordem de postar (prontos.py)
+        mp4 = prontos.guardar(self.video, mp4)
         final_mod._marcar(self.video, status="ok", etapa="pronto", mp4=str(mp4), fim=time.strftime("%Y-%m-%d %H:%M:%S"),
                           render=True, blocos=len(pedacos), erro="")
-        det = f"{mp4.relative_to(self.video)} ({total / 60:.1f} min)"
+        det = f"{prontos.PASTA}/{mp4.name} ({total / 60:.1f} min)"
         try:
             r = limpeza.depois_de_entregar_video(self.video)
             if r:

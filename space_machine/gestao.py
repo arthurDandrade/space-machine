@@ -12,7 +12,7 @@ import subprocess
 import unicodedata
 from pathlib import Path
 
-from . import estado
+from . import estado, prontos
 from .motor_claude import _banco
 from .sistema import arquivo_formato, ficha_formato, gravar_json, ler_json
 
@@ -65,6 +65,8 @@ def coluna_do_video(v, g):
     """Status manual (edição final / agendado / publicado) vale; senão, deriva dos blocos."""
     if g.get("status") in MANUAIS:
         return g["status"]
+    if v.get("arquivado"):          # arquivado sem status marcado: o vídeo estava pronto
+        return "edicao_final"
     if v["n_blocos"] and v["entregues"] == v["n_blocos"]:
         return "edicao_final"
     if any(b["atual"] != "roteiro" for b in v["blocos"]):
@@ -379,8 +381,56 @@ def excluir_video(c, slug):
         raise ValueError(motivo)
     destino = prod / LIXEIRA / f"{slug}__{dt.datetime.now():%Y%m%d-%H%M%S}"
     destino.parent.mkdir(exist_ok=True)
+    pronto = prontos.para_a_lixeira(vd, destino)       # o MP4 da pasta de prontos do canal vai junto
     vd.rename(destino)
+    for de, para in pronto:
+        para.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(de), str(para))
     return destino.name
+
+
+MANTER_ARQUIVADO = ("estudio_video.json", "roteiro_completo.txt", "thumbnail.json")
+
+
+def arquivar_video(c, slug, com_mp4=False):
+    """Vídeo que já foi (ou não vai mais ser) produzido: a produção inteira (blocos, narrações, assets, renders,
+    versões anteriores) vai para o Lixo do Mac e a FICHA fica — título, número, roteiro, thumbnail, duração e o que
+    está na aba Publicação (descrição, tags, data, link). O vídeo continua no quadro, no calendário e na lista.
+    O MP4 pronto continua na pasta de prontos do canal, a não ser com com_mp4=True. Não tem desfazer no painel: o
+    que saiu fica no Lixo do Mac até você esvaziar."""
+    from . import capas, limpeza
+    vd = Path(c["producoes"]) / slug
+    if not slug or slug.startswith((".", "_")) or "/" in slug or not vd.is_dir():
+        raise ValueError("vídeo não encontrado")
+    if prontos.arquivado(vd):
+        raise ValueError("este vídeo já está arquivado")
+    motivo = _ocupado(vd)
+    if motivo:
+        raise ValueError(motivo)
+    mp4 = prontos.atual(vd)
+    if not mp4:     # entregue antes de existir a pasta de prontos: o MP4 ainda está em final/
+        from .final import ler_estado
+        velho = Path(ler_estado(vd).get("mp4") or vd / "final" / "-")
+        if not velho.is_file():
+            velho = max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=velho)
+        if velho.is_file() and not com_mp4:
+            mp4 = prontos.guardar(vd, velho)
+    ficha = {"arquivado": dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+             "n_blocos": len(estado.blocos_do_video(vd))}
+    if mp4:
+        try:
+            ficha["duracao_s"] = round(_duracao(mp4), 1)
+        except (ValueError, OSError, subprocess.SubprocessError):
+            pass
+    thumb = capas.thumbnail(vd)
+    itens = [(p, "arquivado") for p in sorted(vd.iterdir())
+             if p.name not in MANTER_ARQUIVADO and p != thumb and p.name != ".DS_Store"]
+    if com_mp4 and mp4:
+        itens += [(f, "arquivado") for f in [mp4] + prontos._capas(mp4)]
+        ficha["pronto"] = None
+    tamanho, quantos, lixo = limpeza.mandar_para_o_lixo(itens) if itens else (0, 0, Path(""))
+    prontos.anotar(vd, **ficha)
+    return {"tamanho": tamanho, "quantos": quantos, "lixo": lixo.name, "mp4": bool(mp4) and not com_mp4}
 
 
 def _mp4_entregues(vd, nn):
@@ -496,4 +546,5 @@ def restaurar_video(c, nome):
         if destino.exists():
             raise ValueError(f"já existe {destino.name}: renomeie a pasta antes")
     src.rename(destino)
+    prontos.da_lixeira(destino)
     return destino.name

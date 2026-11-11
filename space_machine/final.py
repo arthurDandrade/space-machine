@@ -4,7 +4,7 @@
 
 Monta <vídeo>/final/final.aep: os blocos entregues em sequência numa comp só (com a trilha do canal por baixo, se o canal
 tiver <canal>/identidade/trilha.mp3), com a camada de ajuste de ruído do vídeo final (config video_final.ruido: 6% por padrão, como o primeiro vídeo final montado à mão
-em 2026-10-13; 0 = sem). Com --render, renderiza <vídeo>/final/<título>.mp4.
+em 2026-10-13; 0 = sem). Com --render, renderiza o MP4, que vai para <canal>/videos/NN - <título>.mp4 (prontos.py).
 Desde 2026-10-16 cada bloco entra pelo projeto dele (blocos/NN/edicao/bloco_NN_v2.aep, importado inteiro): o vídeo
 final sai de um render só, sem comprimir de novo os MP4s dos blocos, e o que você ajustar no .aep de um bloco entra
 no final. O edicao/bloco N.mp4 continua marcando o bloco como entregue (é a prévia de rascunho, em meia resolução) e
@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import estado
+from . import estado, prontos
 from .sistema import DADOS, MOTOR, config, gravar_json, ler_json
 
 MONTAR = r"""
@@ -181,7 +181,7 @@ def _motor(vd):
 def montar_ffmpeg(vd):
     """Vídeo final sem After (formato com edicao.motor = "ffmpeg"): cada bloco entregue é desenhado de novo em
     1920×1080 pelo compositor (motor/edicao_ff/compor.py) a partir do plano_render_NN.json dele, o FFmpeg junta os
-    blocos sem recomprimir e mistura a trilha do canal, se houver. Sai <vídeo>/final/<título>.mp4."""
+    blocos sem recomprimir e mistura a trilha do canal, se houver. O MP4 vai para <canal>/videos/NN - <título>.mp4 (prontos.py)."""
     vd = Path(vd)
     fim_dir = vd / "final"
     (fim_dir / "blocos").mkdir(parents=True, exist_ok=True)
@@ -241,7 +241,7 @@ def montar_ffmpeg(vd):
             junto.unlink(missing_ok=True)
         else:
             junto.rename(mp4)
-        _marcar(vd, mp4=str(mp4))
+        _marcar(vd, mp4=str(prontos.guardar(vd, mp4)))
     except subprocess.CalledProcessError as e:
         _marcar(vd, status="erro", etapa="o FFmpeg falhou ao juntar", erro=str(e)[-300:],
                 fim=time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -299,7 +299,7 @@ def montar(vd, render=False):
                 _marcar(vd, status="erro", etapa="o After não renderizou", erro=r or "sem resposta do After em 4 h",
                         fim=time.strftime("%Y-%m-%d %H:%M:%S"))
                 return 1
-            _marcar(vd, mp4=str(mp4))
+            _marcar(vd, mp4=str(prontos.guardar(vd, mp4)))
     finally:
         fcntl.flock(trava, fcntl.LOCK_UN)
         trava.close()

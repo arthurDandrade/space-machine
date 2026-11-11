@@ -24,7 +24,8 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
   const soltar = useSoltar(enviar);
   const capa = urlCapa(canal, v.slug, undefined, v.capa_v);
   const detalhe =
-    v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos })     // o vídeo inteiro anda junto
+    v.arquivado ? t("app.arquivar.selo")
+    : v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos })     // o vídeo inteiro anda junto
     : v.coluna === "producao" || v.coluna === "roteiro"
       ? t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })
       : t("app.video.blocos_pronto", { n: v.n_blocos });
@@ -37,10 +38,10 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
         {v.rodando > 0 && <span className="vivo"><span className="pulso" />{v.rodando}</span>}
       </div>
       <div className="info">
-        <b><TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
+        <b>{v.numero > 0 && <span className="num-video">{String(v.numero).padStart(2, "0")}</span>}<TituloCopiavel texto={v.titulo_pub || v.titulo} /></b>
         <span>{detalhe}{v.esperando > 0 && <em> · {t("app.esperando_n", { n: v.esperando })}</em>}</span>
         <div className="progresso">
-          <i style={{ width: `${pct}%`, background: v.coluna === "producao" ? "var(--accent)" : undefined }} />
+          <i style={{ width: `${v.arquivado ? 100 : pct}%`, background: v.coluna === "producao" ? "var(--accent)" : undefined }} />
         </div>
       </div>
     </Link>

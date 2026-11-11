@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { CircleCheck, FolderOpen, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import { Coluna, enviar, pegar, rota } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
@@ -62,6 +62,7 @@ export function VideosCanal() {
   return (
     <>
       <Cabecalho titulo={t("app.videos.titulo", { n: data.videos.length })} sub={t("app.videos.explica")}>
+        <button className="bt" onClick={() => enviar(`/api/c/${canal}/prontos/abrir`, {})} title={t("app.prontos.dica")}><FolderOpen size={16} />{t("app.prontos.abrir")}</button>
         <Link className="bt primario" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
       </Cabecalho>
       <div className="barra-filtros">

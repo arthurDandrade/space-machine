@@ -81,10 +81,21 @@ def salvar_thumbnail(video_dir, dados, nome):
     (vd / f"thumbnail{'.jpg' if ext == '.jpeg' else ext}").write_bytes(dados)
     (vd / "thumbnail.json").write_text(json.dumps({"nome": Path(nome).name, "largura": largura, "altura": altura,
                                                    "enviada": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False))
+    _capa_do_pronto(vd)
 
 
 def remover_thumbnail(video_dir):
     _guardar_thumbnail(Path(video_dir))
+    _capa_do_pronto(video_dir)
+
+
+def _capa_do_pronto(vd):
+    """Vídeo que já está na pasta de prontos do canal: a capa ao lado do MP4 acompanha a thumbnail."""
+    from . import prontos
+    try:
+        prontos.capa(vd)
+    except OSError:
+        pass
 
 
 def info_thumbnail(video_dir):

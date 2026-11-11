@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, Clapperboard, Copy, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Archive, Check, Clapperboard, Copy, ExternalLink, Film, FolderOpen, ImagePlus, Layers, Loader, Play, Save, Trash2, Wand2 } from "lucide-react";
 import { BlocoDoVideo, DetalheVideo, enviar, pegar, Publicacao, rota, urlCapa } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
 import { useCanal } from "../casca/CascaCanal";
@@ -324,13 +324,67 @@ function ExcluirVideo({ canal, v }: { canal: string; v: DetalheVideo }) {
   );
 }
 
+// Arquivar: a produção vai para o Lixo do Mac e a ficha fica (gestao.arquivar_video). Você escolhe se o MP4 fica.
+function ArquivarVideo({ canal, v }: { canal: string; v: DetalheVideo }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const [aberto, setAberto] = useState(false);
+  const [comMp4, setComMp4] = useState(false);
+  const arquivar = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/v/${v.slug}/arquivar`, { com_mp4: comMp4 }),
+    onSuccess: () => { setAberto(false); qc.invalidateQueries(); },
+  });
+  return (
+    <>
+      <button className="bt redondo" onClick={() => setAberto(true)} title={t("app.arquivar.botao")}><Archive size={16} /></button>
+      {aberto && (
+        <Dialogo titulo={t("app.arquivar.titulo", { titulo: v.titulo_pub || v.titulo })} fechar={() => setAberto(false)}
+          acoes={<>
+            <button className="bt" onClick={() => setAberto(false)}>{t("app.cancelar")}</button>
+            <button className="bt perigo-cheio" disabled={arquivar.isPending} onClick={() => arquivar.mutate()}><Archive size={16} />{t("app.arquivar.confirmar")}</button>
+          </>}>
+          <p>{t("app.arquivar.explica")}</p>
+          <p>{t(v.final.mp4_url ? "app.arquivar.mp4_fica" : "app.arquivar.sem_mp4")}</p>
+          {v.final.mp4_url && <label className="marcar"><input type="checkbox" checked={comMp4} onChange={(e) => setComMp4(e.target.checked)} /> {t("app.arquivar.com_mp4")}</label>}
+          <p className="sub">{t("app.arquivar.lixo")}</p>
+          {arquivar.isError && <p className="erro">{arquivar.error.message}</p>}
+        </Dialogo>
+      )}
+    </>
+  );
+}
+
+// O que sobra de um vídeo arquivado: a ficha, no lugar do andamento da produção.
+function FichaArquivado({ canal, v }: { canal: string; v: DetalheVideo }) {
+  const t = useT();
+  const min = v.duracao_s ? `${Math.floor(v.duracao_s / 60)}:${String(Math.round(v.duracao_s % 60)).padStart(2, "0")}` : "";
+  return (
+    <div className="parte">
+      <div className="t-final"><Archive size={16} /><b>{t("app.arquivar.ficha_titulo")}</b></div>
+      <p className="sub">{t("app.arquivar.ficha_explica", { quando: v.arquivado })}</p>
+      <div className="selos">
+        {v.n_blocos_ficha > 0 && <span className="selo neutro">{t("app.video.capitulos_n", { n: v.n_blocos_ficha })}</span>}
+        {min && <span className="selo neutro">{min}</span>}
+        {v.publicacao.data_pub && <span className="selo neutro">{v.publicacao.data_pub.slice(0, 10)}</span>}
+      </div>
+      <div className="acoes-final">
+        {v.final.mp4_url && <a className="bt pequeno" href={v.final.mp4_url} target="_blank" rel="noreferrer"><Play size={14} />{t("app.arquivar.assistir")}</a>}
+        {v.final.mp4_url && <button className="bt pequeno" onClick={() => enviar(`/api/c/${canal}/v/${v.slug}/abrir`, { sub: "final" })}><FolderOpen size={14} />{t("app.prontos.mostrar")}</button>}
+        {v.publicacao.link && <a className="bt pequeno" href={v.publicacao.link} target="_blank" rel="noreferrer"><ExternalLink size={14} />{t("app.arquivar.link")}</a>}
+      </div>
+      {!v.final.mp4_url && <p className="sub">{t("app.arquivar.ficha_sem_mp4")}</p>}
+    </div>
+  );
+}
+
 export function VideoTela() {
   const { canal = "", video = "" } = useParams();
   const { data: dc } = useCanal(canal);
   const { data: v, error } = useVideo(canal, video);
   const t = useT();
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") === "publicacao" ? "publicacao" : "blocos";
+  const arquivado = !!v?.arquivado;      // só a ficha: não há produção para mostrar
+  const aba = params.get("aba") === "publicacao" || arquivado ? "publicacao" : "blocos";
   const inteiro = !!v?.producao;      // fluxo "video": o vídeo inteiro anda junto (ProducaoVideo.tsx)
   const [filtro, setFiltro] = useState<Filtro>("todos");
   if (error) throw error;
@@ -348,16 +402,18 @@ export function VideoTela() {
     <>
       <Cabecalho
         onde={<><Link to={rota.canal(canal)}>{dc.canal.nome}</Link> › <Link to={`/c/${canal}/videos`}>{t("app.nav.videos")}</Link></>}
-        titulo={<><TituloCopiavel texto={v.titulo_pub || v.titulo} /> <span className="selo neutro coluna">{t(`app.coluna.${v.coluna}`)}</span></>}>
+        titulo={<>{v.numero > 0 && <span className="num-video">{String(v.numero).padStart(2, "0")}</span>}<TituloCopiavel texto={v.titulo_pub || v.titulo} /> <span className="selo neutro coluna">{t(`app.coluna.${v.coluna}`)}</span>
+          {arquivado && <span className="selo neutro coluna"><Archive size={12} />{t("app.arquivar.selo")}</span>}</>}>
         <button className="bt" onClick={abrir} title={t("app.abrir_pasta_dica")}><FolderOpen size={16} />{t("app.abrir_pasta")}</button>
         <span className="separa" />
+        {!arquivado && <ArquivarVideo canal={canal} v={v} />}
         <ExcluirVideo canal={canal} v={v} />
       </Cabecalho>
 
       <div className="video-topo">
         <CapaVideo canal={canal} v={v} />
         <div className="andamento cartao">
-          {inteiro ? <AndamentoVideo canal={canal} v={v} /> : <>
+          {arquivado ? <FichaArquivado canal={canal} v={v} /> : inteiro ? <AndamentoVideo canal={canal} v={v} /> : <>
           <div className="parte">
             <div className="pct"><b>{pct}%</b><span>{t("app.video.blocos_entregues", { e: v.entregues, n: v.n_blocos })}</span></div>
             <div className="segmentos grossos">{v.blocos.map((b) => <i key={b.nn} className={b.estado} title={`${b.nn} · ${b.topico}`} />)}</div>
@@ -381,7 +437,7 @@ export function VideoTela() {
       </div>
 
       <div className="abas">
-        <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}>{t(inteiro ? "app.video.aba_producao" : "app.video.aba_blocos")}{!inteiro && <span>{v.n_blocos}</span>}</button>
+        {!arquivado && <button className={aba === "blocos" ? "on" : ""} onClick={() => setParams({})}>{t(inteiro ? "app.video.aba_producao" : "app.video.aba_blocos")}{!inteiro && <span>{v.n_blocos}</span>}</button>}
         <button className={aba === "publicacao" ? "on" : ""} onClick={() => setParams({ aba: "publicacao" })}>{t("app.video.aba_publicacao")}</button>
       </div>
 

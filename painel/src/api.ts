@@ -191,6 +191,11 @@ export interface Video {
   capa_v: number;
   thumb: { url: string; nome: string } | null;
   fluxo: "blocos" | "video";
+  arquivado: string;       // quando foi arquivado (só a ficha ficou), ou ""
+  numero: number;          // número do vídeo no canal (ordem de postar); 0 = ainda não entregue
+  pronto: string;          // nome do MP4 na pasta de prontos do canal, ou ""
+  duracao_s: number;
+  n_blocos_ficha: number;
 }
 
 // fluxo "video" (2026-11-05): o vídeo inteiro anda junto (space_machine/rodar_video.py)
