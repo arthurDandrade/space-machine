@@ -411,7 +411,7 @@ def arquivar_video(c, slug, com_mp4=False):
     if not mp4:     # entregue antes de existir a pasta de prontos: o MP4 ainda está em final/
         from .final import ler_estado
         velho = Path(ler_estado(vd).get("mp4") or vd / "final" / "-")
-        if not velho.is_file():
+        if not velho.is_file() or vd not in velho.parents:    # pasta copiada à mão aponta para o MP4 do vídeo de origem
             velho = max((vd / "final").glob("*.mp4"), key=lambda f: f.stat().st_mtime, default=velho)
         if velho.is_file() and not com_mp4:
             mp4 = prontos.guardar(vd, velho)
