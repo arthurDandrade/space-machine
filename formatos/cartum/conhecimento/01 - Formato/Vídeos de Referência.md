@@ -99,3 +99,12 @@ Pedido de quem usa: nada de bloco a bloco; o vídeo inteiro evita retrabalho de 
 - As regras de distribuição de variações do explained ficam desligadas no cartum (a variação é só quantos desenhos a tela tem); o que o `storyboard.py --video` mede a mais é quantos desenhos o vídeo manda gerar (meta inicial: ≤ 8 por minuto).
 - Teste da montagem pelo fluxo novo, com os 10 capítulos já prontos juntados num projeto só: 10 capítulos renderizados, QA aprovado nos 10, MP4 de 9 min 54 s. A montagem levou 24 min (render de 4 capítulos por vez + QA de cada um): mais lento que o vídeo final do bloco a bloco (~10 min); falta medir onde o tempo vai.
 
+## Sexto teste (2026-11-10): o mesmo vídeo de 10 tópicos pelo fluxo do vídeo inteiro
+"Every NFL Team That Disappeared", mesma narração (9 min 54 s), com o `<vídeo>/elenco/` do vídeo anterior copiado (52 desenhos e logos).
+- Storyboard do vídeo todo: 514 s, aprovado na 1ª medição. O plano definiu 12 personagens e 66 nomes de elenco. 84 telas, 221 cards e 281 textos/marcações (bloco a bloco: 85 telas, 263 cards, 345): ~16% menos cards, ainda ~50 elementos novos por minuto (a referência tem ~35).
+- **Desenhos a gerar: 35 no vídeo (3,5 por minuto)**, contra 109 e 81 pedidos novos nas duas versões bloco a bloco. Desses, 19 foram atendidos com um desenho equivalente que já estava no cache do Flow e 15 foram gerados: 9 + 6 em dois lotes com 15 min de pausa, ~20 s entre pedidos, nenhuma recusa (11 h depois do aviso de atividade incomum).
+- Escolha de 50 assets em 180 s; montagem dos 10 capítulos + QA em 390 s, QA aprovado nos 10 de primeira; entrega em 9 s. Do fim da narração ao MP4: menos de 1 h, a maior parte esperando o ritmo do Flow.
+- A grade abre cada capítulo com as 10 logos sem gerar nada de novo no final.
+- O que continua aparecendo: foto ou logo real errada escolhida pela busca (a "foto" de Ralph Hay é um selo do time; o card do Chicago Bears é uma folha com seis logos de épocas diferentes), e os mapas pequenos com nomes sobrepostos.
+- Falta: um elenco do CANAL (as poses do mascote e os ícones servem a todos os vídeos; hoje o reaproveitamento entre vídeos é copiar a pasta `elenco/` à mão).
+
