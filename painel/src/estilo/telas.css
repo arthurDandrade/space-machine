@@ -854,3 +854,17 @@ pre.saida { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background
 .pedido-roteiro p.sub { margin-top: 12px; }
 .pedido-roteiro .texto-instrucoes { white-space: pre-wrap; }
 .pedido-roteiro textarea { width: 100%; }
+
+/* tela inicial: puxar um canal para outro lugar da grade */
+.canal { touch-action: manipulation; }
+.canal .pega { position: absolute; top: 12px; right: 46px; width: 26px; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, 0.88); color: #14151a; display: grid; place-items: center; opacity: 0; transition: opacity 0.2s; cursor: grab; }
+.canal:hover .pega { opacity: 1; }
+.canal.arrastando { opacity: 0.35; transform: none !important; }
+.canal.flutuando { cursor: grabbing; box-shadow: var(--shadow-hi); transform: rotate(1.2deg); animation: none; }
+.canal.flutuando .pega { opacity: 1; }
+/* onde o cartão vai entrar */
+.canal.antes, .canal.depois { transform: none; }
+.canal.antes::before, .canal.depois::after { content: ""; position: absolute; top: 0; bottom: 0; width: 6px; background: var(--accent); z-index: 3; }
+.canal.antes::before { left: 0; }
+.canal.depois::after { right: 0; }
+.canal.antes, .canal.depois { box-shadow: 0 0 0 2px var(--accent), var(--shadow-hi); }

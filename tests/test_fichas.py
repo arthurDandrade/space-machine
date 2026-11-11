@@ -61,3 +61,45 @@ class Fichas(Caso):
         fichas.garantir(vd)
         fichas.garantir(vd)
         self.assertEqual(fichas.ler(vd), antes)
+
+
+class OrdemDosCanais(Caso):
+    """A ordem que você arrasta na tela inicial vale para tudo que lista os canais."""
+
+    def setUp(self):
+        super().setUp()
+        import json
+        from space_machine import sistema
+        self.sistema = sistema
+        self.antes = (sistema.DADOS / "space_machine.json").read_text() if (sistema.DADOS / "space_machine.json").exists() else None
+        for nome in ("ordem-a", "ordem-b", "ordem-c"):
+            (sistema.CANAIS / nome).mkdir(exist_ok=True)
+            (sistema.CANAIS / nome / "canal.json").write_text(json.dumps({"nome": nome}))
+
+    def tearDown(self):
+        import shutil
+        arq = self.sistema.DADOS / "space_machine.json"
+        arq.write_text(self.antes) if self.antes is not None else arq.unlink(missing_ok=True)
+        for nome in ("ordem-a", "ordem-b", "ordem-c"):
+            shutil.rmtree(self.sistema.CANAIS / nome, ignore_errors=True)
+
+    def meus(self):
+        return [s for s in self.sistema.canais() if s.startswith("ordem-")]
+
+    def test_sem_ordem_guardada_vem_pelo_nome_da_pasta(self):
+        self.assertEqual(self.meus(), ["ordem-a", "ordem-b", "ordem-c"])
+
+    def test_a_ordem_arrastada_fica_guardada(self):
+        self.sistema.ordenar_canais(["ordem-c", "ordem-a", "ordem-b"])
+        self.assertEqual(self.meus(), ["ordem-c", "ordem-a", "ordem-b"])
+
+    def test_canal_que_nao_veio_na_lista_fica_no_fim_e_nome_estranho_e_ignorado(self):
+        ficou = self.sistema.ordenar_canais(["ordem-b", "nao-existe", "ordem-b"])
+        self.assertEqual([s for s in ficou if s.startswith("ordem-")], ["ordem-b", "ordem-a", "ordem-c"])
+        self.assertNotIn("nao-existe", ficou)
+
+    def test_canal_apagado_some_da_ordem_sem_quebrar(self):
+        import shutil
+        self.sistema.ordenar_canais(["ordem-c", "ordem-a", "ordem-b"])
+        shutil.rmtree(self.sistema.CANAIS / "ordem-a")
+        self.assertEqual(self.meus(), ["ordem-c", "ordem-b"])

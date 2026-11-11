@@ -115,10 +115,24 @@ def config_canal(c):
 
 
 def canais():
-    """Canal = pasta <dados>/canais/<slug>/ com canal.json."""
+    """Canal = pasta <dados>/canais/<slug>/ com canal.json. Saem na ordem que você arrumou na tela inicial
+    (space_machine.json › ordem_canais); os que não estão nela (canal novo) vêm depois, por nome da pasta."""
     if not CANAIS.exists():
         return {}
-    return {p.name: _canal(p) for p in sorted(CANAIS.iterdir()) if (p / "canal.json").exists()}
+    todos = {p.name: _canal(p) for p in sorted(CANAIS.iterdir()) if (p / "canal.json").exists()}
+    ordem = (ler_json(DADOS / "space_machine.json", {}) or {}).get("ordem_canais") or []
+    primeiro = [s for s in ordem if s in todos]
+    return {s: todos[s] for s in primeiro + [s for s in todos if s not in primeiro]}
+
+
+def ordenar_canais(ordem):
+    """Guarda a ordem dos canais (a que você arrastou na tela inicial). Canal que não veio na lista fica no fim,
+    como estava; nome que não é canal é ignorado. Devolve a ordem que ficou."""
+    atuais = list(canais())
+    nova = list(dict.fromkeys(s for s in ordem if s in atuais))
+    nova += [s for s in atuais if s not in nova]
+    salvar_config({"ordem_canais": nova})
+    return nova
 
 
 def ambiente_motor(c):

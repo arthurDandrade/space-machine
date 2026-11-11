@@ -1,20 +1,34 @@
 // Início do produtor: o painel sempre abre aqui. A tela tem um trabalho só — escolher em qual canal você vai
 // mexer. Saudação, os três números do momento (rodando, esperando, gasto do Claude) e um card por canal.
 // Teclas 1–9 entram direto no canal daquela posição.
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Hand, Loader, Plus, Sparkles } from "lucide-react";
-import { Canais, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { closestCenter, DndContext, DragEndEvent, DragOverlay, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { ArrowRight, GripVertical, Hand, Loader, Plus, Sparkles } from "lucide-react";
+import { Canais, enviar, pegar, ResumoCanal, urlCapa, urlMarca } from "../api";
 import { TopoProdutor } from "../casca/TopoProdutor";
 import { Capa, fundoDoCanal, iniciais, LogoCanal } from "../componentes/Imagens";
 import { compacto, saudacao, useT } from "../textos";
 
-function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
-  const t = useT();
+// O cartão de um canal. Dá para puxar o cartão inteiro para outro lugar da grade: a ordem fica guardada e vale também
+// para as teclas 1–9 e para a troca de canal na barra lateral. `lado` = de que lado o cartão arrastado vai entrar.
+function CartaoCanal({ c, i, lado }: { c: ResumoCanal; i: number; lado: "" | "antes" | "depois" }) {
+  const { attributes, listeners, setNodeRef: pegar_, isDragging } = useDraggable({ id: c.slug });
+  const { setNodeRef: soltar_ } = useDroppable({ id: c.slug });
   const estilo = { animationDelay: `${i * 60}ms`, ...(c.cores.cor_destaque ? { "--accent": c.cores.cor_destaque } : {}) } as React.CSSProperties;
   return (
-    <Link className={`canal ${c.ativo ? "" : "inativo"}`} to={`/c/${c.slug}`} style={estilo}>
+    <Link ref={(el) => { pegar_(el); soltar_(el); }} className={`canal ${c.ativo ? "" : "inativo"} ${isDragging ? "arrastando" : ""} ${lado}`}
+          to={`/c/${c.slug}`} style={estilo} draggable={false} {...attributes} {...listeners} role="link">
+      <MioloCanal c={c} i={i} />
+    </Link>
+  );
+}
+
+function MioloCanal({ c, i }: { c: ResumoCanal; i: number }) {
+  const t = useT();
+  return (
+    <>
       <div className="capa">
         {c.banner ? (
           <Capa src={urlMarca(c.slug, "banner")} icone={false} />
@@ -27,6 +41,7 @@ function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
           </span>
         )}
         {i < 9 && <span className="tecla">{i + 1}</span>}
+        <span className="pega" title={t("app.canais.arrastar")}><GripVertical size={15} /></span>
       </div>
       <div className="corpo">
         <LogoCanal canal={c.slug} nome={c.nome} cores={c.cores} tem={c.logo} className="grande" />
@@ -51,7 +66,7 @@ function CartaoCanal({ c, i }: { c: ResumoCanal; i: number }) {
         )}
         <div className="entrar">{t("app.canais.entrar")} <ArrowRight size={18} /></div>
       </div>
-    </Link>
+    </>
   );
 }
 
@@ -80,8 +95,48 @@ function Agora({ data }: { data?: Canais }) {
 export function EscolhaCanais() {
   const t = useT();
   const navegar = useNavigate();
+  const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["canais"], queryFn: () => pegar<Canais>("/api/canais") });
-  const canais = data?.canais ?? [];
+  // enquanto a ordem nova está sendo guardada, a tela já mostra como vai ficar
+  const [ordem, setOrdem] = useState<string[] | null>(null);
+  const doServidor = data?.canais ?? [];
+  const canais = ordem ? ordem.map((s) => doServidor.find((c) => c.slug === s)).filter((c): c is ResumoCanal => !!c) : doServidor;
+  const [puxando, setPuxando] = useState<string | null>(null);
+  const [sobre, setSobre] = useState<string | null>(null);
+  const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const guardar = useMutation({
+    mutationFn: (nova: string[]) => enviar("/api/canais/ordem", { ordem: nova }),
+    onSettled: async () => { await qc.invalidateQueries({ queryKey: ["canais"] }); setOrdem(null); },
+  });
+  const de = canais.findIndex((c) => c.slug === puxando);
+  const para = canais.findIndex((c) => c.slug === sobre);
+  const soltar = (e: DragEndEvent) => {
+    setPuxando(null); setSobre(null);
+    const alvo = e.over ? String(e.over.id) : "";
+    const a = canais.findIndex((c) => c.slug === e.active.id), b = canais.findIndex((c) => c.slug === alvo);
+    if (a < 0 || b < 0 || a === b) return;
+    const nova = canais.map((c) => c.slug);
+    nova.splice(b, 0, nova.splice(a, 1)[0]);
+    setOrdem(nova);
+    guardar.mutate(nova);
+  };
+  // soltar o cartão manda um clique para ele, e o cartão é um link: sem isto, arrastar abria o canal
+  const grade = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let inicio: { x: number; y: number } | null = null;
+    let arrastou = false;
+    const apertar = (e: PointerEvent) => { inicio = grade.current?.contains(e.target as Node) ? { x: e.clientX, y: e.clientY } : null; arrastou = false; };
+    const levantar = (e: PointerEvent) => { arrastou = !!inicio && Math.hypot(e.clientX - inicio.x, e.clientY - inicio.y) > 8; };
+    const clicar = (e: MouseEvent) => { if (arrastou) { e.preventDefault(); e.stopPropagation(); } arrastou = false; };
+    window.addEventListener("pointerdown", apertar, true);
+    window.addEventListener("pointerup", levantar, true);
+    window.addEventListener("click", clicar, true);
+    return () => {
+      window.removeEventListener("pointerdown", apertar, true);
+      window.removeEventListener("pointerup", levantar, true);
+      window.removeEventListener("click", clicar, true);
+    };
+  }, []);
 
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
@@ -106,8 +161,13 @@ export function EscolhaCanais() {
         {canais.length > 0 && <Agora data={data} />}
       </section>
 
-      <div className="canais">
-        {canais.map((c, i) => <CartaoCanal key={c.slug} c={c} i={i} />)}
+      <DndContext sensors={sensores} collisionDetection={closestCenter} onDragStart={(e) => setPuxando(String(e.active.id))}
+                  onDragOver={(e) => setSobre(e.over ? String(e.over.id) : null)} onDragEnd={soltar}
+                  onDragCancel={() => { setPuxando(null); setSobre(null); }}>
+      <div className="canais" ref={grade}>
+        {canais.map((c, i) => (
+          <CartaoCanal key={c.slug} c={c} i={i} lado={puxando && sobre === c.slug && de !== para ? (de < para ? "depois" : "antes") : ""} />
+        ))}
         {data && (
           <Link className="canal novo" to="/config/canais?novo=1" style={{ animationDelay: `${canais.length * 60}ms` }}>
             <span className="mais"><Plus size={22} /></span>
@@ -116,6 +176,11 @@ export function EscolhaCanais() {
           </Link>
         )}
       </div>
+      <DragOverlay dropAnimation={null}>
+        {de >= 0 && <div className="canal flutuando" style={canais[de].cores.cor_destaque ? ({ "--accent": canais[de].cores.cor_destaque } as React.CSSProperties) : undefined}><MioloCanal c={canais[de]} i={de} /></div>}
+      </DragOverlay>
+      </DndContext>
+      {guardar.isError && <p className="erro" style={{ textAlign: "center" }}>{guardar.error.message}</p>}
     </div>
   );
 }

@@ -6,12 +6,13 @@ import hashlib
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Body, Request
 from fastapi.responses import StreamingResponse
 
 from .. import atualizar, capas, estado, gestao, meus_prompts, primeiros_passos, textos
 from ..motor_claude import canais
 from .. import fichas
+from .. import sistema as sistema_mod
 from ..rodar import ETAPAS as ETAPAS_RODAR
 from ..sistema import DADOS, config, ficha_formato, ler_json
 from .comum import _cache_falta, _canal, _consumo_7d, _estado_bloco, _identidade, _video, marca
@@ -81,6 +82,12 @@ def lista_canais():
     return {"canais": lista, "rodando": sum(c["rodando"] for c in lista),
             "esperando": sum(c["esperando"] for c in lista), "consumo_7d": _consumo_7d()["total"],
             "falta_algo": _falta_algo()}
+
+
+@api.post("/canais/ordem")
+def ordenar_canais(ordem: list = Body(..., embed=True)):
+    """A ordem dos canais na tela inicial (e na troca de canal), arrastando os cartões."""
+    return {"ok": True, "ordem": sistema_mod.ordenar_canais([str(s) for s in ordem])}
 
 
 def _segundos(quando):
