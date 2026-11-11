@@ -22,7 +22,7 @@ Medido nos vídeos de referência: as telas não são só colunas do mesmo taman
 - **Seta com número para dentro do desenho** (`"opcoes": {"aponta": {...}}`): o número em cima e a seta curva terminando no ponto do desenho de que ele fala.
 - **Plano médio** (`"opcoes": {"plano": "meio"}`): o personagem maior, cortado pela borda de baixo; um por tela.
 - **Miniatura circulada** (`sticker` + `"opcoes": {"detalhe": {...}}`): um detalhe dentro de um círculo vermelho, com o número ao lado e uma seta até o ponto do desenho grande.
-- **Aproximação** (`"opcoes": {"zoom": {...}}` no 1º card): a tela abre ampliada 2× num ponto do desenho e, no gatilho, abre para o desenho inteiro em 0,12 s (na referência: ~1,5 s no detalhe e 3 quadros de passagem). Pede um desenho grande e detalhado, em paisagem.
+- **Aproximação** (`"opcoes": {"zoom": {...}}` no 1º card): a tela abre com o desenho ampliado, de lado a lado (1,1× a largura da tela, do cabeçalho para baixo), e, no gatilho, abre para o desenho inteiro em 0,12 s (na referência: ~1,5 s no detalhe e 3 quadros de passagem). Depois de abrir, o desenho fica com 2,6 colunas da tela. Pede um desenho grande e detalhado, em paisagem; no máximo 2 cards além dele.
 
 ## Tamanhos
 - Área dos cards: de x 70 a 1850 e de y 190 a 1040. Com `acima`, `balao` ou `sticker`, o card encolhe para caber o que vai em cima.

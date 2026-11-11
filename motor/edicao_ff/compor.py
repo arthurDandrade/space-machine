@@ -730,8 +730,13 @@ class Comp:
                 Mr = Mi.copy()
                 Mr[0, 2] -= x0
                 Mr[1, 2] -= y0
-                w_ = cv2.warpAffine(src, Mr[:2], (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR,
+                # "nitido" (o desenho ampliado da aproximação do cartum): bicúbica; a linear deixa o traço mole a 2×
+                w_ = cv2.warpAffine(src, Mr[:2], (x1 - x0, y1 - y0),
+                                    flags=cv2.INTER_CUBIC if L.get("nitido") else cv2.INTER_LINEAR,
                                     borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+                if L.get("nitido"):         # a bicúbica passa um pouco de 0 e de 1 nas bordas do traço
+                    w_ = np.clip(w_, 0.0, 1.0)
+                    w_[..., :3] = np.minimum(w_[..., :3], w_[..., 3:4])
                 war = w_ if war is None else war + w_
             if len(mats) > 1:
                 war /= len(mats)

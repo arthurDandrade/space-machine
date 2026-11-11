@@ -53,7 +53,8 @@ CARTAO_TOPICO = 1.2               # s do cartão do tópico (símbolo grande + n
 # em média num vídeo de 10 tópicos).
 GRADE_AREA = (70, 50, 1850, 1040)
 TEXTO_MIN = 1.0             # s que um rótulo, legenda ou balão precisa ficar na tela para dar para ler
-ZOOM, ZOOM_T = 2.0, 0.12        # a aproximação: 2× no ponto escolhido; abre para o desenho inteiro em ZOOM_T s
+ZOOM_COBRE, ZOOM_T = 1.1, 0.12  # a aproximação: o desenho com 1,1× a largura da tela; abre para o inteiro em ZOOM_T s
+PESO_ZOOM = 2.6                 # depois de abrir, o desenho da aproximação fica com 2,6 colunas
 EASE_OUT = [0, 0.1, 0, 80]
 EASE_IN = [0, 80, 0, 0.1]
 CAMADAS = {"fundo": 0, "conteudo": 1, "ui": 2}
@@ -273,7 +274,8 @@ def caixas(cards, layout=None):
     n = len(cards)
     x0, y0, x1, y1 = AREA
     if layout == "L1" and n >= 2:
-        wg = (x1 - x0) * 0.42
+        # com aproximação, o desenho grande fica com metade da tela (com 0,42 abria numa miniatura)
+        wg = (x1 - x0) * (0.5 if (cards[0].get("opcoes") or {}).get("zoom") else 0.42)
         out = [(x0, y0, wg, y1 - y0)]
         m = n - 1
         cols = m if m <= 3 else (2 if m == 4 else 3)      # até 3 itens numa fileira só: saem maiores
@@ -290,9 +292,12 @@ def caixas(cards, layout=None):
     out = []
     for fi, fila in enumerate(fileiras):
         # o desenho da aproximação é grande e cheio de detalhe: depois de abrir, fica com uma coluna mais larga
-        pesos = [max(PESO.get((c.get("opcoes") or {}).get("tamanho"), 1.0), 1.8 if (c.get("opcoes") or {}).get("zoom") else 0)
+        # (2,6 colunas: com 1,8, numa tela de 4 cards o desenho abria numa miniatura de ~630 px, 2026-11-11)
+        pesos = [max(PESO.get((c.get("opcoes") or {}).get("tamanho"), 1.0), PESO_ZOOM if (c.get("opcoes") or {}).get("zoom") else 0)
                  for c in fila]
         util = min(x1 - x0, 1000 * len(fila)) - VAO * (len(fila) - 1)     # card sozinho não ocupa a tela toda
+        if any(p == PESO_ZOOM for p in pesos):
+            util = x1 - x0 - VAO * (len(fila) - 1)
         x = (x0 + x1) / 2 - (util + VAO * (len(fila) - 1)) / 2
         for p in pesos:
             w = util * p / sum(pesos)
@@ -301,7 +306,7 @@ def caixas(cards, layout=None):
     return out, set()
 
 
-ONDE = {"centro": (-0.25, -0.3), "esquerda": (-0.6, 0.0), "direita": (0.6, 0.0), "topo": (0.0, -0.6), "base": (0.0, 0.55)}
+ONDE = {"centro": (0.0, 0.0), "esquerda": (-1.0, 0.0), "direita": (1.0, 0.0), "topo": (0.0, 0.0), "base": (0.0, 0.0)}
 
 
 def tela(M, e, fim, espera=0.0):
@@ -375,15 +380,17 @@ def tela(M, e, fim, espera=0.0):
                     M.registro[-1]["box"][3] = min(float(H), M.registro[-1]["box"][3])
                 if ampliado and k == 0:
                     L = next(x for x in reversed(M.layers) if x.get("kind") == "footage")
-                    fx, fy = ONDE.get(zoom.get("onde"), ONDE["centro"])
-                    alvo = (cx + fx * larg / 2, cy + fy * alt / 2)
-                    meio_tela = (W / 2, (AREA[1] + AREA[3]) / 2)
-                    # ampliado, o desenho ENCHE a tela (pelo menos 1,25× a largura dela): numa coluna estreita, 2× o
-                    # tamanho do card ainda era um desenho pequeno no meio da tela (1º render, 2026-11-11)
-                    rz = max(ZOOM, W * 1.25 / larg)
-                    perto = [meio_tela[0] - (alvo[0] - cx) * rz, meio_tela[1] - (alvo[1] - cy) * rz]
-                    perto[1] += max(0.0, (AREA[1] - 50) - (perto[1] - alt * rz / 2))     # nunca por cima do nome do tópico
+                    fx, _ = ONDE.get(zoom.get("onde"), ONDE["centro"])
+                    # ampliado, o desenho ENCHE a tela de lado a lado, do cabeçalho até a borda de baixo, e nenhuma
+                    # borda dele aparece no meio da tela. Antes (2026-11-11) ele era centrado no ponto pedido e
+                    # empurrado para baixo do nome do tópico: com o ponto num canto, um terço da tela ficava vazio
+                    # e o resto do desenho saía cortado pela direita. "onde" só escolhe o lado, dentro da folga.
+                    teto = AREA[1] - 50
+                    rz = max(W * ZOOM_COBRE / larg, (H - teto) * 1.02 / alt)
+                    wz, hz = larg * rz, alt * rz
+                    perto = [min(wz / 2, max(W - wz / 2, W / 2 - fx * (wz - W) / 2)), teto + hz / 2]
                     e0 = L["scale"][0]
+                    L["nitido"] = True
                     L["pos_keys"] = [[t_abre, perto, EASE_OUT], [t_abre + ZOOM_T, [cx, cy], EASE_IN]]
                     L["scale_keys"] = [[t_abre, [e0 * rz, e0 * rz], EASE_OUT], [t_abre + ZOOM_T, [e0, e0], EASE_IN]]
         if not larg:
