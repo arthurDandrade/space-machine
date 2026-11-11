@@ -179,6 +179,15 @@ def _destino_lixo():
     return alt
 
 
+def _livre(alvo):
+    """Um nome que ainda não existe no destino: mover por cima apagaria o que já estava lá (duas thumbnails
+    trocadas no mesmo segundo têm o mesmo nome datado)."""
+    n, base = 2, alvo
+    while alvo.exists():
+        alvo, n = base.with_name(f"{base.stem} ({n}){base.suffix}"), n + 1
+    return alvo
+
+
 def mandar_para_o_lixo(itens, raiz=None):
     """Move os itens para o Lixo mantendo canal/vídeo/bloco no caminho. Devolve (bytes, quantos, pasta)."""
     raiz = Path(raiz or DADOS)
@@ -193,13 +202,13 @@ def mandar_para_o_lixo(itens, raiz=None):
             rel = p.resolve().relative_to(raiz.resolve())
         except ValueError:
             rel = Path(p.name)
-        alvo = destino / rel
+        alvo = _livre(destino / rel)
         alvo.parent.mkdir(parents=True, exist_ok=True)
         try:
             os.rename(p, alvo)
         except OSError:
             # outro disco (ou o Lixo recusou este item): vai para <dados>/lixo, no mesmo disco dos dados
-            alvo = DADOS / "lixo" / destino.name / rel
+            alvo = _livre(DADOS / "lixo" / destino.name / rel)
             alvo.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(p), str(alvo))
         feitos += 1
@@ -209,7 +218,7 @@ def mandar_para_o_lixo(itens, raiz=None):
 
 def versao_anterior(arq):
     """Uma versão só de cada coisa (2026-11-11): o vídeo, o projeto, a thumbnail ou o Reels que vai ser trocado sai
-    da pasta e vai para o Lixo do Mac, com a data dele no nome (duas trocas no mesmo minuto não se atropelam lá).
+    da pasta e vai para o Lixo do Mac, com a data dele no nome (e um " (2)" se já houver um igual lá: nada é sobrescrito).
     Antes ficava em pastas `anteriores/` que nenhuma limpeza olhava: 14 MP4 antigos num vídeo só, 2,4 GB em outro.
     Dá para recuperar até você esvaziar o Lixo. Devolve para onde foi, ou None se não havia arquivo."""
     arq = Path(arq)

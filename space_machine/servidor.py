@@ -2,7 +2,7 @@
 
 Iniciar:  ./spacemachine   (ou .venv/bin/python -m space_machine painel)   → http://localhost:8765
 
-O painel é o React de painel/ (build em static/app/), servido aqui na raiz; os dados e as ações vêm de api.py, que lê
+O painel é o React de painel/ (build em static/app/), servido aqui na raiz; os dados e as ações vêm de api/ (um arquivo por assunto), que lê
 as pastas (estado.py) e o registro de consumo e gestão (<dados>/space_machine.sqlite). Os botões só disparam os mesmos
 comandos da linha de comando (python -m space_machine rodar ...), em segundo plano.
 /arquivo serve prévias e assets de dentro das pastas de produção. Os endereços do painel antigo (páginas em Jinja,
