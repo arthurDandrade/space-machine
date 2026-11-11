@@ -5,8 +5,8 @@ import { NavLink, useLocation, useNavigate, useOutlet, useParams } from "react-r
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BookOpen, CalendarDays, Check, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, LayoutGrid, Lightbulb,
-  ListChecks, ScrollText, Palette, PenLine, Plus, Sparkles,
+  BookOpen, CalendarDays, Check, ChevronDown, ChevronsUpDown, Clapperboard, Columns3, Hand, KeyRound, LayoutDashboard, LayoutGrid,
+  Lightbulb, ListChecks, PanelLeftClose, PanelLeftOpen, ScrollText, Palette, PenLine, Plus, Settings, Sparkles,
 } from "lucide-react";
 import { RodandoNaBarra } from "../componentes/AoVivo";
 import { Link } from "react-router-dom";
@@ -67,7 +67,13 @@ function TrocarCanal({ canal, nome, cores, logo, aberto, setAberto }:
   );
 }
 
-type Item = { rot: string; icone: typeof Hand; para: string; fim?: boolean; contador?: number };
+// contador: quantos há ali. tom "espera" (laranja) é o que pede você; "neutro" é só a contagem. vivo = algo rodando.
+type Item = { rot: string; icone: typeof Hand; para: string; fim?: boolean; contador?: number; tom?: "espera" | "neutro"; vivo?: boolean };
+type Grupo = { id: string; rot: string; itens: Item[]; recolhe?: boolean };
+
+// o que você escolheu fica neste navegador (como o tema): a barra estreita e os Ajustes abertos ou fechados
+const guardado = (chave: string) => { try { return localStorage.getItem(chave); } catch { return null; } };
+const guardar = (chave: string, valor: string) => { try { localStorage.setItem(chave, valor); } catch { /* sem armazenamento: vale só agora */ } };
 
 export function CascaCanal() {
   const { canal = "" } = useParams();
@@ -78,6 +84,20 @@ export function CascaCanal() {
   // useOutlet (e não <Outlet/>): na transição a tela que sai continua sendo a antiga
   const tela = useOutlet();
   const [trocando, setTrocando] = useState(false);
+  const [estreita, setEstreita] = useState(() => guardado("sm-barra") === "estreita");
+  const [ajustes, setAjustes] = useState(() => guardado("sm-ajustes") === "abertos");
+  const alternarBarra = () => setEstreita((e) => { guardar("sm-barra", e ? "larga" : "estreita"); return !e; });
+  const alternarAjustes = () => setAjustes((a) => { guardar("sm-ajustes", a ? "fechados" : "abertos"); return !a; });
+  // ⌘B (ou Ctrl+B) recolhe e abre a barra, fora de campos de texto
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "b" || (e.target as HTMLElement).closest("input, textarea, select")) return;
+      e.preventDefault();
+      alternarBarra();
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }, []);
 
   // Esc fecha a abinha de canais; com ela fechada, volta para a escolha de canais (fora de campos de texto)
   useEffect(() => {
@@ -93,50 +113,68 @@ export function CascaCanal() {
 
   if (error) throw error;
   const c = data?.canal;
-  // três grupos, pelo que você veio fazer: acompanhar o que está rodando, planejar o que vem, ajustar o canal
-  const itens: (Item | string)[] = [
-    "app.nav.secao_acompanhar",
-    { rot: "app.nav.producao", icone: LayoutDashboard, para: `/c/${canal}`, fim: true },
-    { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos` },
-    { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando },
-    "app.nav.secao_planejar",
-    { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
-    { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal) },
-    { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
-    { rot: "app.nav.roteiro_prompt", icone: PenLine, para: `/c/${canal}/roteiro-prompt` },
-    { rot: "app.nav.prompts", icone: ScrollText, para: `/c/${canal}/prompts` },
-    "app.nav.secao_ajustes",
-    { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
-    { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },
-    { rot: "app.nav.aprendizados", icone: BookOpen, para: `/c/${canal}/aprendizados` },
-    { rot: "app.nav.modelos", icone: Sparkles, para: `/c/${canal}/modelos` },
-    { rot: "app.nav.chaves", icone: KeyRound, para: `/c/${canal}/chaves` },
+  // três grupos, pelo que você veio fazer: acompanhar o que está rodando, planejar o que vem, ajustar o canal.
+  // Os ajustes são coisa de vez em quando: ficam recolhidos, e abrem sozinhos quando você está numa tela deles.
+  const grupos: Grupo[] = [
+    { id: "acompanhar", rot: "app.nav.secao_acompanhar", itens: [
+      { rot: "app.nav.producao", icone: LayoutDashboard, para: `/c/${canal}`, fim: true, vivo: !!data?.rodando.length },
+      { rot: "app.nav.videos", icone: Clapperboard, para: `/c/${canal}/videos`, contador: c?.n_videos, tom: "neutro" },
+      { rot: "app.nav.esperando", icone: Hand, para: `/c/${canal}/esperando`, contador: c?.esperando, tom: "espera" },
+    ] },
+    { id: "planejar", rot: "app.nav.secao_planejar", itens: [
+      { rot: "app.nav.quadro", icone: Columns3, para: rota.quadro(canal) },
+      { rot: "app.nav.ideias", icone: Lightbulb, para: rota.ideias(canal), contador: c?.colunas.ideia, tom: "neutro" },
+      { rot: "app.nav.calendario", icone: CalendarDays, para: rota.calendario(canal) },
+      { rot: "app.nav.roteiro_prompt", icone: PenLine, para: `/c/${canal}/roteiro-prompt` },
+      { rot: "app.nav.prompts", icone: ScrollText, para: `/c/${canal}/prompts` },
+    ] },
+    { id: "ajustes", rot: "app.nav.secao_ajustes", recolhe: true, itens: [
+      { rot: "app.nav.identidade", icone: Palette, para: `/c/${canal}/identidade` },
+      { rot: "regras.titulo", icone: ListChecks, para: `/c/${canal}/regras` },
+      { rot: "app.nav.aprendizados", icone: BookOpen, para: `/c/${canal}/aprendizados` },
+      { rot: "app.nav.modelos", icone: Sparkles, para: `/c/${canal}/modelos` },
+      { rot: "app.nav.chaves", icone: KeyRound, para: `/c/${canal}/chaves` },
+    ] },
   ];
+  const numAjuste = grupos[2].itens.some((it) => local.pathname === it.para);
+  const mostraAjustes = ajustes || numAjuste || estreita;
 
   return (
-    <div className="app" style={c?.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
+    <div className={`app ${estreita ? "estreita" : ""}`} style={c?.cores.cor_destaque ? ({ "--accent": c.cores.cor_destaque } as React.CSSProperties) : undefined}>
       <aside className="lado">
         <TrocarCanal canal={canal} nome={c?.nome} cores={c?.cores} logo={c?.logo} aberto={trocando} setAberto={setTrocando} />
         <nav className="nav">
-          {itens.map((it) =>
-            typeof it === "string" ? (
-              <div className="rot" key={it}>{t(it)}</div>
-            ) : (
-              <NavLink key={it.rot} to={it.para} end={it.fim}>
-                <it.icone size={18} />
-                {t(it.rot)}
-                {!!it.contador && <span className="qt">{it.contador}</span>}
-              </NavLink>
-            ),
-          )}
+          {grupos.map((g) => {
+            const aberto = !g.recolhe || mostraAjustes;
+            return (
+              <div className={`grupo ${aberto ? "" : "fechado"}`} key={g.id}>
+                {g.recolhe ? (
+                  <button className="rot abre" onClick={alternarAjustes} aria-expanded={aberto} disabled={numAjuste}>
+                    {t(g.rot)}<ChevronDown size={14} className={aberto ? "aberto" : ""} />
+                  </button>
+                ) : <div className="rot">{t(g.rot)}</div>}
+                {g.itens.map((it) => (
+                  <NavLink key={it.rot} to={it.para} end={it.fim} title={estreita ? t(it.rot) : undefined}>
+                    <span className="ic"><it.icone size={18} />{it.vivo && <i className="pulso" />}</span>
+                    <span className="txt">{t(it.rot)}</span>
+                    {!!it.contador && <span className={`qt ${it.tom === "neutro" ? "neutro" : ""}`}>{it.contador}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="pe">
           {data && <RodandoNaBarra canal={canal} rodando={data.rodando} />}
-          <Link className="bt escuro" to={rota.novoVideo(canal)}><Plus size={18} />{t("app.novo_video")}</Link>
-          <Link className="conta" to="/config">
-            <img className="av" src="/icone-128.png" alt="" />
-            {t("app.nav.space_machine")}
-          </Link>
+          <Link className="bt escuro novo" to={rota.novoVideo(canal)} title={estreita ? t("app.novo_video") : undefined}><Plus size={18} /><span className="txt">{t("app.novo_video")}</span></Link>
+          <div className="linha-pe">
+            <Link className="conta" to="/config" title={t("app.nav.config_dica")}>
+              <Settings size={17} /><span className="txt">{t("app.nav.config")}</span>
+            </Link>
+            <button className="recolher" onClick={alternarBarra} title={t(estreita ? "app.nav.abrir_barra" : "app.nav.recolher_barra")} aria-pressed={estreita}>
+              {estreita ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            </button>
+          </div>
         </div>
       </aside>
       <main className="principal">
