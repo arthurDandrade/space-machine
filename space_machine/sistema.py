@@ -124,4 +124,5 @@ def canais():
 def ambiente_motor(c):
     """Variáveis que os scripts do motor usam para achar o canal e os dados (motor/caminhos.py)."""
     return {**os.environ, "SM_CANAL": c["raiz"], "SM_DADOS": str(DADOS), "SM_PYTHON": sys.executable,
-            "SM_AFTER": config().get("after_app", "Adobe After Effects 2026"), "PYTHONUNBUFFERED": "1"}
+            "SM_AFTER": config().get("after_app", "Adobe After Effects 2026"), "PYTHONUNBUFFERED": "1",
+            "SM_CACHE_DIAS": str(config().get("cache_dias", 7))}

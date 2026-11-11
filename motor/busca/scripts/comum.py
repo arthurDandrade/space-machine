@@ -78,8 +78,22 @@ def dominio_bloqueado(url, cfg):
     return any(d in u for d in cfg["dominios_bloqueados"])
 
 
-def limpar_cache(dias_img=30, dias_busca=30):
-    """Apaga do _cache/ as imagens baixadas há mais de 30 dias e buscas vencidas (quadros do YouTube ficam)."""
+def dias_do_cache():
+    """Quantos dias uma imagem fica no cache sem ser usada (config › cache_dias, que chega por SM_CACHE_DIAS)."""
+    try:
+        return max(1.0, float(os.environ.get("SM_CACHE_DIAS") or 7))
+    except ValueError:
+        return 7.0
+
+
+def limpar_cache(dias_img=None, dias_busca=30):
+    """Apaga do cache as imagens que nenhuma busca usa há mais de `cache_dias` dias (7) e as buscas vencidas.
+    Roda no começo de cada busca. O cache só serve para não baixar de novo a mesma URL: o que foi escolhido já
+    está em assets/ e os candidatos em _work/candidatos, então apagar daqui não tira nada de vídeo nenhum.
+    Eram 30 dias a contar do download, e em um mês de uso o cache chegou a 24 GB (54 mil arquivos) sem que nada
+    tivesse vencido ainda (2026-11-11). Agora conta do último USO (baixar_imagem renova a data de quem é lido),
+    então o que um vídeo em andamento está usando não sai."""
+    dias_img = dias_do_cache() if dias_img is None else dias_img
     agora = time.time()
     for sub, dias in (("img", dias_img), ("busca", dias_busca)):
         for f in (caminhos.cache() / sub).glob("*"):
@@ -101,6 +115,10 @@ def baixar_imagem(url, destino_sem_ext, lado_minimo, max_mb=30):
     try:
         if cache.exists():
             dados = cache.read_bytes()
+            try:
+                os.utime(cache)       # usado agora: a limpeza conta os dias a partir daqui (limpar_cache)
+            except OSError:
+                pass
         else:
             r = sessao.get(url, timeout=(8, 25), stream=True)
             if r.status_code != 200:

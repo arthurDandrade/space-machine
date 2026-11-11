@@ -9,7 +9,8 @@ O que é lixo (medido em 2026-10-14: ~10 GB de 29 GB nas produções):
 - os candidatos baixados (_work/candidatos) de um bloco entregue: serviram para escolher os assets, que já estão em
   assets/. A busca não baixa de novo o que já foi escolhido; rodar "de busca" ou "de escolha" baixa o que faltar.
 - Auto-Save do After e pastas _backup_* antigas.
-- com --cache: imagens do cache da busca (<dados>/cache/img) com mais de 7 dias (só servem para não baixar de novo).
+- com --cache: imagens do cache da busca (<dados>/cache/img) sem uso há mais de 7 dias (config › cache_dias). Só servem
+  para não baixar de novo, e a própria busca apaga as vencidas quando começa.
 Fica sempre: assets, narração, transcrição, cenas/plano/escolhas/manifesto, o .aep e o _cache da edição (o .aep usa),
 QA, storyboard, logs e o vídeo final. A lixeira do canal (vídeos e blocos excluídos no painel, que o painel ainda
 restaura) só sai se você marcar a categoria "lixeira": aí deixa de dar para restaurar e vai para o Lixo do Mac.
@@ -29,7 +30,7 @@ CATEGORIAS = {
     "previas": "Prévias já entregues ou antigas",
     "candidatos": "Candidatos baixados de blocos entregues",
     "after": "Auto-Save do After e backups antigos",
-    "cache": "Cache de imagens da busca (mais de 7 dias)",
+    "cache": "Cache de imagens da busca (sem uso há mais de 7 dias)",
     "lixeira": "Lixeira dos canais (vídeos e blocos que você excluiu)",
 }
 
@@ -120,7 +121,10 @@ def lixo_das_lixeiras(slug=None):
     return itens
 
 
-def lixo_cache(dias=7):
+def lixo_cache(dias=None):
+    """As imagens do cache da busca sem uso há mais de config › cache_dias (7). A busca já apaga essas sozinha
+    quando começa (motor/busca/scripts/comum.limpar_cache); aqui é para a aba Limpeza mostrar e limpar na hora."""
+    dias = float(config().get("cache_dias", 7)) if dias is None else dias
     pasta = DADOS / "cache" / "img"
     limite = time.time() - dias * 86400
     return [(f, "cache") for f in pasta.rglob("*") if f.is_file() and f.stat().st_mtime < limite] if pasta.is_dir() else []

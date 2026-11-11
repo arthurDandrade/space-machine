@@ -543,7 +543,7 @@
  "app.limpeza.ex_previas": "Cópias dos blocos já entregues e versões antigas (v1, v2…). O bloco entregue fica.",
  "app.limpeza.ex_candidatos": "Imagens e vídeos baixados para escolher os assets de blocos já entregues. Os escolhidos ficam em assets/.",
  "app.limpeza.ex_after": "Salvamentos automáticos do After e pastas _backup antigas.",
- "app.limpeza.ex_cache": "Imagens guardadas pela busca para não baixar de novo. Só as com mais de 7 dias.",
+ "app.limpeza.ex_cache": "Imagens guardadas pela busca para não baixar de novo. Só as que nenhuma busca usa há mais de 7 dias; a busca já apaga essas sozinha quando começa.",
  "app.limpeza.ex_lixeira": "Vídeos e blocos que você excluiu no painel. Marcando aqui, eles saem da lixeira do canal (deixa de dar para restaurar) e vão para o Lixo do Mac.",
  "app.limpeza.por_video": "Por vídeo",
  "app.limpeza.total": "Total",
