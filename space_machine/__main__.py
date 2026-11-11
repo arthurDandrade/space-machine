@@ -5,6 +5,7 @@
   python -m space_machine fila <pasta do vídeo> [--max 3]   todos os blocos não entregues, até 3 ao mesmo tempo
   python -m space_machine final <pasta do vídeo> [--render]   junta os blocos entregues num projeto do After
   python -m space_machine reels <pasta do bloco>   Reels 9:16 do bloco (montado na vertical) em <vídeo>/reels/
+  python -m space_machine thumb <pasta do vídeo> --modelo <id>   thumbnail do vídeo por um modelo do formato (--modelos lista)
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
   python -m space_machine novo <canal> "<título>" [--roteiro arquivo]  cria o vídeo (sem roteiro: o Claude escreve, nos formatos que têm agente de roteiro)
@@ -52,6 +53,9 @@ def main():
         m(args)
     elif cmd == "reels":
         from .reels import main as m
+        m(args)
+    elif cmd == "thumb":
+        from .thumb import main as m
         m(args)
     elif cmd in ("painel", "servidor"):
         from .servidor import main as m

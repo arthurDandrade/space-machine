@@ -34,6 +34,11 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   imagem escolhida contra o título da fonte (`prompts/conferir_identidade.md`), e o card pulado sai do `cenas.json` em vez de
   ir para o resgate por imagem parecida; a lista fica em `<projeto>/_estudio/sem_imagem.json`. O card único de uma tela e o
   título do tópico não saem. Sem o campo, vale o comportamento de sempre (a menos ruim, com "conferir").
+- `thumbnail.modelos`: o arquivo com os MODELOS de thumbnail do formato (`thumbs/modelos.json`: o estilo e, por modelo, o
+  layout — `grade`, `dupla` ou `faixa` —, quantos itens, que tipos de imagem cabem e quantas reservas pedir). Com ele, a
+  página do vídeo ganha "Fazer pelo sistema": a pessoa escolhe o modelo e o `space_machine/thumb.py` planeja
+  (`prompts/thumbnail.md`), reaproveita o que o vídeo já tem, busca ou pede ao Flow o que falta e desenha
+  (`motor/thumb/compor_thumb.py`). Sem a chave, o formato só aceita a thumbnail enviada.
 - `audio.ambiente_dbfs`: sem trilha no canal, um ruído de fundo bem baixo por baixo da voz no vídeo inteiro (o cartum usa −50),
   para a pausa entre as frases não cair no silêncio absoluto. O volume da voz é do sistema (`voz_lufs` no
   `config_padrao.json`, −16 LUFS); o canal troca os dois em `canal.json › audio`.

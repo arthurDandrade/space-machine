@@ -9,6 +9,7 @@
     "confirmar_trecho": "claude-sonnet-5-5",
     "descricao": "claude-sonnet-5-5",
     "termos_mineracao": "claude-sonnet-5-5",
+    "thumbnail": "claude-sonnet-5-5",
     "roteiro": "claude-opus-5-5"
   },
   "claude_paralelo": 3,
@@ -26,6 +27,7 @@
     "confirmar_trecho": "low",
     "descricao": "low",
     "termos_mineracao": "low",
+    "thumbnail": "medium",
     "roteiro": "high"
   },
   "storyboard_timeout_s": 2400,

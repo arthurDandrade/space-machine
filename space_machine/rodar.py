@@ -45,6 +45,17 @@ def _vivo(pid):
         return False
 
 
+def esperando_flow(c):
+    """Quantos desenhos deste canal estão na fila do Flow sem imagem e sem recusa."""
+    slug = Path(c["raiz"]).name
+    base = motor.DADOS / "cache" / "flow"
+    fichas = sum(1 for arq in (base / "personagens" / slug).glob("*/ficha.json")
+                 if not (arq.parent / "referencia.jpg").exists())       # personagem ainda sem a imagem de referência
+    return fichas + sum(1 for arq in (base / "pedidos").glob("*/pedido.json")
+                        if (ler_json(arq) or {}).get("canal") == slug and not list(arq.parent.glob("[0-9][0-9].jpg"))
+                        and not (arq.parent / "recusado.txt").exists())
+
+
 class Parada(Exception):
     """O bloco precisa de gente (ou de esperar): motivo vai para o estado.json."""
 
@@ -314,14 +325,7 @@ class Rodada:
         return f"ok ({len(falta)} novos, {len(so_yt)} refeitos sem YouTube)" + (f" · sem candidatos: {', '.join(sem)}" if sem else "")
 
     def _esperando_flow(self):
-        """Quantos desenhos deste canal estão na fila do Flow sem imagem e sem recusa."""
-        slug = Path(self.c["raiz"]).name
-        base = motor.DADOS / "cache" / "flow"
-        fichas = sum(1 for arq in (base / "personagens" / slug).glob("*/ficha.json")
-                     if not (arq.parent / "referencia.jpg").exists())       # personagem ainda sem a imagem de referência
-        return fichas + sum(1 for arq in (base / "pedidos").glob("*/pedido.json")
-                            if (ler_json(arq) or {}).get("canal") == slug and not list(arq.parent.glob("[0-9][0-9].jpg"))
-                            and not (arq.parent / "recusado.txt").exists())
+        return esperando_flow(self.c)
 
     def escolher(self):
         b = BlocoEscolha(self.p)

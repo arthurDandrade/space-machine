@@ -141,5 +141,9 @@
   "estilo": "desenho",
   "cor_base": "#8FCB6B",
   "_sobre": "Mapa do cartum: a silhueta do país (ou dos EUA) em verde com contorno preto, a região destacada na cor de destaque, um pino por ponto com o nome ao lado e o rótulo embaixo — PNG transparente, que entra como um desenho. O mapa claro com fronteiras (o do explained) saía pequeno, com a borda esfumada de foto e os nomes um por cima do outro."
+ },
+ "thumbnail": {
+  "_sobre": "Thumbnail feita pelo sistema (space_machine/thumb.py): os modelos que a pessoa escolhe no painel e o prompt do plano (prompts/thumbnail.md).",
+  "modelos": "thumbs/modelos.json"
  }
 }

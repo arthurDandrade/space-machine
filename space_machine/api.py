@@ -22,6 +22,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
                modelar, primeiros_passos, reels, textos)
 from .motor_claude import _banco, canais
 from . import video as video_mod
+from . import thumb as thumb_mod
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
@@ -116,6 +117,23 @@ def _versao_capa(vd):
     """Muda quando a thumbnail muda: vai no endereço da capa para o navegador não mostrar a antiga do cache."""
     t = capas.thumbnail(vd)
     return int(t.stat().st_mtime) if t else 0
+
+
+def _thumb_sistema(c, vd):
+    """Thumbnail feita pelo sistema: os modelos do formato do canal (com a imagem de exemplo de cada um) e como está
+    a última que você pediu. None se o formato não tem modelos."""
+    try:
+        ms = thumb_mod.modelos(c)
+        if not ms:
+            return None
+        slug = Path(c["raiz"]).name
+        for m in ms:
+            m["previa"] = f"/api/c/{slug}/thumb/modelo/{m['id']}/previa?v={thumb_mod.previa(c, m['id']).stem[-10:]}"
+    except (ValueError, OSError):
+        return None
+    est = thumb_mod.ler_estado(vd)
+    return {"modelos": ms, "estado": {k: est.get(k) or "" for k in ("status", "etapa", "modelo", "modelo_nome", "erro",
+                                                                    "aviso", "atualizado")} | {"rodando": est["rodando"]}}
 
 
 def _thumb(vd):
@@ -300,6 +318,7 @@ def detalhe_video(slug: str, video: str):
                 "log_rodar": _cauda(p / "_estudio" / "log_rodar.txt", 60),
                 "log_etapa": {"nome": etapa_log.name, "texto": _cauda(etapa_log, 40)} if etapa_log else None}
     return {**resumo, "producao": prod, "blocos": blocos, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
+            "thumb_sistema": _thumb_sistema(_canal(slug), vd),
             "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
             "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
@@ -661,6 +680,29 @@ async def enviar_thumbnail(slug: str, video: str, arquivo: UploadFile = File(...
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"ok": True, "thumbnail": capas.info_thumbnail(vd) and {k: v for k, v in capas.info_thumbnail(vd).items() if k != "arquivo"}}
+
+
+@api.get("/c/{slug}/thumb/modelo/{modelo}/previa")
+def previa_modelo_thumbnail(slug: str, modelo: str):
+    """A imagem de exemplo de um modelo de thumbnail (os lugares das imagens em cinza)."""
+    try:
+        return FileResponse(thumb_mod.previa(_canal(slug), modelo), headers={"Cache-Control": "max-age=86400"})
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+
+@api.post("/c/{slug}/v/{video}/thumbnail/fazer")
+def fazer_thumbnail(slug: str, video: str, modelo: str = Body(..., embed=True), refazer: bool = Body(False, embed=True),
+                    obs: str = Body("", embed=True)):
+    """O sistema monta a thumbnail do vídeo no modelo escolhido (space_machine/thumb.py). Roda solto do painel."""
+    vd = _video_dir(slug, video)
+    c = _canal(slug)
+    if modelo not in {m["id"] for m in thumb_mod.modelos(c)}:
+        raise HTTPException(404, "o formato deste canal não tem esse modelo de thumbnail")
+    if thumb_mod.ler_estado(vd)["rodando"]:
+        raise HTTPException(409, "a thumbnail já está sendo feita")
+    thumb_mod.lancar(vd, modelo, refazer, obs.strip()[:500])
+    return {"ok": True}
 
 
 @api.post("/c/{slug}/v/{video}/thumbnail/remover")

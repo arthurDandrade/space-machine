@@ -661,6 +661,17 @@ textarea.roteiro { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; 
 .thumb-previa.vazia:hover { border-color: var(--accent); color: var(--accent-text); }
 .thumb-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; align-items: flex-start; }
 .thumb-info b { word-break: break-all; }
+/* thumbnail feita pelo sistema: os modelos do formato, lado a lado */
+.thumb-sis { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.modelos-thumb { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; width: 100%; }
+.modelo-thumb { display: flex; flex-direction: column; gap: 5px; text-align: left; padding: 8px; border-radius: 14px; border: 2px solid var(--line); background: var(--raised); transition: border-color 0.15s, transform 0.15s; }
+.modelo-thumb img { width: 100%; aspect-ratio: 16 / 9; border-radius: 8px; background: #fff; display: block; }
+.modelo-thumb b { font-size: 13.5px; }
+.modelo-thumb .sub { font-size: 12px; line-height: 1.35; }
+.modelo-thumb:hover:not(:disabled) { border-color: var(--ink3); transform: translateY(-1px); }
+.modelo-thumb.on { border-color: var(--accent); }
+.modelo-thumb:disabled { opacity: 0.6; }
+.obs-thumb { width: 100%; max-width: 560px; margin-bottom: 0; }
 .aviso-thumb { display: inline-flex; align-items: center; gap: 6px; color: var(--wait); font-size: 12.5px; font-weight: 600; }
 
 /* botões da thumbnail sobre a capa (ampliar, trocar, baixar, remover) */

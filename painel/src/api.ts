@@ -304,9 +304,24 @@ export interface Thumbnail {
   url: string;
 }
 
+// thumbnail feita pelo sistema: os modelos do formato do canal e como está a última que você pediu
+export interface ModeloThumb {
+  id: string;
+  nome: string;
+  descricao: string;
+  quando: string;
+  itens: number;
+  previa: string;
+}
+export interface ThumbSistema {
+  modelos: ModeloThumb[];
+  estado: { status: "" | "rodando" | "ok" | "erro" | "esperando_flow"; etapa: string; modelo: string; modelo_nome: string; erro: string; aviso: string; atualizado: string; rodando: boolean };
+}
+
 export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
   final: Final;
   thumbnail: Thumbnail | null;
+  thumb_sistema: ThumbSistema | null;
   blocos: BlocoDoVideo[];
   fila: (Fila & { inicio?: string; fim?: string; lancados?: string[] }) | null;
   publicacao: Publicacao;

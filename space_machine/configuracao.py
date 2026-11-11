@@ -495,6 +495,8 @@ ETAPAS_CLAUDE = [
      "(os capítulos com minutagem saem das durações dos blocos, sem o Claude)."),
     ("termos_mineracao", "Termos de garimpo", "Botão Sugerir da Mineração: tira do tema deste canal os termos de "
      "busca para garimpar canais parecidos no YouTube."),
+    ("thumbnail", "Thumbnail", "Botão Fazer thumbnail do vídeo: decide o que entra em cada lugar do modelo escolhido "
+     "e o texto de cada item (só nos formatos que têm modelos de thumbnail)."),
 ]
 
 

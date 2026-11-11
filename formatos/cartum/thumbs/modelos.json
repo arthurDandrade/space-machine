@@ -1,0 +1,63 @@
+{
+ "_sobre": "Modelos de thumbnail do formato (2026-11-11). Medidos em 25 thumbs de um canal de referência do mesmo tipo de vídeo (lista de tópicos): todas sobre branco, sem o rosto de um apresentador, mostrando OS ITENS da lista. As mais vistas são as grades (1,6 M, 1,5 M, 1,0 M, 976 mil). Quem desenha é o motor/thumb/compor_thumb.py; quem decide o que entra em cada lugar é o Claude (prompts/thumbnail.md), a partir do roteiro e do que o vídeo já tem. Para criar um modelo: copie um, troque o id e os números. layout: grade | dupla | faixa. forma (grade): moldura | circulo | livre. tipos: o que pode entrar (foto e historica = imagem REAL buscada; logo = logo real buscada; recorte = desenho do vídeo ou gerado no Flow). reservas: quantos itens a mais o plano pede, para a grade fechar mesmo se uma imagem não for achada.",
+ "estilo": {
+  "fundo": "#FFFFFF",
+  "cor_texto": "#111111",
+  "cor_destaque": "#E3120B",
+  "cor_borda": "#111111",
+  "fonte_legenda": "ChalkboardSE-Bold",
+  "fonte_titulo": "Impact",
+  "ceu": "#3FA9F5",
+  "grama": "#5DB645"
+ },
+ "modelos": [
+  {
+   "id": "grade_fotos",
+   "nome": "Grade de fotos",
+   "descricao": "6 fotos reais em quadros com borda preta, cada uma com 1 a 3 palavras embaixo. O modelo mais visto da referência.",
+   "layout": "grade", "colunas": 3, "linhas": 2, "forma": "moldura",
+   "itens": 6, "reservas": 3, "tipos": ["foto", "historica"],
+   "quando": "O vídeo é uma lista de casos, pessoas ou acontecimentos reais que têm foto."
+  },
+  {
+   "id": "grade_fotos_8",
+   "nome": "Grade de 8 fotos",
+   "descricao": "8 fotos reais menores, em 4 colunas, com o nome de cada uma embaixo.",
+   "layout": "grade", "colunas": 4, "linhas": 2, "forma": "moldura",
+   "itens": 8, "reservas": 3, "tipos": ["foto", "historica"],
+   "quando": "A lista tem 8 ou mais itens e o nome de cada um já chama atenção (pessoas conhecidas)."
+  },
+  {
+   "id": "grade_logos",
+   "nome": "Grade de logos",
+   "descricao": "8 logos reais sobre branco, cada um com uma palavra forte embaixo.",
+   "layout": "grade", "colunas": 4, "linhas": 2, "forma": "livre", "legenda_px": 34,
+   "itens": 8, "reservas": 2, "tipos": ["logo"],
+   "quando": "A lista é de times, clubes, marcas ou países: cada item tem um símbolo."
+  },
+  {
+   "id": "grade_circulos",
+   "nome": "Grade de círculos",
+   "descricao": "8 círculos com um desenho em cada (céu e grama atrás) e o nome embaixo.",
+   "layout": "grade", "colunas": 4, "linhas": 2, "forma": "circulo",
+   "itens": 8, "reservas": 2, "tipos": ["recorte", "foto", "historica"],
+   "quando": "A lista é de gestos, tipos de jogador, objetos ou situações que ficam melhores desenhados."
+  },
+  {
+   "id": "dupla",
+   "nome": "Dupla com título",
+   "descricao": "Dois desenhos grandes lado a lado, cortados pela borda de baixo, cada um com o título em cima (uma parte em vermelho).",
+   "layout": "dupla",
+   "itens": 2, "reservas": 1, "tipos": ["recorte", "logo"], "titulo_por_item": true,
+   "quando": "O vídeo tem dois casos muito mais fortes que os outros, ou um contraste (antes e depois, melhor e pior)."
+  },
+  {
+   "id": "faixa_foto",
+   "nome": "Faixa e foto",
+   "descricao": "O título numa faixa branca em cima (uma parte em vermelho) e uma foto real ocupando o resto.",
+   "layout": "faixa",
+   "itens": 1, "reservas": 2, "tipos": ["foto", "historica"], "titulo": true,
+   "quando": "Existe UMA foto real que conta o vídeo sozinha."
+  }
+ ]
+}

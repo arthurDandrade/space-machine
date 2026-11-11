@@ -10,6 +10,7 @@ import { Dialogo } from "../componentes/Dialogo";
 import { copiarTexto, TituloCopiavel } from "../componentes/Copiar";
 import { Capa } from "../componentes/Imagens";
 import { BarraThumb, soltarArquivo, useSoltar, useThumbnail } from "../componentes/Thumbnail";
+import { FazerThumb } from "../componentes/FazerThumb";
 import { compacto, haQuanto, useT } from "../textos";
 import { AndamentoVideo, ProducaoVideo } from "./ProducaoVideo";
 
@@ -241,6 +242,7 @@ function CampoThumbnail({ canal, v }: { canal: string; v: DetalheVideo }) {
       </div>
       <input ref={campo} type="file" accept="image/png,image/jpeg,image/webp" hidden
              onChange={(e) => { const f = e.target.files?.[0]; if (f) enviar(f); e.target.value = ""; }} />
+      <FazerThumb canal={canal} v={v} />
     </div>
   );
 }
