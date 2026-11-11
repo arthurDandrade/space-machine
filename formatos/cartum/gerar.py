@@ -200,6 +200,44 @@ class Montador:
         self.forma([{"t": "path", "pts": [a, b], "stroke": self.destaque, "sw": 12},
                     {"t": "path", "pts": [e1, b, e2], "stroke": self.destaque, "sw": 12}], t_in, t_out, [mx, my], "seta")
 
+    def pensamento(self, el, t_in, t_out, cx, base, larg):
+        """Balão de pensamento com um DESENHO dentro (o que o personagem imagina): a nuvem branca acima do card, um
+        pouco para a direita, e as bolinhas descendo para a cabeça dele. `base` = y de baixo do balão."""
+        bw, bh = 330, 215
+        bcx = min(W - bw / 2 - 20, cx + min(120, larg * 0.22))
+        bcy = base - 30 - bh / 2
+        preto, branco = [0.07, 0.07, 0.07], [1, 1, 1]
+        itens = [{"t": "ellipse", "size": [bw, bh], "fill": branco, "stroke": preto, "sw": 4, "trim": False}]
+        for r, dx, dy in [(26, -bw * 0.24, bh / 2 + 6), (16, -bw * 0.33, bh / 2 + 30)]:
+            itens.append({"t": "ellipse", "size": [r, r], "fill": branco, "stroke": preto, "sw": 3, "pos": [dx, dy],
+                          "trim": False})
+        self.forma(itens, t_in, t_out, [bcx, bcy], "balão de pensamento")
+        self.imagem(el, t_in, t_out, bcx, bcy, bw - 110, bh - 70, camada="ui")       # por cima do balão
+
+    def aponta(self, txt, t_in, t_out, cx, cy, larg, alt, base, onde):
+        """Número ou palavra acima do card com uma seta curva que termina DENTRO do desenho ("20,000" apontando
+        para as pessoas no abrigo). `onde` = (fx, fy) de −1 a 1 a partir do centro do desenho."""
+        tam = 56
+        tw = largura(txt, tam, self.fonte_titulo)
+        tx, ty = cx + min(larg * 0.2, 140), base - 40
+        self.texto(txt, t_in, t_out, [tx, ty], tam, self.fonte_titulo)
+        p0 = (tx - tw / 2 - 18, ty + 4)
+        p2 = (cx + onde[0] * larg / 2, cy + onde[1] * alt / 2)
+        p1 = (min(p0[0], p2[0]) - 90, p0[1] + 6)             # o ponto de controle: a seta sai para o lado e desce
+        pts = []
+        for k in range(15):
+            u = k / 14
+            pts.append([(1 - u) ** 2 * p0[0] + 2 * u * (1 - u) * p1[0] + u * u * p2[0] - p0[0],
+                        (1 - u) ** 2 * p0[1] + 2 * u * (1 - u) * p1[1] + u * u * p2[1] - p0[1]])
+        dx, dy = pts[-1][0] - pts[-2][0], pts[-1][1] - pts[-2][1]
+        d = math.hypot(dx, dy) or 1
+        ux, uy = dx / d, dy / d
+        b, asa = pts[-1], 30
+        e1 = [b[0] - asa * (ux * 0.8 - uy * 0.6), b[1] - asa * (uy * 0.8 + ux * 0.6)]
+        e2 = [b[0] - asa * (ux * 0.8 + uy * 0.6), b[1] - asa * (uy * 0.8 - ux * 0.6)]
+        self.forma([{"t": "path", "pts": pts, "stroke": self.destaque, "sw": 9},
+                    {"t": "path", "pts": [e1, b, e2], "stroke": self.destaque, "sw": 9}], t_in, t_out, list(p0), "aponta")
+
     def xis(self, t_in, t_out, cx, cy, larg, alt):
         m = min(larg, alt) * 0.42
         self.forma([{"t": "path", "pts": [[-m, -m], [m, m]], "stroke": self.destaque, "sw": 22},
@@ -210,11 +248,25 @@ class Montador:
                    t_in, t_out, [cx, cy], "círculo")
 
 
-def caixas(cards):
-    """A caixa de cada card na AREA: uma fileira até 4, duas com 5 ou 6; a largura segue o "tamanho" do card."""
+def caixas(cards, layout=None):
+    """A caixa de cada card na AREA e quais são os pequenos. Uma fileira até 4, duas com 5 ou 6; a largura segue o
+    "tamanho" do card. Layout L1 (lista): o 1º card grande à esquerda e os outros pequenos, em grade, à direita."""
     n = len(cards)
-    fileiras = [cards] if n <= 4 else [cards[:(n + 1) // 2], cards[(n + 1) // 2:]]
     x0, y0, x1, y1 = AREA
+    if layout == "L1" and n >= 2:
+        wg = (x1 - x0) * 0.42
+        out = [(x0, y0, wg, y1 - y0)]
+        m = n - 1
+        cols = m if m <= 3 else (2 if m == 4 else 3)      # até 3 itens numa fileira só: saem maiores
+        lin = math.ceil(m / cols)
+        gx0 = x0 + wg + VAO
+        cw = (x1 - gx0 - VAO * (cols - 1)) / cols
+        ch = min(520.0 if lin == 1 else 360.0, (y1 - y0 - VAO * (lin - 1)) / lin)
+        gy0 = (y0 + y1) / 2 - (ch * lin + VAO * (lin - 1)) / 2
+        for k in range(m):
+            out.append((gx0 + (k % cols) * (cw + VAO), gy0 + (k // cols) * (ch + VAO), cw, ch))
+        return out, set(range(1, n))
+    fileiras = [cards] if n <= 4 else [cards[:(n + 1) // 2], cards[(n + 1) // 2:]]
     hf = (y1 - y0 - VAO * (len(fileiras) - 1)) / len(fileiras)
     out = []
     for fi, fila in enumerate(fileiras):
@@ -225,12 +277,18 @@ def caixas(cards):
             w = util * p / sum(pesos)
             out.append((x, y0 + fi * (hf + VAO), w, hf))
             x += w + VAO
-    return out
+    return out, set()
+
+
+ONDE = {"centro": (-0.25, -0.3), "esquerda": (-0.6, 0.0), "direita": (0.6, 0.0), "topo": (0.0, -0.6), "base": (0.0, 0.55)}
 
 
 def tela(M, e, fim, espera=0.0):
-    """Um estado = uma tela: os cards em colunas, cada um no seu tempo, tudo até `fim`. `espera`: na 1ª tela do
-    tópico, o tempo de o cartão do título encolher para o cabeçalho (o 1º card entrava por cima dele)."""
+    """Um estado = uma tela: os cards em colunas (ou em lista, L1), cada um no seu tempo, tudo até `fim`. `espera`:
+    na 1ª tela do tópico, o tempo de o cartão do título encolher para o cabeçalho (o 1º card entrava por cima dele).
+    Composições medidas na referência (2026-11-11): lista (um desenho grande e os itens pequenos se acumulando ao
+    lado), o balão de pensamento com um desenho dentro ("pensa"), a seta com número que aponta para dentro do
+    desenho ("aponta") e o personagem em plano médio, maior e cortado pela borda de baixo ("plano": "meio")."""
     cards = e.get("cards") or []
     ini = e["ini"] + espera
     # a data embaixo do nome: uma de cada vez (duas no mesmo estado ficavam uma por cima da outra)
@@ -245,47 +303,71 @@ def tela(M, e, fim, espera=0.0):
         """Texto que entraria no fim da tela é adiantado para ficar TEXTO_MIN s (nunca antes do card dele)."""
         return max(t0, min(t, fim - TEXTO_MIN))
     anterior = None
-    for c, (bx, by, bw, bh) in zip(cards, caixas(cards)):
+    boxes, pequenos = caixas(cards, e.get("layout"))
+    for idx, (c, (bx, by, bw, bh)) in enumerate(zip(cards, boxes)):
         opc = c.get("opcoes") or {}
+        mini = idx in pequenos                     # item pequeno da lista: texto menor e sem balão, seta ou plano
+        tam, linha = (36, 52) if mini else (46, 68)
         t0 = ini if c is primeiro else max(ini, c.get("t", ini))
-        acima, legenda, bal = c.get("acima"), c.get("legenda"), opc.get("balao")
-        topo = (42 if opc.get("circulo") else 0) + (68 if acima else 0) + (150 + (44 if bal and len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0)
-        pe = (42 if opc.get("circulo") else 0) + (68 if legenda else 0)
-        cx, cy = bx + bw / 2, by + topo + (bh - topo - pe) / 2
+        acima, legenda, bal = c.get("acima"), c.get("legenda"), (None if mini else opc.get("balao"))
+        st = c.get("sticker")
+        if isinstance(st, (list, tuple)):       # o compilador entrega [asset, t]; do elenco, {"arquivo", "t"}
+            st = {"asset": st[0], "t": st[1] if len(st) > 1 else t0}
+        st = st if st and (st.get("asset") or st.get("arquivo")) else None
+        pensa = bool(st) and bool(opc.get("pensa")) and not mini
+        aponta = None if mini else opc.get("aponta")
+        meio = opc.get("plano") == "meio" and not mini
+        if meio and legenda:                       # em plano médio o pé do desenho sai da tela: a legenda sobe
+            acima, legenda = (acima or legenda), None
+        topo = (42 if opc.get("circulo") else 0) + (linha if acima else 0) \
+            + (150 + (44 if len(str(bal.get("texto", ""))) > 22 else 0) if bal else 0) \
+            + (250 if pensa else 0) + (80 if aponta else 0)
+        pe = (42 if opc.get("circulo") else 0) + (linha if legenda else 0)
         ih = bh - topo - pe
+        cx, cy = bx + bw / 2, by + topo + ih / 2
+        lw = bw
+        if meio:                                   # 1,4× maior, preso em cima: o que passa da tela a borda corta
+            ih, lw = ih * 1.4, bw * 1.06
+            cy = by + topo + ih / 2
         # o desenho (e as trocas dele, no mesmo lugar)
         versoes = [(t0, c)] + [(tr.get("t", t0), tr) for tr in c.get("troca") or []]
         larg = alt = 0
         for k, (tv, el) in enumerate(versoes):
             sai = versoes[k + 1][0] if k + 1 < len(versoes) else fim
             if sai - tv > 0.05 and (el.get("asset") or el.get("arquivo")):
-                larg, alt = M.imagem(el, tv, sai, cx, cy, bw, ih)
+                larg, alt = M.imagem(el, tv, sai, cx, cy, lw, ih)
+                if meio:                           # o QA mede o que está DENTRO do quadro
+                    M.registro[-1]["box"][3] = min(float(H), M.registro[-1]["box"][3])
         if not larg:
             continue
         # com círculo em volta do card, o nome e a legenda vão para fora dele (o traço passava por cima do texto)
         folga = 42 if opc.get("circulo") else 0
         y_topo = cy - alt / 2 - folga
+        if aponta and aponta.get("texto"):
+            M.aponta(str(aponta["texto"]), legivel(aponta.get("t", t0), t0), fim, cx, cy, larg, alt, y_topo,
+                     ONDE.get(aponta.get("onde"), ONDE["centro"]))
+            y_topo -= 80
         if acima:
             txt, t = _par(acima)
-            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, y_topo - 36], 46, max_w=bw + VAO - 10)
-            y_topo -= 68
+            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, y_topo - linha / 2 - 2], tam, max_w=bw + VAO - 10)
+            y_topo -= linha
         if bal and bal.get("texto"):
             M.balao(str(bal["texto"]), legivel(bal.get("t", t0), t0), fim, cx, y_topo, bw + VAO - 10)
         if legenda:
             txt, t = _par(legenda)
-            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, cy + alt / 2 + 38 + folga], 46, max_w=bw + VAO - 10)
-        st = c.get("sticker")
-        if isinstance(st, (list, tuple)):       # o compilador entrega [asset, t]; do elenco, {"arquivo", "t"}
-            st = {"asset": st[0], "t": st[1] if len(st) > 1 else t0}
-        if st and (st.get("asset") or st.get("arquivo")):
-            lado = -1 if bal else 1         # com balão, o adesivo vai para o outro canto
+            M.texto(txt, t0 if t is None else legivel(t, t0), fim, [cx, cy + alt / 2 + linha / 2 + 4 + folga], tam, max_w=bw + VAO - 10)
+        if pensa:
+            M.pensamento(st, legivel(st.get("t", t0), t0), fim, cx, y_topo, larg)
+        elif st:
+            lado = -1 if (bal or aponta) else 1         # com balão ou número com seta, o adesivo vai para o outro canto
             sx = min(W - 120, max(120, cx + lado * (larg / 2 - 10)))
-            M.imagem(st, max(t0, st.get("t", t0)), fim, sx, max(AREA[1] + 105, cy - alt / 2 + 40), 210, 210)   # abaixo do cabeçalho e da miniatura
+            lado_st = 120 if mini else 210
+            M.imagem(st, max(t0, st.get("t", t0)), fim, sx, max(AREA[1] + 105, cy - alt / 2 + 40), lado_st, lado_st)   # abaixo do cabeçalho e da miniatura
         if opc.get("circulo"):
             M.circulo(max(t0, opc["circulo"].get("t", t0)), fim, cx, cy, larg, alt)
         if opc.get("x"):
             M.xis(max(t0, opc["x"].get("t", t0)), fim, cx, cy, larg, alt)
-        if opc.get("seta") and anterior:
+        if opc.get("seta") and anterior and not mini:
             M.seta(max(t0, opc["seta"].get("t", t0)), fim, anterior, (cx, cy))
         anterior = (cx, cy)
 

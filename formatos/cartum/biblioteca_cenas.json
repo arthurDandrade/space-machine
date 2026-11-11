@@ -6,7 +6,8 @@
   "P3": "três desenhos",
   "P4": "quatro a seis desenhos",
   "R1": "foto real com desenho",
-  "M1": "mapa com desenho"
+  "M1": "mapa com desenho",
+  "L1": "lista: um desenho grande e os itens pequenos ao lado"
  },
  "card_unico": [
   "P1"
@@ -18,7 +19,8 @@
   "P3",
   "P4",
   "R1",
-  "M1"
+  "M1",
+  "L1"
  ],
  "_orientacao": "Desenho é gerado quadrado e recortado; foto real e mapa em qualquer proporção.",
  "orientacao": {
@@ -27,7 +29,8 @@
   "P3": "quadrado",
   "P4": "quadrado",
   "R1": "qualquer",
-  "M1": "qualquer"
+  "M1": "qualquer",
+  "L1": "quadrado"
  },
  "_metas": "Medido nos 4 vídeos de referência (2026-11-09): um elemento novo a cada 1,6–1,8 s (~35/min, contando ícones e textos) e a tela inteira trocando a cada 4,5–11 s. Aqui a meta é mais baixa (10 assets por minuto) porque cada desenho novo é gerado à mão numa sessão: o resto do ritmo vem de adesivo, balão, seta, X e texto, que não contam como asset. P1 no máximo em 30% dos estados: tela com um desenho só parece vazia.",
  "metas": {

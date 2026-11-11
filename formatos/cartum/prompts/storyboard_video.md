@@ -18,6 +18,7 @@ O que continua valendo em CADA capítulo (as regras do storyboard, abaixo): algo
 
 Como trabalhar:
 - Leia a transcrição inteira e divida frase a frase. Dentro de cada tela, pense no que a frase vai citando: cada coisa citada é um card (o desenho entra na palavra), e o que a frase diz SOBRE ela vira `acima`, `legenda`, `balao`, `seta`, `x`, `circulo` ou um `sticker`.
+- VARIE A COMPOSIÇÃO da tela (as regras do storyboard dizem como escrever cada uma): lista (layout L1) quando a frase enumera; personagem em plano médio ("plano": "meio") com balão ou com um balão de pensamento que leva um desenho ("pensa"); número apontando para dentro de um desenho ("aponta"). Nenhuma delas pede desenho novo: usam o elenco.
 - Tipos de asset: "recorte" (desenho GERADO e recortado: pessoa genérica, grupo, objeto, construção, bicho, ícone), "foto"/"historica" (foto REAL de banco livre: o lugar, o objeto, o retrato da pessoa real), "logo" (logo real, buscada) e mapa (`"mapa": {...}`, gerado pelo sistema). Não há vídeo.
 - NUNCA desenho de pessoa real nem de acontecimento real: a pessoa real é foto com o nome em cima, e o desenho ao lado é genérico.
 - No pedido de desenho, escreva SÓ o que aparece e a pose, em inglês, um assunto por pedido, sem cenário e sem texto.

@@ -129,3 +129,9 @@ Medido com o mesmo detector nas referências e no nosso vídeo de 10 tópicos (m
   - **Cabeçalho**: o nome do tópico na referência é bem menor que o nosso (a olho, umas 3 vezes) e não há miniatura no canto nesse vídeo.
   - **Traço**: a referência parece desenho à mão (linha fina e torta, bonecos brancos de cabeça redonda vestidos conforme a época, cada desenho com um pedaço de cenário); o nosso parece ilustração vetorial pronta. É escolha de identidade, não defeito.
 
+## Composição, 1ª leva (2026-11-11): lista, pensamento com desenho, número com seta e plano médio
+As quatro composições entraram no gerador (`gerar.py`: `caixas(..., "L1")`, `Montador.pensamento`, `Montador.aponta`, `"plano": "meio"`) e nas regras do storyboard; nenhuma pede desenho novo.
+- No vídeo de 10 tópicos, uma correção pontual por capítulo (o storyboard reescreveu de 2 a 4 cenas de cada um, só com o elenco que já existia) pôs composição nova em 36 das 75 telas: 10 listas, 19 personagens em plano médio, 11 números com seta e 4 balões de pensamento com desenho. Nenhum pedido ao Flow.
+- Ajustes que o 1º render pediu: item de lista com 2 ou 3 itens saía pequeno demais numa grade de 2 colunas (agora até 3 itens ficam numa fileira só, com célula de até 520 px de altura); o número com seta ficava por cima do nome do card e do adesivo (agora o número fica colado no desenho, o nome por cima dele e o adesivo vai para o outro canto).
+- Falta a 2ª leva: a miniatura circulada ligada por uma linha a um ponto do desenho grande, e a aproximação num desenho grande seguida do desenho inteiro. As duas dependem de desenhos novos (um detalhe em miniatura; um desenho grande e cheio de detalhe).
+
