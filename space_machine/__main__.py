@@ -9,6 +9,7 @@
   python -m space_machine escolher <bloco> [--sombra] [--asset ID] [--modelo haiku]
   python -m space_machine checar                     testa o claude (versão, login, modelos) sem rodar nada
   python -m space_machine novo <canal> "<título>" [--roteiro arquivo]  cria o vídeo (sem roteiro: o Claude escreve, nos formatos que têm agente de roteiro)
+  python -m space_machine roteiro <pasta do vídeo>   escreve o roteiro de um vídeo criado sem capítulos (o painel lança isto)
   python -m space_machine atalho [--pasta ~/Desktop]  cria o app "Space Machine" na área de trabalho
   python -m space_machine atualizar [--conferir] [--sim]   traz o código novo do GitHub (git pull) e remonta o painel
   python -m space_machine limpar [--cache] [--aplicar]  manda para o Lixo o que o sistema gerou e não serve mais
@@ -53,6 +54,9 @@ def main():
         m(args)
     elif cmd == "reels":
         from .reels import main as m
+        m(args)
+    elif cmd == "roteiro":
+        from .roteiro import main as m
         m(args)
     elif cmd == "thumb":
         from .thumb import main as m

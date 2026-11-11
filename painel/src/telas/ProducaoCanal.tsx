@@ -201,7 +201,8 @@ export function ProducaoCanal() {
           <div className="fila">
             {data.rodando.map((r) => (
               <LinhaRodando key={r.video + r.nn} canal={canal} r={r}
-                            parar={() => parar.mutate(r.nn ? `/api/c/${canal}/v/${r.video}/b/${r.nn}/parar` : `/api/c/${canal}/v/${r.video}/produzir/parar`)} />
+                            parar={() => parar.mutate(r.etapa === "roteiro" ? `/api/c/${canal}/v/${r.video}/roteiro/parar`
+                              : r.nn ? `/api/c/${canal}/v/${r.video}/b/${r.nn}/parar` : `/api/c/${canal}/v/${r.video}/produzir/parar`)} />
             ))}
           </div>
         ) : (

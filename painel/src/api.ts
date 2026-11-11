@@ -196,6 +196,13 @@ export interface Video {
   pronto: string;          // nome do MP4 na pasta de prontos do canal, ou ""
   duracao_s: number;
   n_blocos_ficha: number;
+  escrevendo: boolean;     // o Claude está escrevendo o roteiro deste vídeo agora (roteiro.py)
+}
+
+// O roteiro pedido ao Claude ao criar o vídeo: em que passo está, ou por que parou.
+export interface RoteiroEstado {
+  status: "rodando" | "ok" | "erro" | "parado" | "";
+  etapa: string; inicio: string; erro: string; obs: string; rodando: boolean;
 }
 
 // fluxo "video" (2026-11-05): o vídeo inteiro anda junto (space_machine/rodar_video.py)
@@ -326,6 +333,7 @@ export interface ThumbSistema {
 }
 
 export interface DetalheVideo extends Omit<Video, "blocos" | "fila"> {
+  roteiro_estado: RoteiroEstado | null;
   final: Final;
   thumbnail: Thumbnail | null;
   thumb_sistema: ThumbSistema | null;

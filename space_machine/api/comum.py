@@ -91,10 +91,14 @@ def _video(slug, v):
     if prod:        # fluxo "video": os capítulos andam juntos, então é UMA coisa rodando ou esperando, não uma por capítulo
         um = "run" if prod["rodando"] else "wait" if prod["parado"] else ""
         conta = lambda e: 1 if e == um else 0
+    rot = v.get("roteiro") or {}        # o roteiro sendo escrito conta como rodando; se deu errado, espera você
+    escrevendo = bool(rot.get("rodando"))
+    falhou = rot.get("status") in ("erro", "parado") and not v["n_blocos"]
     return {
         "slug": v["slug"], "titulo": v["titulo"], "titulo_pub": g.get("titulo_pub") or "",
         "coluna": gestao.coluna_do_video(v, g), "n_blocos": v["n_blocos"], "entregues": v["entregues"],
-        "rodando": conta("run"), "esperando": conta("wait"), "na_fila": conta("fila"), "blocos": blocos,
+        "rodando": conta("run") + (1 if escrevendo else 0), "esperando": conta("wait") + (1 if falhou else 0),
+        "na_fila": conta("fila"), "blocos": blocos, "escrevendo": escrevendo,
         "fluxo": v.get("fluxo", "blocos"),
         "arquivado": v.get("arquivado") or "", "numero": v.get("numero") or 0, "pronto": v.get("pronto") or "",
         "duracao_s": v.get("duracao_s") or 0, "n_blocos_ficha": v.get("n_blocos_ficha") or 0,

@@ -83,12 +83,29 @@ def lista_canais():
             "falta_algo": _falta_algo()}
 
 
+def _segundos(quando):
+    """"2026-11-11 16:40:02" → segundos (para o painel dizer há quanto tempo), ou None."""
+    try:
+        return time.mktime(time.strptime(quando, "%Y-%m-%d %H:%M:%S"))
+    except (TypeError, ValueError):
+        return None
+
+
 @api.get("/c/{slug}")
 def painel_canal(slug: str):
     c = _canal(slug)
     resumo, vids, brutos = _resumo_canal(slug, c)
     esperando, rodando, filas = [], [], []
     for v, bruto in zip(vids, brutos):
+        rot = bruto.get("roteiro") or {}
+        if rot and not v["n_blocos"]:       # vídeo novo cujo roteiro o Claude está escrevendo (ou não conseguiu)
+            linha = {"video": v["slug"], "video_titulo": v["titulo"], "nn": "", "topico": "Roteiro", "etapa": "roteiro",
+                     "tem_capa": bool(capas.fontes(bruto["pasta"]))}
+            if rot.get("rodando"):
+                rodando.append({**linha, "indice": 0, "total": 0, "detalhe": rot.get("etapa", ""),
+                                "desde": _segundos(rot.get("inicio"))})
+            elif rot.get("status") in ("erro", "parado"):
+                esperando.append({**linha, "motivo": rot.get("erro", ""), "mudou": bruto["mudou"]})
         prod = bruto.get("producao")
         if prod:             # fluxo "video": uma linha pelo vídeo inteiro (nn vazio = a página do vídeo)
             etapa = prod["etapa_atual"] if prod["rodando"] else (prod["parado"] or {}).get("etapa", "")
@@ -202,7 +219,8 @@ def assinatura():
         for vd in prod.iterdir():
             if not vd.is_dir() or vd.name.startswith((".", "_")):
                 continue
-            for p in (vd, vd / "edicao", vd / "_estudio" / "fila.json", vd / "estudio_video.json", vd / "blocos",
+            for p in (vd, vd / "edicao", vd / "_estudio" / "fila.json", vd / "_estudio" / "roteiro.json",
+                      vd / "estudio_video.json", vd / "blocos",
                       vd / "final" / "estado.json"):
                 marcar(p)
             if (vd / "final" / "pid").exists():

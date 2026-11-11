@@ -258,7 +258,7 @@ def _ritmo_roteiro(texto):
     return (sum(n) / len(n), sum(x <= 8 for x in n) / len(n)) if n else (0.0, 0.0)
 
 
-def escrever_roteiro(c, titulo, obs=""):
+def escrever_roteiro(c, titulo, obs="", avisar=None):
     """O agente de roteiro (formato com roteiro.modelo, 2026-11-04): só com o título, o Claude escreve o roteiro
     inteiro no molde do formato (cold open + capítulos "# Nome"), e se sair fora do molde (poucos capítulos, curto
     ou longo demais) corrige numa volta da mesma conversa. Devolve o texto; ValueError se o formato não tem modelo."""
@@ -279,6 +279,7 @@ def escrever_roteiro(c, titulo, obs=""):
                 f"O formato da resposta continua o descrito acima):\n{obs.strip()}\n" if obs.strip() else "")
              + "\nEscreva o roteiro completo. Responda só com o roteiro, sem nada antes ou depois.")
     sid = str(uuid.uuid4())
+    avisar = avisar or (lambda passo: None)       # roteiro.py mostra no painel em que passo a escrita está
     for volta in range(2):
         r = chamar("roteiro", sistema, texto, canal=c, timeout=1800, sessao=(sid, volta == 0), texto_livre=True,
                    ctx={"canal": Path(c.get("raiz") or Path(c["producoes"]).parent).name})
@@ -310,8 +311,11 @@ def escrever_roteiro(c, titulo, obs=""):
             if fr.get("curtas_max") is not None and curtas > fr["curtas_max"]:
                 problemas.append(f"{curtas:.0%} das frases têm até 8 palavras (o molde aceita até "
                                  f"{fr['curtas_max']:.0%}: frase curta só como fecho de uma ideia)")
+        avisar(f"conferindo o molde: {n} tópicos, {palavras} palavras")
         if not problemas:
             return rot
+        if volta == 0:
+            avisar(f"reescrevendo para caber no molde ({n} tópicos, {palavras} palavras na primeira versão)")
         texto = "Fora do molde: " + "; ".join(problemas) + ". Reescreva o roteiro inteiro corrigindo isso."
         if obs.strip():
             # quem produz pode ter pedido justamente isso (menos tópicos, vídeo mais curto): a instrução manda no molde
@@ -390,7 +394,8 @@ def _ocupado(vd):
     from .fila import ler_fila
     if ler_fila(vd).get("ativa"):
         return "a fila deste vídeo está rodando: pare a fila antes"
-    for pid in list(vd.glob("blocos/*/_estudio/pid")) + [vd / "final" / "pid", vd / "producao" / "_estudio" / "pid"]:
+    for pid in list(vd.glob("blocos/*/_estudio/pid")) + [vd / "final" / "pid", vd / "producao" / "_estudio" / "pid",
+                                                          vd / "_estudio" / "roteiro.pid"]:
         if pid.exists() and estado._vivo(pid.read_text().strip()):
             return "tem coisa rodando neste vídeo: pare antes"
     return ""

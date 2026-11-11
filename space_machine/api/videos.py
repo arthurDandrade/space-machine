@@ -8,6 +8,7 @@ from fastapi import APIRouter, Body, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from .. import capas, estado, fila, final, gestao
+from .. import roteiro as roteiro_mod
 from .. import video as video_mod
 from .. import thumb as thumb_mod
 from .. import fichas, prontos
@@ -88,7 +89,10 @@ def detalhe_video(slug: str, video: str):
                 "mp4_tamanho": mp4p.stat().st_size if mp4p else 0,
                 "log_rodar": _cauda(p / "_estudio" / "log_rodar.txt", 60),
                 "log_etapa": {"nome": etapa_log.name, "texto": _cauda(etapa_log, 40)} if etapa_log else None}
-    return {**resumo, "producao": prod, "blocos": blocos, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
+    rot = v.get("roteiro") or {}
+    return {**resumo, "producao": prod, "blocos": blocos,
+            "roteiro_estado": {k: rot.get(k) or "" for k in ("status", "etapa", "inicio", "erro", "obs")}
+                              | {"rodando": bool(rot.get("rodando"))} if rot else None, "fila": v.get("fila") or None, "final": fim, "thumbnail": thumb,
             "thumb_sistema": _thumb_sistema(_canal(slug), vd),
             "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
@@ -186,13 +190,37 @@ def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Bo
     junto (pode levar alguns minutos)."""
     from ..motor_claude import ErroClaude
     try:
-        video = gestao.criar_video(_canal(slug), titulo, roteiro, instrucoes.strip()[:4000])
+        if roteiro.strip():
+            video = gestao.criar_video(_canal(slug), titulo, roteiro)
+        else:
+            # sem roteiro: o vídeo nasce já, e o Claude escreve em segundo plano com o painel mostrando (roteiro.py)
+            video = roteiro_mod.comecar(_canal(slug), titulo, instrucoes.strip()[:4000])
     except ValueError as e:
         raise HTTPException(400, str(e))
     except ErroClaude as e:
         raise HTTPException(502, f"O Claude não escreveu o roteiro: {e}")
     gestao.ideia_virou_video(slug, ideia, video)
     return {"ok": True, "video": video}
+
+
+@api.post("/c/{slug}/v/{video}/roteiro/parar")
+def parar_roteiro(slug: str, video: str):
+    roteiro_mod.parar(_producao_dir(slug, video))
+    return {"ok": True}
+
+
+@api.post("/c/{slug}/v/{video}/roteiro/escrever")
+def escrever_roteiro_de_novo(slug: str, video: str, instrucoes: str = Body(None, embed=True)):
+    """Tenta de novo o roteiro de um vídeo que ficou sem capítulos (o Claude falhou ou você parou). Sem
+    `instrucoes`, repete as da última vez."""
+    vd = _producao_dir(slug, video)
+    est = roteiro_mod.ler_estado(vd)
+    if est.get("rodando"):
+        raise HTTPException(409, "o roteiro deste vídeo já está sendo escrito")
+    if estado.blocos_do_video(vd):
+        raise HTTPException(409, "este vídeo já tem roteiro e capítulos")
+    roteiro_mod.lancar(vd, None if instrucoes is None else instrucoes.strip()[:4000])
+    return {"ok": True}
 
 
 @api.post("/c/{slug}/v/{video}/thumbnail")

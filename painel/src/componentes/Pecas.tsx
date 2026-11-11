@@ -26,6 +26,8 @@ export function CartaoVideo({ canal, v, atraso = 0 }: { canal: string; v: Video;
   const capa = urlCapa(canal, v.slug, undefined, v.capa_v);
   const detalhe =
     v.arquivado ? t("app.arquivar.selo")
+    : v.escrevendo ? t("app.roteiro.escrevendo")
+    : v.n_blocos === 0 ? t("app.roteiro.sem_capitulos")
     : v.fluxo === "video" ? t("app.video.capitulos_n", { n: v.n_blocos })     // o vídeo inteiro anda junto
     : v.coluna === "producao" || v.coluna === "roteiro"
       ? t("app.video.blocos_de", { e: v.entregues, n: v.n_blocos })

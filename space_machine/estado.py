@@ -254,6 +254,7 @@ def video(canal_slug, video_slug, com_blocos=True):
     entregues = sum(1 for b in blocos if b["feito"]["entregue"])
     from .video import fluxo_video
     from . import fichas
+    from . import roteiro as roteiro_mod
     ficha = fichas.ler(vd)
     arquivado = ficha.get("arquivado") or ""        # só a ficha ficou (gestao.arquivar_video): não há o que medir
     mudou_pasta = vd.stat().st_mtime if vd.is_dir() else (fichas.pasta(vd) / "ficha.json").stat().st_mtime
@@ -263,6 +264,7 @@ def video(canal_slug, video_slug, com_blocos=True):
     return {"canal": canal_slug, "slug": video_slug, "titulo": titulo_video(vd), "pasta": str(vd),
             "blocos": blocos, "n_blocos": n, "entregues": entregues,
             "fluxo": "video" if prod else "blocos", "producao": prod,
+            "roteiro": roteiro_mod.ler_estado(vd) if vd.is_dir() else {},     # o Claude escrevendo o roteiro (roteiro.py)
             "arquivado": arquivado, "numero": ficha.get("numero") or 0, "pronto": ficha.get("pronto") or "",
             "duracao_s": ficha.get("duracao_s") or 0, "n_blocos_ficha": ficha.get("n_blocos") or 0,
             "mudou": max([mudou_pasta] + [b["mudou"] for b in blocos] + [prod["mudou"] if prod else 0]),

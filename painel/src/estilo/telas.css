@@ -847,3 +847,10 @@ pre.saida { margin: 8px 0 0; padding: 10px 12px; border-radius: 10px; background
 .ideia-mini span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* tela do canal: a lista cortada */
 .mostrar-mais { display: flex; justify-content: center; margin-top: 14px; }
+
+/* vídeo novo com o roteiro sendo escrito (Video.tsx › EscrevendoRoteiro) */
+.pedido-roteiro { max-width: 820px; }
+.pedido-roteiro p { margin: 0 0 6px; }
+.pedido-roteiro p.sub { margin-top: 12px; }
+.pedido-roteiro .texto-instrucoes { white-space: pre-wrap; }
+.pedido-roteiro textarea { width: 100%; }

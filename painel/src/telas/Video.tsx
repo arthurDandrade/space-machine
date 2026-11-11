@@ -12,6 +12,7 @@ import { Capa } from "../componentes/Imagens";
 import { BarraThumb, soltarArquivo, useSoltar, useThumbnail } from "../componentes/Thumbnail";
 import { FazerThumb } from "../componentes/FazerThumb";
 import { compacto, haQuanto, useT } from "../textos";
+import { AoVivo, motivoLimpo } from "../componentes/AoVivo";
 import { AndamentoVideo, ProducaoVideo } from "./ProducaoVideo";
 
 export const useVideo = (canal: string, video: string) =>
@@ -377,6 +378,52 @@ function FichaArquivado({ canal, v }: { canal: string; v: DetalheVideo }) {
   );
 }
 
+// Vídeo novo cujo roteiro o Claude está escrevendo (ou não conseguiu): ainda não há capítulos para mostrar, então a
+// página é isto — o que está acontecendo, o que você pediu e, se parou, o motivo e o botão de tentar de novo.
+function EscrevendoRoteiro({ canal, v }: { canal: string; v: DetalheVideo }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const r = v.roteiro_estado!;
+  const [instrucoes, setInstrucoes] = useState(r.obs);
+  const base = `/api/c/${canal}/v/${v.slug}/roteiro`;
+  const parar = useMutation({ mutationFn: () => enviar(`${base}/parar`, {}), onSettled: () => qc.invalidateQueries() });
+  const tentar = useMutation({ mutationFn: () => enviar(`${base}/escrever`, { instrucoes }), onSettled: () => qc.invalidateQueries() });
+  return (
+    <>
+      {r.rodando ? (
+        <AoVivo etapa="roteiro" rotulo={t("app.roteiro.titulo")} indice={0} total={0} detalhe={r.etapa} inicio={r.inicio}
+                progresso={null} log="" parar={() => parar.mutate()} parando={parar.isPending} />
+      ) : (
+        <div className="aviso-parado">
+          <AlertTriangle size={20} />
+          <div>
+            <b>{t(r.status === "parado" ? "app.roteiro.parado" : "app.roteiro.falhou")}</b>
+            <span>{motivoLimpo(r.erro)}</span>
+            {motivoLimpo(r.erro) !== r.erro.trim() && <details className="tecnico"><summary>{t("app.aovivo.detalhe_tecnico")}</summary><pre>{r.erro}</pre></details>}
+          </div>
+        </div>
+      )}
+      <div className="cartao pedido-roteiro">
+        <div className="titulo-secao"><h3>{t("app.roteiro.pedido")}</h3></div>
+        <p className="sub">{t("app.roteiro.pedido_titulo")}</p>
+        <p><b>{v.titulo}</b></p>
+        <p className="sub">{t("app.novo.instrucoes")}</p>
+        {r.rodando ? <p className="texto-instrucoes">{r.obs || t("app.roteiro.sem_instrucoes")}</p> : (
+          <>
+            <textarea rows={4} value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} placeholder={t("app.novo.instrucoes_ex")} maxLength={4000} />
+            <div className="rodape-form">
+              <button className="bt primario" disabled={tentar.isPending} onClick={() => tentar.mutate()}><Wand2 size={16} />{t("app.roteiro.tentar")}</button>
+              <span className="sub">{t("app.roteiro.tentar_sub")}</span>
+              {tentar.isError && <span className="erro">{tentar.error.message}</span>}
+            </div>
+          </>
+        )}
+        {r.rodando && <p className="sub">{t("app.roteiro.pode_sair")}</p>}
+      </div>
+    </>
+  );
+}
+
 export function VideoTela() {
   const { canal = "", video = "" } = useParams();
   const { data: dc } = useCanal(canal);
@@ -396,6 +443,8 @@ export function VideoTela() {
     f === "todos" || (f === "afazer" ? b.estado === "todo" || b.estado === "meio" : b.estado === f);
   const filtros: Filtro[] = ["todos", "run", "fila", "wait", "ok", "afazer"];
   const pct = v.n_blocos ? Math.round((100 * v.entregues) / v.n_blocos) : 0;
+  // sem capítulos e com o roteiro a caminho (ou parado): a página mostra só isso
+  const semRoteiro = v.n_blocos === 0 && !!v.roteiro_estado && v.roteiro_estado.status !== "ok";
   const abrir = () => enviar(`/api/c/${canal}/v/${video}/abrir`, {});
 
   return (
@@ -410,6 +459,7 @@ export function VideoTela() {
         <ExcluirVideo canal={canal} v={v} />
       </Cabecalho>
 
+      {semRoteiro ? <EscrevendoRoteiro canal={canal} v={v} /> : <>
       <div className="video-topo">
         <CapaVideo canal={canal} v={v} />
         <div className="andamento cartao">
@@ -464,6 +514,7 @@ export function VideoTela() {
           <FormPublicacao canal={canal} v={v} />
         </>
       )}
+      </>}
     </>
   );
 }

@@ -74,7 +74,7 @@ export function AoVivo({ etapa, rotulo, indice, total, detalhe, inicio, progress
     <div className={`ao-vivo ${corrigindo ? "corrigindo" : ""}`}>
       <div className="icone">{corrigindo ? <Wrench size={22} /> : <IconeEtapa etapa={etapa} size={22} />}</div>
       <div className="meio">
-        <span className="rotulo"><span className="pulso" />{t(corrigindo ? "app.aovivo.corrigindo" : "app.aovivo.agora")} · {t("app.rodando.etapa_de", { i: indice, n: total })}</span>
+        <span className="rotulo"><span className="pulso" />{t(corrigindo ? "app.aovivo.corrigindo" : "app.aovivo.agora")}{total > 0 && <> · {t("app.rodando.etapa_de", { i: indice, n: total })}</>}</span>
         <b>{rotulo}</b>
         <p>{t(`app.aovivo.${etapa}`, undefined, "")}</p>
         {medido ? (
@@ -113,7 +113,7 @@ export function RodandoNaBarra({ canal, rodando }: { canal: string; rodando: Rod
       <span className="topo"><span className="pulso" />{t(rodando.length > 1 ? "app.aovivo.barra_n" : "app.aovivo.barra", { n: rodando.length })}</span>
       <b>{r.nn ? `${r.nn} · ${r.topico}` : r.video_titulo}</b>
       <span className="etapa"><IconeEtapa etapa={r.etapa} size={13} />{r.etapa ? t(`app.etapa.${r.etapa}`, undefined, r.etapa) : t("app.rodando.comecando")}{r.indice ? ` · ${r.indice}/${r.total}` : ""}</span>
-      <div className="passos">{Array.from({ length: r.total }, (_, i) => <i key={i} className={i + 1 < r.indice ? "ok" : i + 1 === r.indice ? "run" : ""} />)}</div>
+      {r.total > 0 && <div className="passos">{Array.from({ length: r.total }, (_, i) => <i key={i} className={i + 1 < r.indice ? "ok" : i + 1 === r.indice ? "run" : ""} />)}</div>}
     </Link>
   );
 }
