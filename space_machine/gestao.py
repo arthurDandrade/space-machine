@@ -271,7 +271,12 @@ def escrever_roteiro(c, titulo, obs=""):
     if regras.get("storyboard"):
         sistema += "\n\n## Regras do tema deste canal\n" + "\n".join(f"- {r}" for r in regras["storyboard"])
     texto = (f"Título do vídeo: {titulo.strip()}\nCanal: {c.get('nome', '')} — tema: {c.get('tema', '')}\n"
-             f"Idioma da narração: {c.get('idioma', 'en')}\n" + (f"Observação de quem produz: {obs}\n" if obs else "")
+             f"Idioma da narração: {c.get('idioma', 'en')}\n"
+             # o que você escreveu em "Instruções para o roteiro" ao criar o vídeo: vale para ESTE roteiro, por cima
+             # das escolhas de conteúdo do molde (o formato da resposta continua o do molde, senão a divisão em
+             # capítulos quebra)
+             + (f"\nInstruções de quem produz para ESTE roteiro (siga todas; mandam no conteúdo, no ângulo e no tom. "
+                f"O formato da resposta continua o descrito acima):\n{obs.strip()}\n" if obs.strip() else "")
              + "\nEscreva o roteiro completo. Responda só com o roteiro, sem nada antes ou depois.")
     sid = str(uuid.uuid4())
     for volta in range(2):
@@ -308,16 +313,22 @@ def escrever_roteiro(c, titulo, obs=""):
         if not problemas:
             return rot
         texto = "Fora do molde: " + "; ".join(problemas) + ". Reescreva o roteiro inteiro corrigindo isso."
+        if obs.strip():
+            # quem produz pode ter pedido justamente isso (menos tópicos, vídeo mais curto): a instrução manda no molde
+            texto += (" Só não mude o que as instruções de quem produz pediram: onde elas pedem diferente do molde "
+                      "(número de tópicos, tamanho, abertura), valem elas.")
     return rot
 
 
 def criar_video(c, titulo, roteiro, obs=""):
     """Cria a pasta do vídeo e um bloco por tópico (00 = cold open). Sem roteiro, num formato com agente de roteiro
-    (formato.json › roteiro.modelo), o Claude escreve o roteiro a partir do título. Devolve o slug; ValueError com o
+    (formato.json › roteiro.modelo), o Claude escreve o roteiro a partir do título e das instruções que você mandou
+    junto (`obs`: quantos tópicos, o ângulo, o que não pode faltar, o que evitar). Devolve o slug; ValueError com o
     motivo (para mostrar a quem produz) se não der."""
     if not titulo.strip():
         raise ValueError("Dê um título ao vídeo.")
-    if not (roteiro or "").strip():
+    escrito = not (roteiro or "").strip()         # sem roteiro colado: quem escreve é o Claude
+    if escrito:
         if Path(c["producoes"], slug_video(titulo)).exists() or fichas.existe(Path(c["producoes"], slug_video(titulo))):
             raise ValueError(f"Já existe um vídeo com essa pasta ({slug_video(titulo)}).")
         roteiro = escrever_roteiro(c, titulo, obs)
@@ -334,6 +345,8 @@ def criar_video(c, titulo, roteiro, obs=""):
     (vd / "edicao").mkdir(parents=True)
     gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
     fichas.criar(vd, titulo, roteiro)
+    if escrito and obs.strip():       # o que você pediu ao Claude fica guardado com o vídeo
+        fichas.anotar(vd, instrucoes_roteiro=obs.strip())
     escrever_blocos(c, vd, cold_open, partes)
     return vd.name
 

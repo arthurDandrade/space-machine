@@ -264,10 +264,19 @@ export function NovoVideoTela() {
   const navegar = useNavigate();
   const [titulo, setTitulo] = useState(params.get("titulo") ?? "");
   const [roteiro, setRoteiro] = useState("");
+  const [instrucoes, setInstrucoes] = useState("");
+  // veio de "Virar vídeo": as notas da ideia (ângulo, gancho, o que citar) já entram como instruções, para você ajustar
+  const idIdeia = Number(params.get("ideia")) || 0;
+  const { data: ideias } = useIdeias(canal);
+  const preenchido = useRef(false);
+  useEffect(() => {
+    const notas = ideias?.ideias.find((i) => i.id === idIdeia)?.notas;
+    if (notas && !preenchido.current) { preenchido.current = true; setInstrucoes(notas); }
+  }, [ideias, idIdeia]);
   const divisao = useMemo(() => dividir(roteiro), [roteiro]);
   const criar = useMutation({
     // veio de "Virar vídeo": a ideia sai da lista quando o vídeo é criado
-    mutationFn: () => enviar<{ ok: boolean; video: string }>(`/api/c/${canal}/novo`, { titulo, roteiro, ideia: Number(params.get("ideia")) || 0 }),
+    mutationFn: () => enviar<{ ok: boolean; video: string }>(`/api/c/${canal}/novo`, { titulo, roteiro, ideia: idIdeia, instrucoes: roteiro.trim() ? "" : instrucoes }),
     onSuccess: (r) => { qc.invalidateQueries(); navegar(rota.video(canal, r.video)); },
   });
   if (!dc) return null;
@@ -281,6 +290,12 @@ export function NovoVideoTela() {
       <form className="novo-grade" onSubmit={(e) => { e.preventDefault(); criar.mutate(); }}>
         <div className="cartao">
           <label className="campo">{t("app.novo.titulo_video")}<input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Every NFL Team Name Explained" required /></label>
+          {so_titulo && (
+            <label className="campo">{t("app.novo.instrucoes")}
+              <textarea rows={4} value={instrucoes} onChange={(e) => setInstrucoes(e.target.value)} placeholder={t("app.novo.instrucoes_ex")} maxLength={4000} />
+              <span className="sub">{t("app.novo.instrucoes_sub")}</span>
+            </label>
+          )}
           <label className="campo">{t(escreve ? "app.novo.roteiro_opcional" : "app.novo.roteiro")}
             <textarea className="roteiro" rows={22} value={roteiro} onChange={(e) => setRoteiro(e.target.value)}
               placeholder={t(escreve ? "app.novo.roteiro_ex_agente" : "app.novo.roteiro_ex")} required={!escreve} />

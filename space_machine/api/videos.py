@@ -180,12 +180,13 @@ def mover_video(slug: str, video: str, coluna: str = Body(..., embed=True)):
 
 @api.post("/c/{slug}/novo")
 def novo_video(slug: str, titulo: str = Body(..., embed=True), roteiro: str = Body("", embed=True),
-               ideia: int = Body(0, embed=True)):
+               ideia: int = Body(0, embed=True), instrucoes: str = Body("", embed=True)):
     """ideia: o id da ideia do "Virar vídeo" (sai da lista de ideias quando o vídeo é criado). Sem roteiro, num
-    formato com agente de roteiro, o Claude escreve o roteiro a partir do título (pode levar alguns minutos)."""
+    formato com agente de roteiro, o Claude escreve o roteiro a partir do título e das `instrucoes` que você mandou
+    junto (pode levar alguns minutos)."""
     from ..motor_claude import ErroClaude
     try:
-        video = gestao.criar_video(_canal(slug), titulo, roteiro)
+        video = gestao.criar_video(_canal(slug), titulo, roteiro, instrucoes.strip()[:4000])
     except ValueError as e:
         raise HTTPException(400, str(e))
     except ErroClaude as e:
