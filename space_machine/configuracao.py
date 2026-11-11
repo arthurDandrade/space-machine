@@ -324,11 +324,6 @@ def criar_canal(nome, tema, idioma, cores, fonte_arquivo, logo=None, fundo=None,
         f"---\ntags: [aprendizados, log]\n---\n\n# Log de Aprendizados\n\nVoltar: [[00 - {nome} (Índice)]]\n\n"
         "Tudo o que descobrirmos neste canal, mais recente em cima. As 4 entradas do topo vão junto no storyboard. "
         "O que vale para todos os canais do formato fica em formatos/<formato>/conhecimento/ no Space Machine.\n\n---\n")
-    # o modelo de roteiro do formato (se ele tiver um) já entra nos prompts do canal (aba Prompts)
-    modelo = (ficha_formato(formato).get("roteiro") or {}).get("modelo")
-    if modelo and arquivo_formato(modelo, formato, exigir=False).is_file():
-        (d / "prompts").mkdir(exist_ok=True)
-        shutil.copy2(arquivo_formato(modelo, formato), d / "prompts" / "Roteiro do vídeo.md")
     (d / "conhecimento" / f"00 - {nome} (Índice).md").write_text(
         f"# {nome} — Índice\n\nCanal no formato \"{ficha_formato(formato).get('nome', formato)}\" sobre {tema} "
         f"(idioma: {idioma}).\n\n"

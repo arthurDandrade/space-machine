@@ -5,9 +5,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, KeyRound, Save, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
+import { ArrowRightLeft, Check, Copy, KeyRound, Save, Sparkles, Trash2, Upload, Wand2 } from "lucide-react";
 import { Cores, enviar, ErroApi, Formato, Narracao, pegar, urlMarca } from "../api";
 import { Cabecalho } from "../casca/Cabecalho";
+import { Dialogo } from "../componentes/Dialogo";
 import { useCanal } from "../casca/CascaCanal";
 import { fundoDoCanal, iniciais } from "../componentes/Imagens";
 import { Markdown } from "../componentes/Markdown";
@@ -26,6 +27,68 @@ const CORES: [keyof Cores, string][] = [
   ["cor_fundo", "app.ident.fundo"], ["cor_texto", "app.ident.texto"], ["cor_destaque", "app.ident.destaque"],
   ["cor_caixa", "app.ident.caixa"], ["cor_sombra", "app.ident.sombra"],
 ];
+
+// O que a troca de formato encontra no canal (formato_canal.conferir): o que impede, o que ela faz e o que avisar.
+interface Conferencia {
+  de_nome: string; para_nome: string; bloqueios: string[];
+  em_producao: { slug: string; titulo: string }[]; redividir: { slug: string; titulo: string }[]; sem_roteiro: { slug: string; titulo: string }[];
+  prontos: number; arquivados: number; prompt: "canal" | "formato" | "nenhum"; escreve_roteiro: boolean; regras: number;
+  chaves_faltando: string[]; usa_flow: boolean; perde_fundo: boolean;
+}
+
+function TrocarFormato({ canal, atual, formatos, fechar }: { canal: string; atual: string; formatos: Formato[]; fechar: () => void }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const outros = formatos.filter((f) => f.slug !== atual);
+  const [para, setPara] = useState(outros[0]?.slug ?? "");
+  const [manter, setManter] = useState(false);
+  const { data: conf, error } = useQuery({
+    queryKey: ["formato-conferir", canal, para], enabled: !!para, refetchInterval: false,
+    queryFn: () => pegar<Conferencia>(`/api/c/${canal}/formato/conferir?para=${encodeURIComponent(para)}`),
+  });
+  const trocar = useMutation({
+    mutationFn: () => enviar(`/api/c/${canal}/formato`, { formato: para, manter_prompt: manter }),
+    onSuccess: () => { qc.invalidateQueries(); fechar(); },
+  });
+  const nomes = (l: { titulo: string }[]) => l.map((v) => `“${v.titulo}”`).join(", ");
+  const impede = !conf || conf.bloqueios.length > 0;
+  return (
+    <Dialogo largo titulo={t("app.formato.titulo")} fechar={fechar}
+      acoes={<>
+        <button type="button" className="bt" onClick={fechar}>{t("app.cancelar")}</button>
+        <button type="button" className="bt primario" disabled={impede || trocar.isPending} onClick={() => trocar.mutate()}><ArrowRightLeft size={16} />{t("app.formato.confirmar")}</button>
+      </>}>
+      <label className="campo">{t("app.formato.para")}
+        <select value={para} onChange={(e) => setPara(e.target.value)}>
+          {outros.map((f) => <option key={f.slug} value={f.slug}>{f.nome}</option>)}
+        </select>
+      </label>
+      <p className="sub">{outros.find((f) => f.slug === para)?.resumo}</p>
+      {error && <p className="erro">{error.message}</p>}
+      {conf && (
+        <div className="lista-troca">
+          {conf.bloqueios.includes("rodando") && <p className="erro">{t("app.formato.rodando")}</p>}
+          {conf.em_producao.length > 0 && <p className="erro">{t("app.formato.em_producao", { videos: nomes(conf.em_producao) })}</p>}
+          {!impede && <p className="feito">{t("app.formato.novos", { formato: conf.para_nome })}</p>}
+          {conf.redividir.length > 0 && <p>{t("app.formato.redividir", { videos: nomes(conf.redividir) })}</p>}
+          {conf.sem_roteiro.length > 0 && <p className="aviso-texto">{t("app.formato.sem_roteiro", { videos: nomes(conf.sem_roteiro) })}</p>}
+          {conf.prontos > 0 && <p>{t("app.formato.prontos", { n: conf.prontos })}</p>}
+          {conf.prompt === "canal" ? (
+            <>
+              <p>{t("app.formato.prompt_seu", { formato: conf.de_nome })}</p>
+              <label className="marcar"><input type="checkbox" checked={manter} onChange={(e) => setManter(e.target.checked)} /> {t("app.formato.manter_prompt")}</label>
+            </>
+          ) : <p>{t(conf.escreve_roteiro ? "app.formato.prompt_troca" : "app.formato.prompt_nao_escreve", { formato: conf.para_nome })}</p>}
+          {conf.regras > 0 && <p className="aviso-texto">{t("app.formato.regras", { n: conf.regras })}</p>}
+          {conf.chaves_faltando.length > 0 && <p className="aviso-texto">{t("app.formato.chaves", { chaves: conf.chaves_faltando.join(", ") })}</p>}
+          {conf.usa_flow && <p className="aviso-texto">{t("app.formato.flow")}</p>}
+          {conf.perde_fundo && <p className="aviso-texto">{t("app.formato.fundo")}</p>}
+        </div>
+      )}
+      {trocar.isError && <p className="erro">{trocar.error.message}</p>}
+    </Dialogo>
+  );
+}
 
 function TrocarImagem({ canal, qual, tem, cores, nome, versao, mudou }: { canal: string; qual: "logo" | "banner" | "fundo"; tem: boolean; cores: Cores; nome: string; versao: number; mudou: () => void }) {
   const t = useT();
@@ -83,7 +146,7 @@ export function IdentidadeTela() {
   const [ativo, setAtivo] = useState(true);
   const [cores, setCores] = useState<Cores>({});
   const [fonte, setFonte] = useState("");
-  const [formato, setFormato] = useState("");
+  const [trocando, setTrocando] = useState(false);
   const [versao, setVersao] = useState(Date.now());
   // preenche uma vez: os dados se atualizam ao vivo e não podem apagar o que você está digitando
   const preenchido = useRef(false);
@@ -91,12 +154,11 @@ export function IdentidadeTela() {
     if (data && !preenchido.current) {
       preenchido.current = true;
       setNome(data.nome); setAtivo(data.ativo); setCores(data.cores); setFonte(data.fonte);
-      setFormato(data.formato);
     }
   }, [data]);
   const salvar = useMutation({
     mutationFn: async () => {
-      await enviar(`/api/c/${canal}/config`, { nome, ativo, formato });
+      await enviar(`/api/c/${canal}/config`, { nome, ativo });
       await enviar(`/api/c/${canal}/identidade`, { cores, fonte });
     },
     onSuccess: () => qc.invalidateQueries(),
@@ -117,12 +179,14 @@ export function IdentidadeTela() {
               </select>
             </label>
           </div>
-          <label className="campo">{t("app.ident.formato")}
-            <select value={formato} onChange={(e) => setFormato(e.target.value)}>
-              {data.formatos.map((f) => <option key={f.slug} value={f.slug}>{f.nome}</option>)}
-            </select>
-          </label>
+          <div className="campo">{t("app.ident.formato")}
+            <div className="linha-formato">
+              <b>{data.formatos.find((f) => f.slug === data.formato)?.nome ?? data.formato}</b>
+              {data.formatos.length > 1 && <button type="button" className="bt pequeno" onClick={() => setTrocando(true)}><ArrowRightLeft size={14} />{t("app.formato.trocar")}</button>}
+            </div>
+          </div>
           <p className="sub">{t("app.ident.formato_troca")}</p>
+          {trocando && <TrocarFormato canal={canal} atual={data.formato} formatos={data.formatos} fechar={() => setTrocando(false)} />}
           <div className="cores-grade">
             {CORES.map(([k, rot]) => (
               <label key={k} className="campo cor">{t(rot)}

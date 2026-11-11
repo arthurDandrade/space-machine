@@ -140,3 +140,8 @@ svg.lucide { flex: none; }
 
 /* número do vídeo no canal (a ordem de postar; prontos.py) */
 .num-video { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 6px; background: var(--raised); color: var(--ink2); font-size: .8em; font-weight: 700; font-variant-numeric: tabular-nums; vertical-align: middle; }
+
+/* troca de formato do canal (canal › Identidade) */
+.linha-formato { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.lista-troca { display: grid; gap: 8px; margin-top: 12px; }
+.lista-troca p { margin: 0; }

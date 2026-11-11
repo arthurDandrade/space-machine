@@ -229,13 +229,22 @@ def slug_video(t):
 
 
 def _modelo_roteiro(c):
-    """O prompt de roteiro: o do canal (prompts/Roteiro do vídeo.md, editável na aba Prompts), senão o do formato."""
-    do_canal = Path(c.get("raiz") or Path(c["producoes"]).parent) / "prompts" / "Roteiro do vídeo.md"
-    if do_canal.exists():
+    """O prompt de roteiro: o do canal (prompts/Roteiro do vídeo.md, que você altera em canal › Prompt de roteiro),
+    senão o do formato."""
+    do_canal = Path(c.get("raiz") or Path(c["producoes"]).parent) / "prompts" / PROMPT_ROTEIRO
+    if do_canal.exists() and do_canal.read_text().strip():
         return do_canal.read_text()
-    modelo = (ficha_formato(c.get("formato")).get("roteiro") or {}).get("modelo")
-    if modelo and arquivo_formato(modelo, c.get("formato"), exigir=False).is_file():
-        return arquivo_formato(modelo, c.get("formato")).read_text()
+    return modelo_roteiro_do_formato(c.get("formato"))
+
+
+PROMPT_ROTEIRO = "Roteiro do vídeo.md"
+
+
+def modelo_roteiro_do_formato(formato):
+    """O prompt de roteiro que o formato traz (formato.json › roteiro.modelo), ou None se ele não escreve roteiro."""
+    modelo = (ficha_formato(formato).get("roteiro") or {}).get("modelo")
+    if modelo and arquivo_formato(modelo, formato, exigir=False).is_file():
+        return arquivo_formato(modelo, formato).read_text()
     return None
 
 
@@ -329,6 +338,16 @@ def criar_video(c, titulo, roteiro, obs=""):
         raise ValueError(f"Já existe um vídeo com essa pasta ({vd.name}).")
     (vd / "edicao").mkdir(parents=True)
     (vd / "roteiro_completo.txt").write_text(roteiro.strip() + "\n")
+    gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
+    escrever_blocos(c, vd, cold_open, partes)
+    return vd.name
+
+
+def escrever_blocos(c, vd, cold_open, partes):
+    """Os blocos do vídeo (um por tópico, 00 = cold open) e o fluxo dele, do jeito do FORMATO do canal: como o nome
+    do capítulo entra na narração (roteiro.capitulo_falado) e se o vídeo anda inteiro ou bloco a bloco
+    (producao.fluxo). Usado ao criar o vídeo e ao redividir um vídeo ainda não começado quando o canal troca de
+    formato (formato_canal.trocar)."""
     if cold_open:
         bd = vd / "blocos" / "00"
         bd.mkdir(parents=True)
@@ -346,13 +365,8 @@ def criar_video(c, titulo, roteiro, obs=""):
             (bd / "roteiro.txt").write_text(f"# {nome}\n{nome}.\n\n{texto}\n")
         else:
             (bd / "roteiro.txt").write_text(f"# {nome}\n{MARCA_CAPITULO}\n{texto}\n")
-    info = {"titulo": titulo.strip()}
     # fluxo do formato (formato.json › producao.fluxo): "video" = o vídeo inteiro como um projeto só (video.py)
-    fluxo = (ficha_formato(c.get("formato")).get("producao") or {}).get("fluxo")
-    if fluxo:
-        info["fluxo"] = fluxo
-    gravar_json(vd / "estudio_video.json", info)
-    return vd.name
+    prontos.anotar(vd, fluxo=(ficha_formato(c.get("formato")).get("producao") or {}).get("fluxo") or None)
 
 
 # ---------------- excluir (lixeira) ----------------

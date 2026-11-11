@@ -23,7 +23,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
 from .motor_claude import _banco, canais
 from . import video as video_mod
 from . import thumb as thumb_mod
-from . import prontos
+from . import formato_canal, prontos
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
@@ -839,16 +839,51 @@ def config_canal(slug: str):
 
 
 @api.post("/c/{slug}/config")
-def salvar_config_canal(slug: str, nome: str = Body(..., embed=True), ativo: bool = Body(True, embed=True),
-                        formato: str = Body("", embed=True)):
+def salvar_config_canal(slug: str, nome: str = Body(..., embed=True), ativo: bool = Body(True, embed=True)):
     c = _canal(slug)
-    campos = {"nome": nome.strip() or c["nome"], "ativo": bool(ativo)}
-    if formato.strip():
-        if formato not in formatos():
-            raise HTTPException(400, f"não existe o formato \"{formato}\"")
-        campos["formato"] = formato
-    configuracao.salvar_canal(slug, **campos)
+    configuracao.salvar_canal(slug, nome=nome.strip() or c["nome"], ativo=bool(ativo))
     return {"ok": True}
+
+
+# o formato não se troca gravando o campo: a troca confere o canal e arruma o que dá (formato_canal.py)
+@api.get("/c/{slug}/formato/conferir")
+def conferir_troca_de_formato(slug: str, para: str):
+    _canal(slug)
+    try:
+        return formato_canal.conferir(slug, para)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@api.post("/c/{slug}/formato")
+def trocar_formato(slug: str, formato: str = Body(..., embed=True), manter_prompt: bool = Body(False, embed=True)):
+    _canal(slug)
+    try:
+        return {"ok": True, **formato_canal.trocar(slug, formato, manter_prompt)}
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@api.get("/c/{slug}/roteiro-prompt")
+def ver_prompt_roteiro(slug: str):
+    _canal(slug)
+    return formato_canal.prompt_roteiro(slug)
+
+
+@api.post("/c/{slug}/roteiro-prompt")
+def salvar_prompt_roteiro(slug: str, texto: str = Body("", embed=True)):
+    _canal(slug)
+    try:
+        return formato_canal.salvar_prompt_roteiro(slug, texto)
+    except ValueError as e:
+        raise HTTPException(409, str(e))
+
+
+@api.post("/c/{slug}/roteiro-prompt/padrao")
+def prompt_roteiro_do_formato(slug: str):
+    _canal(slug)
+    formato_canal.voltar_ao_do_formato(slug)
+    return formato_canal.prompt_roteiro(slug)
 
 
 @api.post("/c/{slug}/identidade")
