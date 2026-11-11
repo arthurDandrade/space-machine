@@ -17,7 +17,7 @@ O que acontece, em <vídeo>/thumb/<modelo>/ (uma pasta com a cara da de um bloco
                de novo.
   3. escolher  a mesma escolha da produção (com a regra de imagem real certa ou nenhuma, se o formato tiver).
   4. compor    motor/thumb/compor_thumb.py desenha em 1280×720 e a imagem vira a thumbnail do vídeo
-               (<vídeo>/thumbnail.png; a anterior vai para o Lixo do Mac).
+               (thumbnail.png na ficha do vídeo; a anterior vai para o Lixo do Mac).
 
 O plano pede alguns itens de reserva: se uma imagem não for achada, a grade fecha com o seguinte.
 A cor do fundo é sua: a do formato, uma das sugeridas ou qualquer outra (--fundo; no painel, as bolinhas de cor). A que
@@ -235,7 +235,8 @@ def _topicos(vd):
 
 def _roteiro(vd, limite=9000):
     vd = Path(vd)
-    for arq in (vd / "roteiro_completo.txt", vd / "producao" / "roteiro.txt"):
+    from . import fichas
+    for arq in (fichas.roteiro(vd), vd / "producao" / "roteiro.txt"):
         if arq.exists():
             return arq.read_text()[:limite]
     partes = [b.read_text() for b in sorted((vd / "blocos").glob("*/roteiro.txt"))] if (vd / "blocos").is_dir() else []
@@ -408,9 +409,10 @@ def fazer(vd, modelo_id, refazer=False, obs="", fundo=""):
         feita = _compor({"modelo": m, "estilo": estilo, "titulo": plano.get("titulo", ""), "itens": prontos[:n],
                          "saida": str(p / "thumbnail.png")}, p / "pedido_compor.json", c)
         capas.salvar_thumbnail(vd, feita.read_bytes(), f"thumbnail {m.get('nome', modelo_id).lower()}{feita.suffix}")
-        info = ler_json(vd / "thumbnail.json", {}) or {}
+        from . import fichas
+        info = ler_json(fichas.pasta(vd) / "thumbnail.json", {}) or {}
         info.update(modelo=modelo_id, modelo_nome=m.get("nome", modelo_id), feita_pelo_sistema=True, fundo=fundo)
-        gravar_json(vd / "thumbnail.json", info)
+        gravar_json(fichas.pasta(vd) / "thumbnail.json", info)
         # um dos primeiros ficou sem imagem e uma reserva entrou no lugar: avisa qual
         fora = [it["legenda"] or it["titulo"] for it in plano["itens"][:n]
                 if not any(pr is not None and pr.get("legenda") == it["legenda"] and pr.get("titulo") == it["titulo"]

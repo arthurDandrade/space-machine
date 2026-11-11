@@ -416,7 +416,7 @@
  "app.arquivar.botao": "Arquivar vídeo",
  "app.arquivar.titulo": "Arquivar “{titulo}”?",
  "app.arquivar.confirmar": "Arquivar",
- "app.arquivar.explica": "Tudo o que a produção fez (narrações, assets, renders, projetos e versões anteriores) vai para o Lixo do Mac. A ficha fica: título, número, roteiro, thumbnail e o que está na aba Publicação. O vídeo continua no quadro, na lista e no calendário.",
+ "app.arquivar.explica": "Tudo o que a produção fez (narrações, assets, renders, projetos e versões anteriores) vai para o Lixo do Mac. A pasta de produção deixa de existir e a ficha fica: título, número, roteiro, thumbnail e o que está na aba Publicação. O vídeo continua no quadro, na lista e no calendário.",
  "app.arquivar.mp4_fica": "O vídeo pronto continua na pasta de vídeos prontos do canal.",
  "app.arquivar.sem_mp4": "Este vídeo ainda não tem um MP4 final: depois de arquivar, não dá mais para renderizar.",
  "app.arquivar.com_mp4": "Mandar também o vídeo pronto (MP4) para o Lixo",

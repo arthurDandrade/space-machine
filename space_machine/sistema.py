@@ -3,9 +3,9 @@
 O código (este repo) é o mesmo para todo mundo. Tudo o que é de quem usa fica na pasta de dados:
   space_machine.json   paralelo, app do After, limpeza (padrões em config_padrao.json)
   .env                 CLAUDE_CODE_OAUTH_TOKEN
-  space_machine.sqlite consumo das chamadas e gestão (ideias, publicação)
+  space_machine.sqlite consumo das chamadas e ideias
   cache/  logs/  referencias/<formato>/
-  canais/<slug>/       canal.json, .env, identidade/, conhecimento/, producoes/
+  canais/<slug>/       canal.json, .env, identidade/, conhecimento/, producoes/, fichas/ (a ficha de cada vídeo), videos/ (os prontos)
 
 A pasta de dados vem de SM_DADOS; senão, do arquivo ~/.config/spacemachine/dados (gravado pelo instalar.sh);
 senão, ~/SpaceMachine-dados.

@@ -5,14 +5,15 @@ a pasta do canal, com a thumbnail do vídeo ao lado, no mesmo nome. Um vídeo te
 troca o arquivo (o anterior vai para o Lixo do Mac: limpeza.versao_anterior).
 
 O número é do vídeo e não muda: é dado na primeira entrega, em sequência dentro do canal, e fica em
-estudio_video.json › numero (junto de `pronto`, o nome do arquivo na pasta). Vídeo excluído leva o número com ele,
+a ficha do vídeo (fichas.py › numero, junto de `pronto`, o nome do arquivo na pasta). Vídeo excluído leva o número com ele,
 então restaurar não embaralha a ordem.
 """
 import re
 import shutil
 from pathlib import Path
 
-from .sistema import gravar_json, ler_json
+from . import fichas
+from .sistema import ler_json
 
 PASTA = "videos"
 CAPAS = (".png", ".jpg", ".jpeg", ".webp")
@@ -25,18 +26,12 @@ def pasta(vd):
 
 
 def _info(vd):
-    return ler_json(Path(vd) / "estudio_video.json", {}) or {}
+    return fichas.ler(vd)
 
 
 def anotar(vd, **campos):
-    """Grava campos no estudio_video.json do vídeo (None tira o campo)."""
-    info = _info(vd)
-    for k, v in campos.items():
-        if v is None:
-            info.pop(k, None)
-        else:
-            info[k] = v
-    gravar_json(Path(vd) / "estudio_video.json", info)
+    """Grava campos na ficha do vídeo (None tira o campo)."""
+    fichas.anotar(vd, **campos)
 
 
 def arquivado(vd):
@@ -50,9 +45,10 @@ def numero(vd, dar=True):
     n = _info(vd).get("numero")
     if n or not dar:
         return n
-    prod = vd.parent
-    outros = [p for p in prod.iterdir() if p.is_dir()] + [p for p in (prod / "_lixeira").glob("*") if p.is_dir()]
-    usados = [int(_info(p).get("numero") or 0) for p in outros]
+    # os números já dados: nas fichas do canal e nas dos vídeos que estão na lixeira
+    registros = list((vd.parent.parent / fichas.PASTA).glob("*/ficha.json")) \
+        + list((vd.parent / "_lixeira").glob(f"*/{fichas.GUARDADA}/ficha.json"))
+    usados = [int((ler_json(f, {}) or {}).get("numero") or 0) for f in registros]
     usados += [int(m.group(1)) for f in pasta(vd).glob("*") if (m := re.match(r"(\d+) - ", f.name))]
     n = max(usados, default=0) + 1
     anotar(vd, numero=n)

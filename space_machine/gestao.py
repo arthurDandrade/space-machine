@@ -1,7 +1,8 @@
 """Gestão do canal: colunas do quadro de produção, ideias, calendário de publicação e criação de vídeos novos.
 
-O andamento da produção vem das pastas (estado.py). O que não está nas pastas (ideia, título/descrição/tags de
-publicação, data, "agendado"/"publicado", link) fica em <dados>/space_machine.sqlite. Upload pelo sistema: não (2026-10-11) — sobe-se no YouTube
+O andamento da produção vem das pastas (estado.py). O que é do vídeo e não da produção (título/descrição/tags de
+publicação, data, "agendado"/"publicado", link) fica na ficha dele (fichas.py: <canal>/fichas/<vídeo>/); as ideias,
+em <dados>/space_machine.sqlite. Upload pelo sistema: não (2026-10-11) — sobe-se no YouTube
 Studio e marca aqui.
 """
 import calendar
@@ -12,7 +13,7 @@ import subprocess
 import unicodedata
 from pathlib import Path
 
-from . import estado, prontos
+from . import estado, fichas, prontos
 from .motor_claude import _banco
 from .sistema import arquivo_formato, ficha_formato, gravar_json, ler_json
 
@@ -29,36 +30,28 @@ MANUAIS = {"edicao_final", "agendado", "publicado"}
 
 def _db():
     con = _banco()
-    con.execute("""create table if not exists videos_gestao (
-        canal text, slug text, status text, titulo_pub text, descricao text, tags text, data_pub text,
-        notas text, link text, atualizado text, primary key (canal, slug))""")
     con.execute("""create table if not exists ideias (
         id integer primary key, canal text, titulo text, notas text, criado text)""")
     return con
 
 
+CAMPOS_PUBLICACAO = fichas.PUBLICACAO
+
+
+def _vd(canal, slug):
+    from .sistema import canais
+    return Path(canais()[canal]["producoes"]) / slug
+
+
 def dados_video(canal, slug):
-    con = _db()
-    lin = con.execute("select status, titulo_pub, descricao, tags, data_pub, notas, link, atualizado "
-                      "from videos_gestao where canal=? and slug=?", (canal, slug)).fetchone()
-    con.close()
-    campos = ["status", "titulo_pub", "descricao", "tags", "data_pub", "notas", "link", "atualizado"]
-    return dict(zip(campos, lin)) if lin else {c: "" for c in campos}
+    """O que você preenche na aba Publicação. Fica na ficha do vídeo (fichas.py), não mais no sqlite."""
+    ficha = fichas.ler(_vd(canal, slug))
+    return {c: ficha.get(c) or "" for c in CAMPOS_PUBLICACAO}
 
 
 def salvar_video(canal, slug, **campos):
-    atual = dados_video(canal, slug)
-    atual.update({k: (v or "").strip() for k, v in campos.items()})
-    con = _db()
-    con.execute("""insert into videos_gestao (canal, slug, status, titulo_pub, descricao, tags, data_pub, notas, link,
-                   atualizado) values (?,?,?,?,?,?,?,?,?,datetime('now','localtime'))
-                   on conflict(canal, slug) do update set status=excluded.status, titulo_pub=excluded.titulo_pub,
-                   descricao=excluded.descricao, tags=excluded.tags, data_pub=excluded.data_pub,
-                   notas=excluded.notas, link=excluded.link, atualizado=excluded.atualizado""",
-                (canal, slug, atual["status"], atual["titulo_pub"], atual["descricao"], atual["tags"],
-                 atual["data_pub"], atual["notas"], atual["link"]))
-    con.commit()
-    con.close()
+    fichas.anotar(_vd(canal, slug), **{k: (v or "").strip() for k, v in campos.items()},
+                  atualizado=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 
 def coluna_do_video(v, g):
@@ -325,7 +318,7 @@ def criar_video(c, titulo, roteiro, obs=""):
     if not titulo.strip():
         raise ValueError("Dê um título ao vídeo.")
     if not (roteiro or "").strip():
-        if Path(c["producoes"], slug_video(titulo)).exists():
+        if Path(c["producoes"], slug_video(titulo)).exists() or fichas.existe(Path(c["producoes"], slug_video(titulo))):
             raise ValueError(f"Já existe um vídeo com essa pasta ({slug_video(titulo)}).")
         roteiro = escrever_roteiro(c, titulo, obs)
     cold_open, partes = dividir_roteiro(roteiro)
@@ -336,9 +329,11 @@ def criar_video(c, titulo, roteiro, obs=""):
         raise ValueError("O título precisa ter letras ou números.")
     if vd.exists():
         raise ValueError(f"Já existe um vídeo com essa pasta ({vd.name}).")
+    if fichas.existe(vd):
+        raise ValueError(f"Já existe um vídeo arquivado com esse título ({vd.name}). Use outro título ou exclua o arquivado.")
     (vd / "edicao").mkdir(parents=True)
-    (vd / "roteiro_completo.txt").write_text(roteiro.strip() + "\n")
     gravar_json(vd / "estudio_video.json", {"titulo": titulo.strip()})
+    fichas.criar(vd, titulo, roteiro)
     escrever_blocos(c, vd, cold_open, partes)
     return vd.name
 
@@ -366,7 +361,11 @@ def escrever_blocos(c, vd, cold_open, partes):
         else:
             (bd / "roteiro.txt").write_text(f"# {nome}\n{MARCA_CAPITULO}\n{texto}\n")
     # fluxo do formato (formato.json › producao.fluxo): "video" = o vídeo inteiro como um projeto só (video.py)
-    prontos.anotar(vd, fluxo=(ficha_formato(c.get("formato")).get("producao") or {}).get("fluxo") or None)
+    info = {"titulo": estado.titulo_video(vd)}
+    fluxo = (ficha_formato(c.get("formato")).get("producao") or {}).get("fluxo")
+    if fluxo:
+        info["fluxo"] = fluxo
+    gravar_json(vd / "estudio_video.json", info)
 
 
 # ---------------- excluir (lixeira) ----------------
@@ -388,35 +387,36 @@ def excluir_video(c, slug):
     """Move o vídeo inteiro para a lixeira do canal (nada é apagado; dá para restaurar)."""
     prod = Path(c["producoes"])
     vd = prod / slug
-    if not slug or slug.startswith((".", "_")) or "/" in slug or not vd.is_dir():
+    if not slug or slug.startswith((".", "_")) or "/" in slug or not (vd.is_dir() or fichas.existe(vd)):
         raise ValueError("vídeo não encontrado")
     motivo = _ocupado(vd)
     if motivo:
         raise ValueError(motivo)
+    fichas.garantir(vd)
     destino = prod / LIXEIRA / f"{slug}__{dt.datetime.now():%Y%m%d-%H%M%S}"
     destino.parent.mkdir(exist_ok=True)
     pronto = prontos.para_a_lixeira(vd, destino)       # o MP4 da pasta de prontos do canal vai junto
-    vd.rename(destino)
+    if vd.is_dir():
+        vd.rename(destino)
+    fichas.para_a_lixeira(vd, destino)                 # e a ficha também (vídeo arquivado: só ela e o MP4)
     for de, para in pronto:
         para.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(de), str(para))
     return destino.name
 
 
-MANTER_ARQUIVADO = ("estudio_video.json", "roteiro_completo.txt", "thumbnail.json")
-
-
 def arquivar_video(c, slug, com_mp4=False):
     """Vídeo que já foi (ou não vai mais ser) produzido: a produção inteira (blocos, narrações, assets, renders,
-    versões anteriores) vai para o Lixo do Mac e a FICHA fica — título, número, roteiro, thumbnail, duração e o que
-    está na aba Publicação (descrição, tags, data, link). O vídeo continua no quadro, no calendário e na lista.
+    projetos) vai para o Lixo do Mac — a pasta <canal>/producoes/<vídeo>/ deixa de existir — e a FICHA fica
+    (fichas.py: título, número, roteiro, thumbnail, duração e o que está na aba Publicação). O vídeo continua no
+    quadro, no calendário e na lista.
     O MP4 pronto continua na pasta de prontos do canal, a não ser com com_mp4=True. Não tem desfazer no painel: o
     que saiu fica no Lixo do Mac até você esvaziar."""
-    from . import capas, limpeza
+    from . import limpeza
     vd = Path(c["producoes"]) / slug
-    if not slug or slug.startswith((".", "_")) or "/" in slug or not vd.is_dir():
+    if not slug or slug.startswith((".", "_")) or "/" in slug or not (vd.is_dir() or fichas.existe(vd)):
         raise ValueError("vídeo não encontrado")
-    if prontos.arquivado(vd):
+    if prontos.arquivado(vd) or not vd.is_dir():
         raise ValueError("este vídeo já está arquivado")
     motivo = _ocupado(vd)
     if motivo:
@@ -436,9 +436,9 @@ def arquivar_video(c, slug, com_mp4=False):
             ficha["duracao_s"] = round(_duracao(mp4), 1)
         except (ValueError, OSError, subprocess.SubprocessError):
             pass
-    thumb = capas.thumbnail(vd)
-    itens = [(p, "arquivado") for p in sorted(vd.iterdir())
-             if p.name not in MANTER_ARQUIVADO and p != thumb and p.name != ".DS_Store"]
+    ficha["titulo"] = estado.titulo_video(vd)          # o estudio_video.json vai embora com a pasta
+    fichas.garantir(vd)                                # a thumbnail e o roteiro já estão na ficha antes de a pasta sair
+    itens = [(vd, "arquivado")]
     if com_mp4 and mp4:
         itens += [(f, "arquivado") for f in [mp4] + prontos._capas(mp4)]
         ficha["pronto"] = None
@@ -523,7 +523,8 @@ def lixeira(c):
                     "video_titulo": estado.titulo_video(vd) if vd.is_dir() else video, "pode_restaurar": vd.is_dir()}
         else:
             n = len([b for b in (p / "blocos").glob("*") if b.is_dir()]) if (p / "blocos").is_dir() else 0
-            item = {"tipo": "video", "nn": "", "titulo": estado.titulo_video(p), "n_blocos": n,
+            titulo = (ler_json(p / fichas.GUARDADA / "ficha.json", {}) or {}).get("titulo") or estado.titulo_video(p)
+            item = {"tipo": "video", "nn": "", "titulo": titulo, "n_blocos": n,
                     "video_titulo": "", "pode_restaurar": True}
         out.append({"nome": p.name, "video": video, "excluido": excluido, **item})
     return out
@@ -561,4 +562,7 @@ def restaurar_video(c, nome):
             raise ValueError(f"já existe {destino.name}: renomeie a pasta antes")
     src.rename(destino)
     prontos.da_lixeira(destino)
+    fichas.da_lixeira(destino)
+    if not any(p.name != ".DS_Store" for p in destino.iterdir()):
+        shutil.rmtree(destino)        # era um vídeo arquivado: só a ficha (e o MP4) voltam, não há pasta de produção
     return destino.name

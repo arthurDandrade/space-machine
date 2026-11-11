@@ -23,7 +23,7 @@ from . import (atualizar, capas, configuracao, estado, fila, final, gestao, limp
 from .motor_claude import _banco, canais
 from . import video as video_mod
 from . import thumb as thumb_mod
-from . import formato_canal, prontos
+from . import fichas, formato_canal, prontos
 from .rodar import ETAPAS as ETAPAS_RODAR
 from .sistema import DADOS, FORMATO_PADRAO, REPO, config, ficha_formato, formatos, ler_json
 
@@ -41,8 +41,18 @@ def _canal(slug):
 
 def _video_dir(slug, video):
     vd = Path(_canal(slug)["producoes"]) / video
-    if "/" in video or video.startswith((".", "_")) or not vd.is_dir():
+    # vídeo arquivado não tem pasta de produção: existe pela ficha (fichas.py)
+    if "/" in video or video.startswith((".", "_")) or not (vd.is_dir() or fichas.existe(vd)):
         raise HTTPException(404, "vídeo não encontrado")
+    return vd
+
+
+def _producao_dir(slug, video):
+    """A pasta de produção do vídeo, para o que mexe na produção (produzir, fila, juntar, fazer thumbnail):
+    vídeo arquivado só tem a ficha."""
+    vd = _video_dir(slug, video)
+    if not vd.is_dir():
+        raise HTTPException(409, "este vídeo está arquivado: a produção dele não existe mais")
     return vd
 
 
@@ -126,7 +136,7 @@ def _thumb_sistema(c, vd):
     """Thumbnail feita pelo sistema: os modelos do formato do canal (com a imagem de exemplo de cada um) e como está
     a última que você pediu. None se o formato não tem modelos."""
     try:
-        ms = thumb_mod.modelos(c)
+        ms = thumb_mod.modelos(c) if vd.is_dir() else None       # arquivado: não há produção de onde tirar as imagens
         if not ms:
             return None
         slug = Path(c["raiz"]).name
@@ -325,7 +335,7 @@ def detalhe_video(slug: str, video: str):
             "thumb_sistema": _thumb_sistema(_canal(slug), vd),
             "publicacao": gestao.dados_video(slug, video),
             "consumo_detalhe": v.get("consumo") or {}, "etapas": [{"id": e, "rotulo": r} for e, r in estado.ETAPAS],
-            "tem_roteiro": (vd / "roteiro_completo.txt").exists()}
+            "tem_roteiro": fichas.roteiro(vd).exists()}
 
 
 def _curto(vd, texto):
@@ -543,7 +553,7 @@ def imagem_capa(slug: str, video: str, nn: str = ""):
 # ---------------- ações ----------------
 @api.post("/c/{slug}/v/{video}/fila")
 def produzir_todos(slug: str, video: str, maximo: int = Body(3, embed=True)):
-    vd = _video_dir(slug, video)
+    vd = _producao_dir(slug, video)
     if not fila.ler_fila(vd).get("ativa"):
         fila.lancar_fila(vd, max(1, min(maximo, 5)))
     return {"ok": True}
@@ -551,7 +561,7 @@ def produzir_todos(slug: str, video: str, maximo: int = Body(3, embed=True)):
 
 @api.post("/c/{slug}/v/{video}/fila/parar")
 def parar_fila(slug: str, video: str):
-    fila.parar_fila(_video_dir(slug, video))
+    fila.parar_fila(_producao_dir(slug, video))
     return {"ok": True}
 
 
@@ -575,7 +585,7 @@ def rodar_bloco(slug: str, video: str, nn: str, de: str = Body("", embed=True), 
 def produzir_video(slug: str, video: str, de: str = Body("", embed=True), ate: str = Body("", embed=True),
                    obs: str = Body("", embed=True)):
     """Fluxo "video": roda o vídeo inteiro (rodar_video.py) a partir de onde parou, ou de/até uma etapa."""
-    vd = _video_dir(slug, video)
+    vd = _producao_dir(slug, video)
     if not video_mod.fluxo_video(vd):
         raise HTTPException(409, "este vídeo é produzido bloco a bloco")
     if estado.producao_video(vd)["rodando"]:
@@ -586,14 +596,14 @@ def produzir_video(slug: str, video: str, de: str = Body("", embed=True), ate: s
 
 @api.post("/c/{slug}/v/{video}/produzir/parar")
 def parar_video(slug: str, video: str):
-    fila.parar_rodada(video_mod.pasta(_video_dir(slug, video)))
+    fila.parar_rodada(video_mod.pasta(_producao_dir(slug, video)))
     return {"ok": True}
 
 
 @api.post("/c/{slug}/v/{video}/produzir/conferir")
 def conferir_video(slug: str, video: str):
     """Quem produz viu o vídeo e aprovou os itens de "conferir" (fluxo "video")."""
-    estado.aprovar_conferir(video_mod.pasta(_video_dir(slug, video)))
+    estado.aprovar_conferir(video_mod.pasta(_producao_dir(slug, video)))
     return {"ok": True}
 
 
@@ -699,7 +709,7 @@ def previa_modelo_thumbnail(slug: str, modelo: str):
 def fazer_thumbnail(slug: str, video: str, modelo: str = Body(..., embed=True), refazer: bool = Body(False, embed=True),
                     obs: str = Body("", embed=True), fundo: str = Body("", embed=True)):
     """O sistema monta a thumbnail do vídeo no modelo escolhido (space_machine/thumb.py). Roda solto do painel."""
-    vd = _video_dir(slug, video)
+    vd = _producao_dir(slug, video)
     c = _canal(slug)
     if modelo not in {m["id"] for m in thumb_mod.modelos(c)}:
         raise HTTPException(404, "o formato deste canal não tem esse modelo de thumbnail")
@@ -720,7 +730,7 @@ def remover_thumbnail(slug: str, video: str):
 @api.post("/c/{slug}/v/{video}/final")
 def juntar_no_after(slug: str, video: str, render: bool = Body(False, embed=True)):
     """Junta os blocos entregues num projeto do After (final/final.aep) e, se pedir, renderiza o MP4."""
-    vd = _video_dir(slug, video)
+    vd = _producao_dir(slug, video)
     if final.ler_estado(vd)["rodando"]:
         raise HTTPException(409, "o vídeo final já está sendo montado")
     if not final.entregues(vd):
@@ -812,6 +822,8 @@ def abrir_pasta(slug: str, video: str, nn: str = Body("", embed=True), sub: str 
     """Mostra a pasta do vídeo (do bloco, ou a final/ ou reels/) no Finder: o painel roda no próprio Mac."""
     pasta = _bloco_dir(slug, video, nn) if nn else _video_dir(slug, video)
     pronto = prontos.atual(pasta) if sub == "final" and not nn else None
+    if not nn and not pasta.is_dir():       # arquivado: o que existe do vídeo é a ficha
+        pasta = fichas.pasta(pasta)
     if pronto:      # o vídeo pronto mora na pasta do canal: mostra o arquivo lá
         subprocess.run(["open", "-R", str(pronto)], check=False)
         return {"ok": True}
@@ -1379,6 +1391,11 @@ def assinatura():
     for c in canais().values():
         marcar(Path(c["raiz"]) / "canal.json")
         marcar(Path(c["raiz"]) / "prompts")
+        raiz_fichas = Path(c["raiz"]) / fichas.PASTA        # publicação, thumbnail, arquivar: tudo passa pela ficha
+        marcar(raiz_fichas)
+        for f in raiz_fichas.iterdir() if raiz_fichas.is_dir() else []:
+            marcar(f)
+            marcar(f / "ficha.json")
         prod = Path(c["producoes"])
         if not prod.is_dir():
             continue

@@ -17,7 +17,7 @@ do repo. Alterado em canal › Prompt de roteiro, vira <canal>/prompts/Roteiro d
 import json
 from pathlib import Path
 
-from . import estado, gestao, meus_prompts, prontos
+from . import estado, fichas, gestao, meus_prompts, prontos
 from .configuracao import ler_env, salvar_canal
 from .sistema import CANAIS, FORMATO_PADRAO, canais, ficha_formato, formatos, ler_json
 
@@ -101,7 +101,7 @@ def conferir(slug, novo):
             continue
         rodando = rodando or bool(gestao._ocupado(vd))
         grupos[_situacao(slug, vd)].append({"slug": vd.name, "titulo": estado.titulo_video(vd),
-                                            "tem_roteiro": (vd / "roteiro_completo.txt").is_file()})
+                                            "tem_roteiro": fichas.roteiro(vd).is_file()})
     bloqueios = []
     if rodando:
         bloqueios.append("rodando")
@@ -116,7 +116,7 @@ def conferir(slug, novo):
         "bloqueios": bloqueios, "em_producao": grupos["producao"],
         "redividir": [v for v in grupos["roteiro"] if v["tem_roteiro"]],
         "sem_roteiro": [v for v in grupos["roteiro"] if not v["tem_roteiro"]],
-        "prontos": len(grupos["pronto"]), "arquivados": len(grupos["arquivado"]),
+        "prontos": len(grupos["pronto"]), "arquivados": len(grupos["arquivado"]) + len(fichas.so_ficha(c)),
         "prompt": p["origem"],                                         # "canal": você tem um prompt de roteiro seu
         "escreve_roteiro": bool(gestao.modelo_roteiro_do_formato(novo)),
         "regras": len(regras.get("storyboard") or []) + len(regras.get("escolha") or []),
@@ -130,7 +130,7 @@ def redividir(c, vd):
     """Vídeo que ainda só tem roteiro: os blocos são refeitos a partir do roteiro_completo.txt no jeito do formato
     do canal (os de antes vão para o Lixo do Mac) e o fluxo do vídeo passa a ser o do formato."""
     from . import limpeza
-    cold_open, partes = gestao.dividir_roteiro((vd / "roteiro_completo.txt").read_text())
+    cold_open, partes = gestao.dividir_roteiro(fichas.roteiro(vd).read_text())
     if not partes:
         return False
     if (vd / "blocos").is_dir():

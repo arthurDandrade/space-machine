@@ -1,6 +1,6 @@
 """Capas do painel: a thumbnail do vídeo ou um quadro tirado dos vídeos, para mostrar um vídeo (ou um bloco) num card.
 
-Fonte, em ordem: a thumbnail que você enviou (<vídeo>/thumbnail.*), os blocos entregues (<vídeo>/edicao/bloco N.mp4),
+Fonte, em ordem: a thumbnail que você enviou (na ficha do vídeo, <canal>/fichas/<vídeo>/thumbnail.*), os blocos entregues (<vídeo>/edicao/bloco N.mp4),
 a prévia mais nova de um bloco, e por fim a primeira imagem dos assets do bloco. De alguns instantes, fica o quadro com mais detalhe (o JPEG maior): os quadros
 só com texto sobre o papel ficam pequenos e perdem para os que têm foto.
 Guardadas em <dados>/cache/capas/<canal>/; refeitas quando a fonte muda.
@@ -49,20 +49,23 @@ LIMITE_YOUTUBE = 2 * 1024 * 1024          # o YouTube recusa thumbnail com mais 
 
 
 def thumbnail(video_dir):
-    return next((f for ext in THUMB_EXT if (f := Path(video_dir) / f"thumbnail{ext}").exists()), None)
+    from . import fichas
+    pasta = fichas.pasta(video_dir)          # a thumbnail é da ficha do vídeo, não da pasta de produção
+    return next((f for ext in THUMB_EXT if (f := pasta / f"thumbnail{ext}").exists()), None)
 
 
 def _guardar_thumbnail(vd):
     """A thumbnail atual vai para o Lixo do Mac (trocar ou remover não apaga: dá para tirar de lá)."""
+    from . import fichas
     from .limpeza import versao_anterior
     t = thumbnail(vd)
     if t:
         versao_anterior(t)
-    (vd / "thumbnail.json").unlink(missing_ok=True)
+    (fichas.pasta(vd) / "thumbnail.json").unlink(missing_ok=True)
 
 
 def salvar_thumbnail(video_dir, dados, nome):
-    """Grava a imagem enviada como <vídeo>/thumbnail.<ext>. ValueError se não for uma imagem que abre."""
+    """Grava a imagem enviada como thumbnail.<ext> na ficha do vídeo (<canal>/fichas/<vídeo>/). ValueError se não for uma imagem que abre."""
     from io import BytesIO
     from PIL import Image
     vd = Path(video_dir)
@@ -76,9 +79,11 @@ def salvar_thumbnail(video_dir, dados, nome):
             largura, altura = im.size
     except Exception:  # noqa: BLE001 — qualquer falha de leitura = não é imagem
         raise ValueError("Esse arquivo não é uma imagem que dê para abrir.")
+    from . import fichas
     _guardar_thumbnail(vd)
-    (vd / f"thumbnail{'.jpg' if ext == '.jpeg' else ext}").write_bytes(dados)
-    (vd / "thumbnail.json").write_text(json.dumps({"nome": Path(nome).name, "largura": largura, "altura": altura,
+    ficha = fichas.pasta(vd)
+    (ficha / f"thumbnail{'.jpg' if ext == '.jpeg' else ext}").write_bytes(dados)
+    (ficha / "thumbnail.json").write_text(json.dumps({"nome": Path(nome).name, "largura": largura, "altura": altura,
                                                    "enviada": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False))
     _capa_do_pronto(vd)
 
@@ -102,7 +107,7 @@ def info_thumbnail(video_dir):
     if not t:
         return None
     try:
-        info = json.loads((Path(video_dir) / "thumbnail.json").read_text())
+        info = json.loads((t.parent / "thumbnail.json").read_text())
     except (OSError, ValueError):
         info = {"nome": t.name}
     return {**info, "arquivo": str(t), "tamanho": t.stat().st_size, "versao": int(t.stat().st_mtime),

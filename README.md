@@ -61,7 +61,7 @@ O painel é seu, não de um canal: ele abre na escolha de canais e, ao escolher 
 
 Os prompts que você usa no canal (o de roteiro, o de títulos…) ficam na aba **Prompts**: cada um é um `.md` em `canais/<canal>/prompts/`, com copiar em um clique, editar/visualizar e importar os `.md` que você já tem.
 
-Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira.
+Desistiu de um vídeo? A lixeira na página dele manda tudo para `producoes/_lixeira/`, e dá para restaurar em Vídeos › Lixeira. Já publicou e quer liberar espaço? **Arquivar** manda a produção para o Lixo do Mac e mantém o vídeo no quadro e no calendário, com a ficha dele.
 
 A produção gera muita coisa que só serve até o bloco ser entregue: prévias (v1, v2, v3…), os candidatos baixados para a escolha, o Auto-Save do After. Ao entregar, a prévia aprovada vira o `edicao/bloco N.mp4` (é movida, não copiada) e o resto daquele bloco vai para o Lixo do Mac. Para o que já existia, **Configurações › Limpeza** mostra quanto cada vídeo ocupa à toa e manda para o Lixo (dá para pôr de volta até você esvaziar). Assets, narração, roteiro, projeto do After, blocos entregues e o vídeo final ficam sempre.
 
@@ -88,7 +88,10 @@ Um bloco que precisa de você para com o motivo escrito no painel, em **Esperand
   - `.env`: chaves do canal;
   - `identidade/`;
   - `conhecimento/`: Log de Aprendizados do canal;
-  - `producoes/<vídeo>/blocos/NN/`.
+  - `producoes/<vídeo>/blocos/NN/`: o que a produção faz;
+  - `fichas/<vídeo>/`: a ficha de cada vídeo (título, número, publicação, thumbnail, roteiro), que continua aí
+    mesmo depois de a produção ser arquivada;
+  - `videos/`: os vídeos prontos do canal, numerados na ordem de postar.
 
 ## Linha de comando
 ```bash

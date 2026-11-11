@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from .api import api
 from .motor_claude import canais
+from .fichas import PASTA as PASTA_FICHAS
 from .prontos import PASTA as PASTA_PRONTOS
 
 app = FastAPI(title="Space Machine")
@@ -27,11 +28,11 @@ APP = Path(__file__).with_name("static") / "app"
 
 @app.get("/arquivo")
 def arquivo(p: str):
-    """Serve prévias, folhas, revisão e os vídeos prontos — só de dentro das pastas de produção e de prontos
-    (<canal>/videos) dos canais."""
+    """Serve prévias, folhas, revisão e os vídeos prontos — só de dentro das pastas de produção, de prontos
+    (<canal>/videos) e das fichas (<canal>/fichas) dos canais."""
     alvo = Path(p).resolve()
     if not any(str(alvo).startswith(str(pasta.resolve()) + "/") for c in canais().values()
-               for pasta in (Path(c["producoes"]), Path(c["raiz"]) / PASTA_PRONTOS)):
+               for pasta in (Path(c["producoes"]), Path(c["raiz"]) / PASTA_PRONTOS, Path(c["raiz"]) / PASTA_FICHAS)):
         raise HTTPException(403, "fora das pastas de produção")
     if not alvo.is_file():
         raise HTTPException(404)

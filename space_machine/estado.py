@@ -238,7 +238,8 @@ def blocos_do_video(video_dir):
 
 def titulo_video(video_dir):
     video_dir = Path(video_dir)
-    for c in [video_dir / "estudio_video.json", video_dir / "blocos" / "01" / "cenas.json", video_dir / "cenas.json"]:
+    ficha = video_dir.parent.parent / "fichas" / video_dir.name / "ficha.json"      # fichas.py (lido direto: sem migrar)
+    for c in [video_dir / "estudio_video.json", ficha, video_dir / "blocos" / "01" / "cenas.json", video_dir / "cenas.json"]:
         t = (_json(c, {}) or {}).get("titulo")
         if t:
             return t
@@ -252,8 +253,10 @@ def video(canal_slug, video_slug, com_blocos=True):
     n = len(blocos)
     entregues = sum(1 for b in blocos if b["feito"]["entregue"])
     from .video import fluxo_video
-    ficha = _json(vd / "estudio_video.json", {}) or {}
+    from . import fichas
+    ficha = fichas.ler(vd)
     arquivado = ficha.get("arquivado") or ""        # só a ficha ficou (gestao.arquivar_video): não há o que medir
+    mudou_pasta = vd.stat().st_mtime if vd.is_dir() else (fichas.pasta(vd) / "ficha.json").stat().st_mtime
     prod = producao_video(vd) if fluxo_video(vd) and not arquivado else None
     if prod:            # fluxo "video": os capítulos não são entregues um a um; o vídeo inteiro é
         entregues = n if prod["feito"]["entregar"] else 0
@@ -262,7 +265,7 @@ def video(canal_slug, video_slug, com_blocos=True):
             "fluxo": "video" if prod else "blocos", "producao": prod,
             "arquivado": arquivado, "numero": ficha.get("numero") or 0, "pronto": ficha.get("pronto") or "",
             "duracao_s": ficha.get("duracao_s") or 0, "n_blocos_ficha": ficha.get("n_blocos") or 0,
-            "mudou": max([vd.stat().st_mtime] + [b["mudou"] for b in blocos] + [prod["mudou"] if prod else 0]),
+            "mudou": max([mudou_pasta] + [b["mudou"] for b in blocos] + [prod["mudou"] if prod else 0]),
             "consumo": consumo(canal=canal_slug, video=video_slug), "fila": _fila(vd)}
 
 
@@ -274,11 +277,12 @@ def _fila(vd):
 def videos(canal_slug):
     c = canais()[canal_slug]
     pasta = Path(c["producoes"])
-    out = []
-    for vd in sorted(pasta.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
-        if vd.is_dir() and not vd.name.startswith((".", "_")):
-            out.append(video(canal_slug, vd.name))
-    return out
+    from . import fichas
+    # os que têm pasta de produção e os que só têm ficha (arquivados): o canal continua vendo todos
+    nomes = [vd.name for vd in pasta.iterdir() if vd.is_dir() and not vd.name.startswith((".", "_"))] if pasta.is_dir() else []
+    nomes += [vd.name for vd in fichas.so_ficha(c)]
+    out = [video(canal_slug, n) for n in nomes]
+    return sorted(out, key=lambda v: v["mudou"], reverse=True)
 
 
 def quando(ts):
