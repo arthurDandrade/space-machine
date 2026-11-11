@@ -142,6 +142,46 @@ def commons(consulta, n, orientacao=None):
     return out
 
 
+def wikipedia(consulta, n, orientacao=None):
+    """A imagem principal do ARTIGO da Wikipedia de quem a busca nomeia (2026-11-10). Para pessoa, time, lugar e
+    marca reais é o candidato que vem com a identidade conferida: o título do candidato é o título do artigo e a
+    descrição dele ("[artigo da Wikipedia] Ralph Hay — American football executive (1891–1944)"), e quem escolhe confere por ali. A busca
+    de imagens na web trazia o que tinha o nome na página — selo de time, montagem, figurinha, folha com várias
+    logos — e a escolha ficava com o menos ruim. Artigo sem imagem não vira candidato (melhor sem foto do que com a
+    errada). A imagem do artigo pode não ser livre (logo, retrato): a licença sai como "conferir"."""
+    idioma = (caminhos.canal_json().get("idioma") or "en").split("-")[0].lower()
+    params = {"action": "query", "format": "json", "generator": "search", "gsrsearch": consulta,
+              "gsrlimit": min(max(n, 3), 8), "prop": "pageimages|description|info", "inprop": "url",
+              "piprop": "original|thumbnail|name", "pithumbsize": 1600, "pilicense": "any"}
+    out = []
+    for lingua in dict.fromkeys([idioma, "en"]):
+        try:
+            r = _get_com_espera("wikipedia", f"https://{lingua}.wikipedia.org/w/api.php", params=params, timeout=20,
+                                headers={"User-Agent": UA_WIKIMEDIA})
+            if r.status_code != 200:
+                log(f"   wikipedia: HTTP {r.status_code}")
+                continue
+            paginas = sorted(r.json().get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 0))
+        except Exception as e:
+            log(f"   wikipedia: {e}")
+            continue
+        for p in paginas:
+            orig, mini = p.get("original") or {}, p.get("thumbnail") or {}
+            if not orig.get("source"):
+                continue
+            vetor = orig["source"].lower().split("?")[0].endswith(".svg")
+            img = mini if (vetor or orig.get("width", 0) > 2400) and mini.get("source") else orig
+            out.append({"url": img["source"], "fonte": "wikipedia",
+                        "titulo": f"[artigo da Wikipedia] {p.get('title', '')} — {p.get('description', '')}",
+                        "pagina": p.get("fullurl", ""), "licenca": "Wikipedia: conferir", "autor": "",
+                        "w": img.get("width", 0), "h": img.get("height", 0)})
+            if len(out) >= n:
+                break
+        if out:
+            break
+    return out
+
+
 def openverse(consulta, n, orientacao=None):
     params = {"q": consulta, "page_size": min(n, 20), "mature": "false"}
     if orientacao in ("retrato", "paisagem", "quadrado"):
@@ -444,7 +484,7 @@ from flow import flow, flow_recorte  # noqa: E402  (a mesma ilustração, gerada
 
 BUSCADORES = {
     "google": google, "google_transparente": google_transparente,
-    "web": web, "web_transparente": web_transparente, "commons": commons,
+    "web": web, "web_transparente": web_transparente, "commons": commons, "wikipedia": wikipedia,
     "openverse": openverse, "smithsonian": smithsonian, "pixabay": pixabay,
     "gemini": gemini, "gemini_recorte": gemini_recorte,
     "flow": flow, "flow_recorte": flow_recorte,

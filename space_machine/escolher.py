@@ -27,6 +27,7 @@ MARGEM_VIDEO = 1.0          # finalizar.py baixa duração + video_margem_s (1 s
 
 S_IMAGEM = {"type": "object", "additionalProperties": False, "properties": {
     "n": {"type": "integer"}, "recortar": {"type": "boolean"}, "conferir": {"type": "string", "maxLength": 140},
+    "identidade": {"type": "string", "enum": ["certa", "duvida"]},
     "pular": {"type": "boolean"}, "motivo": {"type": "string"},
     "nova_busca": {"type": "array", "items": {"type": "string"}, "maxItems": 3}}}
 S_VIDEO = {"type": "object", "additionalProperties": False, "properties": {
@@ -151,15 +152,55 @@ class Bloco:
         cod, saida = rodar_script(self.c, "buscar.py", *args, log=self.log)
         return "ok" if cod == 0 else f"erro {cod}"
 
+    def exige_identidade(self, a):
+        """Formato que prefere ficar sem a imagem a mostrar a errada (formato.json › escolha.sem_imagem_certa): foto,
+        histórica e logo REAIS só entram se quem escolhe declarar que é exatamente o que o pedido nomeia."""
+        from .sistema import ficha_formato
+        politica = (ficha_formato(self.c.get("formato")).get("escolha") or {}).get("sem_imagem_certa")
+        return bool(politica) and a.get("tipo") in ("foto", "historica", "logo")
+
+    @staticmethod
+    def titulo_prova(a, c):
+        """A imagem escolhida é a do artigo da Wikipedia cujo título é o próprio assunto do card (a descrição começa
+        por ele: "Ernie Nevers portrait" × artigo "Ernie Nevers")? Aí a identidade está provada pelo título e o
+        segundo olhar não precisa opinar — ele reprovou um retrato desses por "não ter o nome escrito na foto"
+        (2026-11-10). Artigo de quem só é citado na descrição ("Ole Haugsrud, Duluth Eskimos owner" × artigo
+        "Duluth Eskimos") não prova nada."""
+        if c.get("fonte") != "wikipedia":
+            return False
+        limpar = lambda t: re.findall(r"[a-z0-9]+", re.sub(r"\(.*?\)", " ", t.lower()))
+        titulo = limpar(re.sub(r"^\[.*?\]\s*", "", c.get("titulo", "")).split(" — ")[0])
+        desc = limpar(a.get("descricao", ""))
+        while desc and desc[0] in ("the", "a", "an", "portrait", "photo", "of", "logo"):
+            desc = desc[1:]
+        return bool(titulo) and desc[:len(titulo)] == titulo
+
     def escolher_imagem(self, item, cena, a, meta, evitar=None):
         pasta = self.p / "_work" / "candidatos" / a["id"]
         texto = self.pedido(item, cena, a, meta)
+        exige = self.exige_identidade(a)
         if evitar and evitar[0] is not None:
             texto += f"\n\nNÃO use o #{evitar[0]}: {evitar[1]}"
+        elif evitar and exige:
+            texto += ("\n\nÚLTIMA TENTATIVA: não há mais busca nova. Se nenhuma imagem for claramente o que o pedido "
+                      "nomeia, pule: imagem só \"relacionada\" não serve aqui.")
         elif evitar:
             texto += ("\n\nÚLTIMA TENTATIVA: não há mais busca nova. Escolha a imagem relacionada mais próxima do "
                       "pedido, com \"conferir\" explicando a troca; pule só se nenhuma tiver relação com o assunto.")
-        return self.chamar("escolher_imagem", "escolher_imagem", texto, [pasta / "folha.jpg"], S_IMAGEM, a["id"])
+        if exige:
+            # a regra em prosa não bastou (2026-11-10: com "se não for claramente, pule" no prompt, a escolha ainda
+            # ficou com um prédio no lugar do retrato do dono e anotou a dúvida em "conferir"): a declaração é um
+            # campo da resposta, e "duvida" vira pular aqui, no código
+            texto += ("\n\nIMAGEM REAL: se escolher uma, responda também \"identidade\": \"certa\" só quando o "
+                      "título do candidato ou a própria imagem PROVAM que ela é exatamente o que o pedido nomeia (a "
+                      "pessoa certa, a logo daquele time e não a de outro, o lugar); em qualquer outro caso, "
+                      "\"identidade\": \"duvida\". Com \"duvida\" o card sai da tela, e é isso que queremos: "
+                      "melhor sem a imagem do que com a errada.")
+        r = self.chamar("escolher_imagem", "escolher_imagem", texto, [pasta / "folha.jpg"], S_IMAGEM, a["id"])
+        if exige and r.get("n") is not None and r.pop("identidade", None) != "certa":
+            return {"pular": True, "motivo": "identidade em dúvida: " + (r.get("conferir") or f"candidato #{r['n']}")}
+        r.pop("identidade", None)
+        return r
 
     def escolher_video(self, item, cena, a, meta, evitar=None):
         pasta = self.p / "_work" / "candidatos" / a["id"]
@@ -499,13 +540,32 @@ class Bloco:
 
     def conferir(self, ids):
         manif = {m["id"]: m for m in ler_json(self.p / "manifesto.json", {"assets": []})["assets"]}
-        refazer = []
+        refazer, sem_identidade = [], []
         idx = {a["id"]: (item, cena, a) for item, cena, a in self.assets()}
         with tempfile.TemporaryDirectory() as tmp:
             def um(aid):
                 m = manif.get(aid)
                 if not m:
                     return
+                # imagem REAL em formato que não aceita a errada: um segundo olhar, independente de quem escolheu,
+                # vê a imagem com o título da fonte e reprova se ela não for o que o card vai dizer que é
+                # (2026-11-10: quem escolhe declarou "certa" uma foto de outra pessoa e anotou a dúvida ao lado)
+                if self.exige_identidade(idx[aid][2]) and not self.escolhas.get(aid, {}).get("pular"):
+                    a = idx[aid][2]
+                    esc = self.escolhas.get(aid, {})
+                    c = next((x for x in (self.candidatos(aid) or {}).get("candidatos", []) if x.get("n") == esc.get("n")), {})
+                    if self.titulo_prova(a, c):
+                        self.registrar(f"[{aid}] identidade provada pelo título do artigo: {c.get('titulo', '')[:80]}")
+                    else:
+                        r = self.chamar("escolher_imagem", "conferir_identidade",
+                                        f"O card vai dizer que a imagem é: {a.get('descricao', '')} (tipo {a['tipo']}).\n"
+                                        f"Título da fonte: \"{c.get('titulo', '')}\" · fonte {c.get('fonte', '')} · "
+                                        f"página {c.get('pagina') or c.get('url') or ''}\n"
+                                        f"O que quem escolheu anotou: {esc.get('conferir') or 'nada'}",
+                                        [self.p / m["arquivo"]], S_CONFERIR, aid)
+                        if not r.get("ok"):
+                            sem_identidade.append((aid, r.get("detalhe", "")))
+                            return
                 # foto copiada sem mudança já foi vista na folha: só confere o que muda no download
                 # (trecho de vídeo, tarja, recorte de fundo). Antes: ~6.700 tokens por asset à toa.
                 if not (m["arquivo"].endswith(".mp4") or m["arquivo"].endswith(".png")):
@@ -523,6 +583,9 @@ class Bloco:
                     refazer.append((aid, r.get("problema", ""), r.get("detalhe", "")))
             with ThreadPoolExecutor(self.cfg["claude_paralelo"]) as ex:
                 list(ex.map(um, ids))
+        for aid, detalhe in sem_identidade:      # vira "pulado": o rodar tira o card da tela (formato.json › escolha)
+            self.registrar(f"[{aid}] segundo olhar reprovou a identidade: {detalhe}")
+            self.gravar(aid, {"pular": True, "motivo": f"segundo olhar: {detalhe}"})
         trocados = []
         for aid, problema, detalhe in refazer:
             esc = dict(self.escolhas.get(aid, {}))

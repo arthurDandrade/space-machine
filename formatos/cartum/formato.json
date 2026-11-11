@@ -26,11 +26,58 @@
   ]
  },
  "busca": {
-  "_sobre": "Recorte = desenho GERADO no Google Flow por uma sessão do Claude (fonte flow_recorte: fila em cache/flow/pedidos, ver o CLAUDE.md), em fundo magenta liso (cor-chave), que o finalizar.py tira pela cor (ilustracao.recorte = fundo_liso). Foto e histórica são reais, de banco livre. O formato não usa vídeo.",
+  "_sobre": "Recorte = desenho GERADO no Google Flow por uma sessão do Claude (fonte flow_recorte: fila em cache/flow/pedidos, ver o CLAUDE.md), em fundo magenta liso (cor-chave), que o finalizar.py tira pela cor (ilustracao.recorte = fundo_liso). Foto e histórica são reais, de banco livre. O formato não usa vídeo. Para o que é REAL (foto, histórica, logo) a 1ª fonte é a imagem do artigo da Wikipedia de quem a busca nomeia: é o candidato que vem com a identidade conferida (o título do artigo).",
   "fontes_por_tipo": {
    "recorte": [
     [
      "flow_recorte"
+    ]
+   ],
+   "foto": [
+    [
+     "wikipedia",
+     "web",
+     "commons"
+    ],
+    [
+     "pixabay"
+    ],
+    [
+     "openverse",
+     "smithsonian"
+    ],
+    [
+     "google"
+    ]
+   ],
+   "historica": [
+    [
+     "wikipedia",
+     "commons",
+     "web"
+    ],
+    [
+     "smithsonian"
+    ],
+    [
+     "openverse"
+    ],
+    [
+     "google"
+    ]
+   ],
+   "logo": [
+    [
+     "wikipedia",
+     "web_transparente",
+     "commons"
+    ],
+    [
+     "web"
+    ],
+    [
+     "google_transparente",
+     "google"
     ]
    ]
   },
@@ -80,5 +127,9 @@
  "producao": {
   "fluxo": "video",
   "_sobre": "O vídeo inteiro é um projeto só (2026-11-10, space_machine/video.py e rodar_video.py): narração por capítulo, storyboard do vídeo todo numa conversa (1º o plano com o ELENCO do vídeo, depois um capítulo por resposta), uma busca, uma fila de desenhos, uma escolha, e o compositor entrega um MP4 só. Feito bloco a bloco, cada tópico pedia os desenhos dele sem saber dos outros (109 e depois 81 pedidos novos num vídeo de 10 tópicos) e a grade de abertura só fechava no vídeo final."
+ },
+ "escolha": {
+  "sem_imagem_certa": "tirar_card",
+  "_sobre": "Foto, histórica ou logo REAL sem candidato que seja claramente a coisa pedida: o card sai da tela (e fica anotado em _estudio/sem_imagem.json) em vez de entrar uma imagem parecida. No teste de 2026-11-10 a escolha ficou com a menos ruim e anotou a dúvida em \"conferir\" (um selo de time no lugar do retrato do dono, uma folha com seis logos, uma figurinha), e o vídeo saiu assim. Desenho gerado continua com o resgate de sempre."
  }
 }

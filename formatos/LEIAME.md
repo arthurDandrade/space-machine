@@ -29,6 +29,11 @@ Chaves opcionais da ficha (o `bestiario` usa todas):
   do layout do explained). Formato com gerador próprio ainda não faz Reels.
 - `edicao.regerar_no_final`: true = o vídeo final roda o gerador de cada bloco de novo antes de desenhar (cartum: a grade
   de abertura mostra o símbolo de todos os tópicos, e um bloco feito cedo ainda não tinha os dos outros).
+- `escolha.sem_imagem_certa`: `"tirar_card"` = foto, histórica ou logo REAL só entra se for comprovadamente o que o card diz.
+  Quem escolhe declara `"identidade": "certa" | "duvida"` (dúvida vira pulado), um segundo olhar independente confere a
+  imagem escolhida contra o título da fonte (`prompts/conferir_identidade.md`), e o card pulado sai do `cenas.json` em vez de
+  ir para o resgate por imagem parecida; a lista fica em `<projeto>/_estudio/sem_imagem.json`. O card único de uma tela e o
+  título do tópico não saem. Sem o campo, vale o comportamento de sempre (a menos ruim, com "conferir").
 - `producao.fluxo`: `"video"` = o vídeo novo nasce como um projeto só (`space_machine/video.py`, `rodar_video.py`): narração por
   capítulo, storyboard do vídeo todo numa conversa (plano + um capítulo por resposta), uma busca, uma escolha e um MP4. O que
   o formato diz sobre o vídeo inteiro fica em `biblioteca_cenas.json › metas_video`: as regras de distribuição das variações

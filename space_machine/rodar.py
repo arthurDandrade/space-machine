@@ -339,6 +339,20 @@ class Rodada:
         faltam = [a["id"] for _, _, a in b.assets()
                   if a["id"] not in man and not b.escolhas.get(a["id"], {}).get("pular")]
         pulados = [aid for aid, e in b.escolhas.items() if e.get("pular")]
+        # formato que prefere ficar SEM a imagem a mostrar a errada (formato.json › escolha.sem_imagem_certa =
+        # "tirar_card"): foto, histórica ou logo real que a escolha pulou sai da tela, sem resgate por imagem parecida
+        tirados = []
+        politica = (ficha_formato(self.c.get("formato") or FORMATO_PADRAO).get("escolha") or {}).get("sem_imagem_certa")
+        if politica == "tirar_card" and pulados:
+            reais = {a["id"]: a for _, _, a in b.assets() if a.get("tipo") in ("foto", "historica", "logo")}
+            tirados = self._tirar_cards({aid: (reais[aid], b.escolhas[aid]) for aid in pulados if aid in reais})
+            if tirados:
+                b = BlocoEscolha(self.p)
+                b.obs = self.obs
+                man = {m["id"] for m in ler_json(self.p / "manifesto.json", {"assets": []})["assets"]}
+                faltam = [a["id"] for _, _, a in b.assets()
+                          if a["id"] not in man and not b.escolhas.get(a["id"], {}).get("pular")]
+                pulados = [aid for aid, e in b.escolhas.items() if e.get("pular")]
         if (faltam or pulados) and self.cfg.get("resgatar_assets", True):
             # o bloco não para por asset: busca genérica → candidato não usado da cena → repete o vizinho,
             # tudo com "conferir" (2026-10-12: 10 de 21 blocos paravam aqui, quase todos por vídeo de lance)
@@ -361,7 +375,68 @@ class Rodada:
             raise Parada("assets sem arquivo: " + ", ".join(faltam + pulados)
                          + " — decidir: reaproveitar outro (--obs / reusar_candidato.py), trocar por texto ou pular a cena")
         conferir = [f"{aid}: {e['conferir']}" for aid, e in b.escolhas.items() if e.get("conferir") and aid in feitos]
-        return f"{len(feitos)} escolhidos" + (f" · conferir: {'; '.join(conferir)[:400]}" if conferir else "")
+        return f"{len(feitos)} escolhidos" \
+            + (f" · {len(tirados)} card(s) sem imagem certa saíram da tela: {', '.join(tirados)}" if tirados else "") \
+            + (f" · conferir: {'; '.join(conferir)[:400]}" if conferir else "")
+
+    def _tirar_cards(self, pulados):
+        """Tira do cenas.json os cards de imagem REAL que a escolha pulou ({id: (asset, escolha)}), compila de novo e
+        anota em _estudio/sem_imagem.json. Card que é o único da tela e o título do tópico ficam (a tela não pode
+        ficar vazia): esses seguem para o resgate. Devolve os ids tirados."""
+        cenas = ler_json(self.p / "cenas.json")
+        fora = []
+        # a imagem reprovada pode ter nome de elenco: os outros cards que repetem o mesmo nome saem junto, e o arquivo
+        # que a 1ª escolha guardou em <vídeo>/elenco/ também (senão a foto reprovada voltava nas outras telas)
+        nomes = {a["elenco"] for a, _ in pulados.values() if a.get("elenco")}
+        for nome in nomes:
+            arq = self.video / "elenco" / (re.sub(r"[^a-z0-9]+", "-", nome.lower()).strip("-") + ".png")
+            arq.unlink(missing_ok=True)
+
+        dono = {a["elenco"]: aid for aid, (a, _) in pulados.items() if a.get("elenco")}
+
+        def sai(x):
+            return isinstance(x, dict) and (x.get("id") in pulados or x.get("reusar") in pulados
+                                            or (x.get("elenco") in nomes and x.get("tipo") in (None, "foto", "historica", "logo")))
+
+        def andar(o):
+            if isinstance(o, dict):
+                if isinstance(o.get("cards"), list):
+                    for cd in list(o["cards"]):
+                        if sai(cd) and len(o["cards"]) > 1:
+                            o["cards"].remove(cd)
+                            fora.append(cd.get("id") or cd.get("reusar") or dono.get(cd.get("elenco")))
+                    for cd in o["cards"]:
+                        if isinstance(cd, dict):
+                            if sai(cd.get("sticker")):
+                                fora.append(cd.pop("sticker").get("id"))
+                            if cd.get("troca"):
+                                fora.extend(t.get("id") for t in cd["troca"] if sai(t))
+                                cd["troca"] = [t for t in cd["troca"] if not sai(t)]
+                for v in o.values():
+                    andar(v)
+            elif isinstance(o, list):
+                for v in o:
+                    andar(v)
+        andar(cenas.get("itens", []))
+        fora = [f for f in dict.fromkeys(fora) if f in pulados]
+        if not fora:
+            return []
+        shutil.copy2(self.p / "cenas.json", self.p / "_estudio" / f"cenas_antes_de_tirar_{time.strftime('%H%M%S')}.json")
+        gravar_json(self.p / "cenas.json", cenas)
+        esc = ler_json(self.p / "escolhas.json", {}) or {}
+        arq = self.p / "_estudio" / "sem_imagem.json"
+        lista = ler_json(arq, []) or []
+        for aid in fora:
+            a, e = pulados[aid]
+            lista.append({"id": aid, "tipo": a.get("tipo"), "descricao": a.get("descricao"), "buscas": a.get("buscas"),
+                          "motivo": e.get("motivo") or e.get("_humano") or "", "quando": time.strftime("%Y-%m-%d %H:%M")})
+            esc.pop(aid, None)
+        gravar_json(arq, lista)
+        gravar_json(self.p / "escolhas.json", esc)
+        cod, saida = self.script("escolher", "compilar_cenas.py", self.p)
+        if cod != 0:
+            raise Parada(f"tirei {len(fora)} card(s) sem imagem certa e o storyboard não compilou: {saida.strip()[-300:]}")
+        return fora
 
     # ----- edição + QA -----
     def _versao(self):
