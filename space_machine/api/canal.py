@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 
 from .. import capas, configuracao
 from .. import formato_canal
-from ..sistema import FORMATO_PADRAO, ficha_formato, formatos, ler_json
+from ..sistema import FORMATO_PADRAO, cores_do_video, ficha_formato, formatos, ler_json
 from .comum import IMAGENS, _cache_falta, _canal, _identidade, marca
 
 api = APIRouter(prefix="/api")
@@ -42,6 +42,8 @@ def config_canal(slug: str):
             "fontes": [{"arquivo": f, "nome": Path(f).stem} for f in configuracao.fontes()],
             "banner": bool(marca(c, "banner")), "logo": bool(marca(c, "logo")),
             "usa_fundo": bool((ficha_formato(c.get("formato")).get("identidade") or {}).get("fundo_imagem")),
+            # as cores da identidade que o vídeo deste formato usa (as outras não aparecem na tela)
+            "cores_video": cores_do_video(c.get("formato")),
             "fundo": bool(configuracao.fundo_do_canal(slug)),
             "regras": configuracao.regras_em_texto(cj.get("regras", {}) or {})}
 

@@ -62,6 +62,31 @@ def identidade():
     return canal_json().get("identidade", {})
 
 
+CORES_DO_CANAL = ("cor_fundo", "cor_texto", "cor_destaque", "cor_caixa", "cor_sombra")
+
+
+def cores_do_video(nome=None):
+    """Quais cores da identidade do canal o vídeo deste formato usa. A ficha diz em identidade.cores; sem o campo,
+    todas (o explained, que lê a identidade inteira)."""
+    lista = (ficha(nome).get("identidade") or {}).get("cores")
+    return list(CORES_DO_CANAL) if lista is None else [k for k in lista if k in CORES_DO_CANAL]
+
+
+def visual():
+    """O visual do vídeo num formato que tem `visual` na ficha (o cartum): os padrões do formato, com as cores que
+    você escolheu em canal › Identidade por cima (só as que o formato usa) e, por último, o canal.json › visual, para
+    o que a Identidade não tem (fontes).
+
+    Até 2026-11-11 a Identidade não entrava: trocar a cor do fundo no painel não mudava nada no vídeo do cartum."""
+    v = dict(ficha().get("visual") or {})
+    ident = identidade()
+    for k in cores_do_video():
+        if ident.get(k):
+            v[k] = ident[k]
+    v.update(canal_json().get("visual") or {})
+    return v
+
+
 def regras():
     """Regras do TEMA do canal (o que é do formato fica no código e em formatos/): ver canal.json["regras"]."""
     return canal_json().get("regras", {})
@@ -124,7 +149,10 @@ def formatos():
     for d in sorted(FORMATOS.iterdir()) if FORMATOS.is_dir() else []:
         if (d / "formato.json").exists():
             f = _json(d / "formato.json")
-            out[d.name] = {"nome": f.get("nome", d.name), "resumo": f.get("resumo", "")}
+            vis = f.get("visual") or {}
+            out[d.name] = {"nome": f.get("nome", d.name), "resumo": f.get("resumo", ""),
+                           # as cores com que um canal novo deste formato começa (as medidas nas referências)
+                           "cores": {k: vis[k] for k in CORES_DO_CANAL if vis.get(k)}}
     return out
 
 

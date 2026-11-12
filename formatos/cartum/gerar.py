@@ -65,8 +65,8 @@ def _rgb(h):
 
 
 def visual():
-    """formato.json › visual, com canal.json › visual por cima."""
-    return {**caminhos.ficha().get("visual", {}), **caminhos.canal_json().get("visual", {})}
+    """formato.json › visual, com as cores do canal (Identidade) e o canal.json › visual por cima."""
+    return caminhos.visual()
 
 
 def largura(txt, tam, fonte):

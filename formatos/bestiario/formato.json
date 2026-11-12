@@ -2,6 +2,10 @@
  "_sobre": "Ficha do formato bestiário (2026-11-03): uma criatura do folclore por vídeo, narrada em segunda pessoa, em animação 2D vetorial com gráficos de explicação (régua, ícones, lista de opções, documento, linha do tempo), como o canal Depth Theory (medido nos 5 vídeos: conhecimento/01 - Formato/Canal de Referência Depth Theory.md), com o assunto trocado por criaturas de lenda.",
  "nome": "Bestiário (Why You'd Never Want To Meet ___)",
  "resumo": "Uma criatura do folclore por vídeo, em segunda pessoa, em animação 2D vetorial com gráficos de explicação.",
+ "identidade": {
+  "_sobre": "cores vazio = o vídeo não usa as cores do canal: os fundos são desenhados pelo formato (gerar_ae.py › FUNDOS). O painel mostra só a de destaque, que é a cor do canal nas telas.",
+  "cores": []
+ },
  "storyboard": {
   "regras": "storyboard.md",
   "exemplo_cenas": "exemplo_cenas.json",

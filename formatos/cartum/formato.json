@@ -2,6 +2,10 @@
  "_sobre": "Ficha do formato cartum (2026-11-09): lista de tópicos narrada sem apresentador, em desenho de traço grosso recortado sobre um fundo azul-claro liso. Cada frase põe 2 a 4 elementos na tela, um a cada ~1,7 s, em corte seco; a tela limpa na cena seguinte. Medido em 4 vídeos de referência (conhecimento/01 - Formato/Vídeos de Referência.md).",
  "nome": "Cartum (lista de tópicos em desenho)",
  "resumo": "Lista de tópicos em desenho de traço grosso sobre fundo azul-claro: os elementos entram um a um, na palavra dita.",
+ "identidade": {
+  "_sobre": "cores = as cores de canal › Identidade que entram no vídeo (motor/caminhos.visual): o fundo liso, o texto e o destaque. Caixa e sombra não existem neste formato.",
+  "cores": ["cor_fundo", "cor_texto", "cor_destaque"]
+ },
  "storyboard": {
   "regras": "storyboard.md",
   "exemplo_cenas": "exemplo_cenas.json",
@@ -95,7 +99,7 @@
   "estilo_recorte": "Simple hand-drawn cartoon illustration for an explainer video, in the style of a thick-marker doodle: bold clean black outlines of even weight, flat solid colors, no shading, no gradients, no texture, people and animals have simple friendly faces with dot eyes, objects have no face. One single subject, fully visible, centered, with generous empty margin around it, on a perfectly plain, flat, uniform pure magenta background (hex #FF00FF) that also shows through every gap and hole of the subject, with no shadow, no ground line and no scenery. Never use magenta, hot pink or purple in the subject itself. No text, no letters, no numbers, no logos, no watermark, no frame. Never depict a real, identifiable person."
  },
  "visual": {
-  "_sobre": "Lido pelo gerar.py; o canal.json › visual pode trocar qualquer campo. Cor do fundo medida nos 4 vídeos de referência.",
+  "_sobre": "Os padrões do formato, lidos por motor/caminhos.visual(): as cores que o canal escolher em Identidade (fundo, texto, destaque) entram por cima, e o canal.json › visual pode trocar qualquer campo (as fontes, por exemplo). Cor do fundo medida nos 4 vídeos de referência: é com ela que um canal novo começa.",
   "cor_fundo": "#BFE9FF",
   "cor_texto": "#111111",
   "cor_destaque": "#D7191C",

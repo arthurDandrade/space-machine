@@ -33,6 +33,7 @@ function NovoCanal({ fechar }: { fechar: () => void }) {
     navegar(`/c/${corpo.slug}/regras`);
   };
   const impact = data?.fontes.find((f) => f.nome === "Impact")?.arquivo;
+  const doFormato = fmt?.formatos.find((f) => f.slug === (formato || fmt.padrao));
   return (
     <Dialogo largo titulo={t("app.canais.novo")} fechar={fechar}
       acoes={<>
@@ -77,7 +78,8 @@ function NovoCanal({ fechar }: { fechar: () => void }) {
           <div className="cores-grade">
             {([["cor_fundo", "#EDF0F6", "app.ident.fundo"], ["cor_texto", "#191A21", "app.ident.texto"], ["cor_destaque", "#1D2D85", "app.ident.destaque"],
                ["cor_caixa", "#0B2479", "app.ident.caixa"], ["cor_sombra", "#0B1A3A", "app.ident.sombra"]] as const).map(([k, v, rot]) => (
-              <label key={k} className="campo cor">{t(rot)}<input type="color" name={k} defaultValue={v} /></label>
+              // a cor inicial é a do formato escolhido, quando ele tem a dele (o cartum mediu o azul-claro nas referências)
+              <label key={k + doFormato?.slug} className="campo cor">{t(rot)}<input type="color" name={k} defaultValue={doFormato?.cores?.[k] ?? v} /></label>
             ))}
           </div>
         </div>

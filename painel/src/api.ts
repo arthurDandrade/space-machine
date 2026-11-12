@@ -34,6 +34,7 @@ export interface Formato {
   slug: string;
   nome: string;
   resumo: string;
+  cores?: Partial<Cores>;     // as cores com que um canal novo deste formato começa
 }
 
 export interface Formatos {

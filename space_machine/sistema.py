@@ -39,6 +39,11 @@ def ficha_formato(nome):
     return _caminhos.ficha(nome)
 
 
+def cores_do_video(formato=None):
+    """Quais cores da identidade do canal entram no vídeo deste formato (formato.json › identidade.cores)."""
+    return _caminhos.cores_do_video(formato or FORMATO_PADRAO)
+
+
 def arquivo_formato(arquivo, formato=None, exigir=True):
     """Um arquivo da pasta do formato ("prompts/storyboard.md"), com erro claro se o formato não trouxer o seu
     (exigir=False para o que é opcional, como o edicao.gerador)."""

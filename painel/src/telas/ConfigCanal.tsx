@@ -17,7 +17,7 @@ import { compacto, useT } from "../textos";
 type Regras = Record<"escolha" | "storyboard" | "genericas" | "genericas_hist" | "proibidos" | "permitido_se" | "trocas", string>;
 interface ConfigCanal {
   slug: string; nome: string; ativo: boolean; tema: string; idioma: string; cores: Cores; fonte: string;
-  fontes: { arquivo: string; nome: string }[]; banner: boolean; logo: boolean; fundo: boolean; usa_fundo: boolean; regras: Regras;
+  fontes: { arquivo: string; nome: string }[]; banner: boolean; logo: boolean; fundo: boolean; usa_fundo: boolean; cores_video: (keyof Cores)[]; regras: Regras;
   formato: string; formatos: Formato[];
 }
 const useConfig = (canal: string) =>
@@ -188,7 +188,7 @@ export function IdentidadeTela() {
           <p className="sub">{t("app.ident.formato_troca")}</p>
           {trocando && <TrocarFormato canal={canal} atual={data.formato} formatos={data.formatos} fechar={() => setTrocando(false)} />}
           <div className="cores-grade">
-            {CORES.map(([k, rot]) => (
+            {CORES.filter(([k]) => data.cores_video.includes(k) || k === "cor_destaque").map(([k, rot]) => (
               <label key={k} className="campo cor">{t(rot)}
                 <span className="par-cor">
                   <input type="color" value={cores[k] || "#000000"} onChange={(e) => setCores({ ...cores, [k]: e.target.value.toUpperCase() })} />
@@ -201,7 +201,7 @@ export function IdentidadeTela() {
             <input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} />
             <span className="trilho" /><span>{t("app.ident.ativo")}</span>
           </label>
-          <p className="sub">{t("app.ident.vale_proximos")}</p>
+          <p className="sub">{t(data.cores_video.length ? "app.ident.vale_proximos" : "app.ident.cores_do_formato")}</p>
           <div className="rodape-form">
             <button className="bt primario" disabled={salvar.isPending}><Save size={16} />{t("comum.salvar")}</button>
             {salvar.isSuccess && <span className="selo ok"><Check size={12} />{t("app.salvo")}</span>}

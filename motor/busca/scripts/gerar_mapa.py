@@ -336,7 +336,7 @@ def silhueta(a, alvo, estados):
                 d.polygon(ext, fill=(des or {}).get("cor_base", "#7F858F"))
     cor = CORES[a.cor] if a.cor != "azul" or estados is not None else CORES["azul"]
     if des:
-        cor = des.get("cor_destaque") or (caminhos.ficha().get("visual") or {}).get("cor_destaque") or cor
+        cor = des.get("cor_destaque") or caminhos.visual().get("cor_destaque") or cor
     for f in dest:
         for pol in aneis(f["geometry"]):
             ext = [tela(*pt) for pt in pol[0]]
@@ -357,7 +357,7 @@ def silhueta(a, alvo, estados):
         import sys as _s
         _s.path.insert(0, str(Path(__file__).resolve().parents[2] / "edicao_ff"))
         from compor import fonte as _fonte
-        f_txt = _fonte((caminhos.ficha().get("visual") or {}).get("fonte_titulo", "ChalkboardSE-Bold"), tam)
+        f_txt = _fonte(caminhos.visual().get("fonte_titulo", "ChalkboardSE-Bold"), tam)
     except Exception:
         f_txt = ImageFont.truetype(IMPACT, tam)
     tela2 = Image.new("RGBA", (W * SS + 2 * m, H * SS + 2 * m + (int(tam * 1.5) if tem_rot else 0)), (0, 0, 0, 0))
