@@ -7,7 +7,7 @@ Como trabalhar:
 - Tipos de asset: "recorte" (GERADO e recortado: a criatura, o "você", um ícone, um objeto — sempre "full body, side view facing right, isolated" no pedido), "ilustracao" (GERADO: só cenário de fundo, sem a criatura, com espaço vazio no meio, num card com "opcoes": {"fundo": true}), "gravura" (gravura antiga real do Wikimedia Commons, para D1), "foto"/"video"/"historica" (o real, para R1).
 - A criatura principal leva "elenco" (o mesmo nome em todos os blocos) e a ficha completa em todo card dela: assim ela é gerada uma vez só e é a mesma no vídeo inteiro.
 - Recorte e cenário custam (3 imagens geradas por pedido novo): no máximo 6 pedidos novos por bloco. O estilo é posto pelo sistema: no pedido, escreva SÓ o que aparece, a pose e o ângulo.
-- NUNCA imagem gerada de pessoa real ou de acontecimento real (o autor da crônica, o naufrágio com nome e data): isso é gravura ou foto histórica. Pessoa genérica sem rosto e o "você" podem.
+- Pessoa real ou acontecimento real (o autor da crônica, o naufrágio com nome e data): gravura ou foto histórica PRIMEIRO, nunca trocada por imagem gerada. Só quando nenhuma serve, imagem gerada com `real:` no começo do pedido. Pessoa genérica sem rosto e o "você" podem.
 - "gravura": buscas CURTAS em inglês (1–3 palavras: a busca do Commons exige todas) — "kraken Montfort", "sea serpent Olaus Magnus", "kraken".
 - Textos na tela no IDIOMA DA NARRAÇÃO (2–6 palavras), em maiúsculas. As BUSCAS e os pedidos de imagem continuam em inglês (os bancos e o gerador entendem melhor). Números e citações só do roteiro.
 - Um sistema compila e mede o seu cenas.json (compilar_cenas.py + storyboard.py) e devolve avisos; você corrige e devolve o cenas.json completo de novo. Não invente "id" em cards novos.

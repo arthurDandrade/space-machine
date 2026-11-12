@@ -26,7 +26,7 @@ Desde 2026-11-11 o sistema faz a thumbnail: na página do vídeo (aba Publicaç�
 Medidas do desenho (1280 × 720): margem de 12 px; legenda em Chalkboard SE Bold, 34 px com 3 colunas e 30 px com 4; borda de 3 px no quadro e 4 px no círculo; título em Impact, com o que vai entre asteriscos em vermelho (#E3120B). Desenhado no dobro e reduzido. PNG; acima de 2 MB (o limite do YouTube) sai JPG.
 
 ## O que é diferente da referência, de propósito
-A referência usa caricaturas de jogadores reais nos círculos e nas duplas. O sistema NUNCA gera desenho de pessoa real: pessoa real entra por foto real, e o desenho é genérico (o objeto ou o símbolo do caso, um jogador genérico com o uniforme da época). Vale no prompt do plano e no estilo do pedido ao Flow.
+A referência usa caricaturas de jogadores reais nos círculos e nas duplas. Desde 2026-11-11 o sistema também pode (decidido pelo Arthur: gera mais conexão): foto real primeiro quando o modelo aceita foto; quando o modelo é de desenho e o item é uma pessoa real, o pedido ao Flow começa com `real:` e sai uma caricatura reconhecível. Medido no vídeo do Thanksgiving: a dupla MADDEN'S TURKEY × LETT 1993, pedida só por texto, saiu na 1ª tentativa, sem recusa.
 
 ## De onde vêm as imagens
 1. Do que o vídeo já tem: o elenco (desenhos, logos e fotos de `<vídeo>/elenco/`) e os assets escolhidos na produção. O tipo de cada imagem do elenco vem do `cenas.json` (o arquivo não diz se é logo, foto ou desenho).

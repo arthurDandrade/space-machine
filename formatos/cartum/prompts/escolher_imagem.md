@@ -11,7 +11,7 @@ O tipo muda o que importa:
 Sempre:
 1. LITERAL: mostra o que o pedido diz. Entre bonita e certa, a certa.
 1b. TEMA CERTO: siga as regras do tema do canal (no fim deste texto).
-2. NUNCA um desenho que retrate uma pessoa real identificável: se o gerador devolveu o rosto de alguém conhecido, recuse.
+2. Desenho que retrata uma pessoa real identificável só vale quando o pedido começou com `real:` (aí ele DEVE parecer com a pessoa pedida). Fora disso, se o gerador devolveu o rosto de alguém conhecido, recuse.
 3. RESOLUÇÃO: ≥700 px no lado menor. Foto antiga pode ser menor se for a única certa.
 
 Respostas possíveis (só o JSON):

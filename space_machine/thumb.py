@@ -22,7 +22,7 @@ O que acontece, em <vídeo>/thumb/<modelo>/ (uma pasta com a cara da de um bloco
 O plano pede alguns itens de reserva: se uma imagem não for achada, a grade fecha com o seguinte.
 A cor do fundo é sua: a do formato, uma das sugeridas ou qualquer outra (--fundo; no painel, as bolinhas de cor). A que
 você usar fica como a do canal (canal.json › thumbnail.fundo). Trocar só a cor não refaz o plano: redesenha.
-Nunca desenho de pessoa real: pessoa real entra por foto (regra do sistema, repetida no prompt).
+Pessoa real: foto real primeiro; em modelo de desenho, caricatura pedida com "real:" (regra de 2026-11-11, no prompt).
 """
 import argparse
 import json

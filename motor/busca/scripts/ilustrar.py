@@ -11,8 +11,9 @@ Chave: GEMINI_API_KEY no .env do canal (ou dos dados). Sem chave, a fonte é pul
 Preço (2026-11, gemini-nano-banana-2.1): ~US$ 0,05 por imagem em 2K, sem cota grátis. Cada imagem gerada vai
 para <dados>/cache/gemini/gastos.jsonl.
 
-Nunca pessoa real nem acontecimento real (regra do Space Machine): o estilo da ficha diz isso ao modelo, e o
-storyboard do formato só pede ilustração de criatura, lugar e cena de lenda.
+Pessoa real (regra de 2026-11-11): foto real primeiro; desenho de pessoa real só quando nenhuma foto serve, e o
+pedido começa com "real:" (estilo_do_pedido troca a frase "Never depict a real person" do estilo pelo pedido de
+caricatura). Sem "real:", o estilo da ficha continua dizendo ao modelo para não retratar ninguém real.
 
 Uso à mão (teste): python ilustrar.py <pasta de saída> "<pedido>" [--n 1] [--orientacao paisagem]
 """
@@ -20,6 +21,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -36,6 +38,25 @@ ASPECTO = {"paisagem": "16:9", "retrato": "3:4", "quadrado": "1:1"}
 def config():
     """formato.json › ilustracao, com canal.json › ilustracao por cima."""
     return {**PADRAO, **caminhos.ficha().get("ilustracao", {}), **caminhos.canal_json().get("ilustracao", {})}
+
+
+REAL = re.compile(r"^\s*real\s*:\s*", re.I)
+SEM_REAL = re.compile(r"\s*Never depict a real, identifiable person[^.]*\.")
+PESSOA_REAL = ("The scene names a real, famous person: draw them as a friendly, recognizable caricature in this "
+               "same style, never photorealistic.")
+
+
+def estilo_do_pedido(cfg, estilo, pedido):
+    """(estilo, pedido) para o texto do gerador. Pedido que começa com "real:" é o desenho de uma pessoa real (regra
+    de 2026-11-11: pode, desde que não tome o lugar de uma foto real que existe; quem decide é o storyboard): o
+    prefixo sai e a frase "Never depict a real, identifiable person" do estilo vira o pedido de caricatura
+    (formato.json › ilustracao › pessoa_real, ou o PESSOA_REAL). Sem "real:", o estilo fica igual — e a chave dos
+    pedidos do Flow, que é o texto inteiro, também."""
+    est = cfg.get(estilo) or ""
+    if not REAL.match(pedido):
+        return est, pedido
+    est = SEM_REAL.sub("", est).strip()
+    return f"{est} {cfg.get('pessoa_real') or PESSOA_REAL}".strip(), REAL.sub("", pedido, count=1)
 
 
 def _referencia(cfg):
@@ -67,7 +88,8 @@ def gerar(pedido, orientacao=None, cfg=None, estilo="estilo"):
     if not chave:
         log("   gemini: sem GEMINI_API_KEY (pulado)")
         return None
-    texto = f"{cfg[estilo]}\n\nScene: {pedido}".strip() if cfg.get(estilo) else pedido
+    est, pedido = estilo_do_pedido(cfg, estilo, pedido)
+    texto = f"{est}\n\nScene: {pedido}".strip() if est else pedido
     partes = [{"type": "text", "text": texto}]
     ref = _referencia(cfg)
     if ref:

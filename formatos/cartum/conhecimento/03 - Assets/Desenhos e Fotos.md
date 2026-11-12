@@ -8,7 +8,7 @@
 - Um assunto por pedido, corpo inteiro, sem cenário e sem texto. Texto é do editor (`acima`, `legenda`, `balao`).
 - **Personagem** (quem aparece em mais de uma pose): o pedido começa por `@nome{ficha física}` e depois vem só a pose. O sistema guarda a ficha em `<dados>/cache/flow/personagens/<canal>/<nome>/`, a sessão gera primeiro o boneco parado de frente, escolhe uma opção como referência e gera cada pose com ela anexada no Flow. Medido em 2026-11-09: sem a referência, as 4 telas do quarterback eram 4 bonecos diferentes; com ela, capacete, proporção, chuteira e cores se mantêm. A 1ª ficha de um nome fica valendo para o canal inteiro (o mascote é o mesmo em todos os vídeos).
 - O que volta IGUAL (mesma pose) leva também `elenco` e é gerado uma vez por vídeo.
-- Nunca pessoa real nem acontecimento real.
+- Pessoa real e acontecimento real: foto real primeiro. Desenho só quando nenhuma foto serve, com `real:` no começo do pedido (caricatura reconhecível); nunca no lugar de uma foto que existe (regra de 2026-11-11).
 
 ## Foto real (tipo `foto` / `historica`)
 - De banco livre, pela busca de sempre. Sai pequena (até 520 px de altura) com a borda esfumada, então precisa ser reconhecível pequena: o rosto, a ruína inteira, o objeto isolado.

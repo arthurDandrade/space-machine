@@ -27,7 +27,8 @@ sessão gera primeiro a ficha (o boneco parado, de frente), escolhe uma das opç
 (--referencia), anexa essa imagem no pedido do Flow e só então gera as poses.
 
 Medido em 2026-11-09 (plano Plus, Nano Banana 2.1, imagem 1:1): 3 opções em ~30 s, 0 créditos, 1024×1024.
-Nunca pessoa real nem acontecimento real (regra do Space Machine), igual ao ilustrar.py.
+Pessoa real: foto real primeiro; o desenho de uma pessoa real vem com "real:" no começo do pedido (ilustrar.estilo_do_pedido,
+regra de 2026-11-11). Os pedidos sem "real:" têm o mesmo texto (e a mesma chave) de antes.
 """
 import argparse
 import hashlib
@@ -103,7 +104,7 @@ def pendentes(canal=None):
     return fichas + com + sem
 
 
-def _personagem(consulta, cfg, estilo):
+def _personagem(consulta, est):
     """("nome", ficha, pose) quando a consulta começa por @nome; cria a ficha do personagem na 1ª vez. A ficha
     física vem entre chaves; sem ela, de canal.json › personagens. None = pedido comum."""
     m = PERSONAGEM.match(consulta.strip())
@@ -119,7 +120,7 @@ def _personagem(consulta, cfg, estilo):
         if not ficha:
             return None
         pasta.mkdir(parents=True, exist_ok=True)
-        texto = f"{cfg[estilo]}\n\nScene: {ficha}, {POSE_FICHA}".strip()
+        texto = f"{est}\n\nScene: {ficha}, {POSE_FICHA}".strip()
         arq.write_text(json.dumps({"nome": nome, "canal": caminhos.canal().name, "ficha": ficha, "texto": texto,
                                    "flow_id": "", "quando": time.strftime("%Y-%m-%d %H:%M:%S")},
                                   ensure_ascii=False, indent=1))
@@ -129,9 +130,11 @@ def _personagem(consulta, cfg, estilo):
 def flow(consulta, n, orientacao=None, estilo="estilo"):
     """Fonte de busca. Com as imagens do pedido já guardadas, devolve as candidatas; sem elas, põe o pedido na fila
     e devolve vazio (o orquestrador para e uma sessão do Claude gera)."""
-    from ilustrar import _referencia, config
+    from ilustrar import _referencia, config, estilo_do_pedido
     cfg = config()
-    quem = _personagem(consulta, cfg, estilo) if cfg.get(estilo) else None
+    pedido = consulta
+    est, consulta = estilo_do_pedido(cfg, estilo, consulta)   # "real:" = desenho de pessoa real
+    quem = _personagem(consulta, est) if est else None
     if quem and not quem[2]:
         # o pedido é o próprio personagem, sem pose: a candidata é a referência dele (uma só, para o desenho do
         # título ser o mesmo boneco das poses)
@@ -146,9 +149,9 @@ def flow(consulta, n, orientacao=None, estilo="estilo"):
         return [{"url": url, "fonte": "flow", "titulo": consulta[:120], "pagina": "", "licenca": "gerada (Google Flow)",
                  "autor": "Google Flow", "w": 0, "h": 0}]
     if quem:
-        texto = f"{COM_REFERENCIA}{cfg[estilo]}\n\nScene: {quem[1]}, {quem[2]}".strip()
+        texto = f"{COM_REFERENCIA}{est}\n\nScene: {quem[1]}, {quem[2]}".strip()
     else:
-        texto = f"{cfg[estilo]}\n\nScene: {consulta}".strip() if cfg.get(estilo) else consulta
+        texto = f"{est}\n\nScene: {consulta}".strip() if est else consulta
     aspecto = ASPECTO.get(orientacao, "16:9")
     chave = hashlib.sha1(f"{texto}|{aspecto}".encode()).hexdigest()[:16]
     pasta = pedidos() / chave
@@ -162,7 +165,7 @@ def flow(consulta, n, orientacao=None, estilo="estilo"):
             ref = _referencia(cfg)
             por = int({**PADRAO_FLOW, **(cfg.get("flow") or {})}["por_asset"])
             (pasta / "pedido.json").write_text(json.dumps({
-                "chave": chave, "canal": caminhos.canal().name, "pedido": consulta, "texto": texto, "aspecto": aspecto,
+                "chave": chave, "canal": caminhos.canal().name, "pedido": pedido, "texto": texto, "aspecto": aspecto,
                 "personagem": quem[0] if quem else "",
                 "n": max(1, min(n, por, 4)), "referencia": str(ref) if ref else "",
                 "quando": time.strftime("%Y-%m-%d %H:%M:%S")}, ensure_ascii=False, indent=1))

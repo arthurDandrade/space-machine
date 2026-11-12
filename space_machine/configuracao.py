@@ -66,7 +66,7 @@ APIS = [
     {"id": "gemini", "nome": "Gemini / Nano Banana (ilustrações geradas, pago)", "arquivo": ".env", "escopo": "canal",
      "ajuda": "Chave em aistudio.google.com → Get API key, num projeto com faturamento ligado (imagem não tem cota "
               "grátis; ~US$ 0,05 por imagem em 2K). Só é usada pelos formatos que pedem ilustração (o bestiário): "
-              "cada cena ilustrada gera 3 opções e o Claude escolhe uma. Nunca gera pessoa real nem acontecimento real.",
+              "cada cena ilustrada gera 3 opções e o Claude escolhe uma. Pessoa real ou acontecimento real só quando não há foto real que sirva.",
      "campos": [("GEMINI_API_KEY", "Chave da API", True, "")]},
 ]
 

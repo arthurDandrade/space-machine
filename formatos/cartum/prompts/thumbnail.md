@@ -16,8 +16,8 @@ Como preencher cada item:
 - Se não tem, peça uma nova: `{"legenda": "...", "tipo": "...", "descricao": "...", "buscas": ["...", "..."]}`, com o tipo entre os de "tipos_que_cabem":
   - "foto" ou "historica": foto REAL. A descrição diz exatamente quem ou o quê; as buscas (2 ou 3, em inglês) levam o nome completo ("Jim Thorpe Canton Bulldogs", "Jim Thorpe portrait"). Se a imagem certa não existir, o item fica de fora: não peça foto de quem dificilmente tem foto livre.
   - "logo": o logo REAL, com o nome exato ("Oorang Indians logo").
-  - "recorte": um DESENHO gerado, genérico: só o que aparece e a pose, em inglês, um assunto, sem cenário e sem texto ("a brown Airedale terrier dog standing, side view").
-- NUNCA desenho de pessoa real nem de acontecimento real. Pessoa real só entra por foto real. Se o modelo só aceita desenho e o item é uma pessoa real, desenhe o OBJETO ou o SÍMBOLO do caso (o cão, o trem, o saco de dinheiro, um jogador genérico com o uniforme da época), nunca a pessoa.
+  - "recorte": um DESENHO gerado (genérico, ou a caricatura de uma pessoa real com `real:` no começo da busca, ex.: "real: John Madden, the TV broadcaster, grinning and holding up a roasted turkey leg"): só o que aparece e a pose, em inglês, um assunto, sem cenário e sem texto ("a brown Airedale terrier dog standing, side view").
+- Pessoa real: foto real primeiro quando o modelo aceita foto. Se o modelo só aceita desenho e o item é uma pessoa real, o pedido começa com `real:` e diz quem é (caricatura reconhecível, como as do canal de referência: gera mais conexão). Acontecimento real segue a mesma regra.
 
 Quantos itens: devolva `quantos_itens` + `reservas`, em ordem de força. As reservas (as últimas) só entram se a imagem de um dos primeiros não for achada.
 
